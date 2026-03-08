@@ -1,0 +1,5 @@
+[tools]
+claude-code = "latest"
+"claude:mcp/context7" = "latest"
+"claude:mcp/chrome-devtools" = "latest"
+"claude:mcp/shadcn" = "latest"

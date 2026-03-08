@@ -1,0 +1,5 @@
+[tools]
+claude-code = "latest"
+"claude:skills.sh/vercel-labs/next-skills/next-best-practices" = "latest"
+"claude:skills.sh/anthropics/skills/frontend-design" = "latest"
+"claude:skills.sh/anthropics/skills/skill-creator" = "latest"

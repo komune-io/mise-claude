@@ -1,0 +1,5 @@
+# Dev config for local testing
+# Usage: mise plugin link claude ./
+#        mise install claude:@upstash/context7-mcp@latest
+
+[tools]

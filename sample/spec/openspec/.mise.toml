@@ -1,0 +1,6 @@
+[tools]
+java = "25"
+kotlin = "2.3.10"
+gradle = "9.3.1"
+claude-code = "latest"
+"claude:spec/openspec" = "latest"
