@@ -1,0 +1,3 @@
+[tools]
+claude-code = "latest"
+"claude:plugin/ChromeDevTools/chrome-devtools-mcp/chrome-devtools-mcp" = "latest"

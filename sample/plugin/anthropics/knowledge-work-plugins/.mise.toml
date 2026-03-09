@@ -1,0 +1,13 @@
+[tools]
+claude-code = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/productivity" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/sales" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/customer-support" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/product-management" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/marketing" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/legal" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/finance" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/data" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/enterprise-search" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/bio-research" = "latest"
+"claude:plugin/anthropics/knowledge-work-plugins/cowork-plugin-management" = "latest"

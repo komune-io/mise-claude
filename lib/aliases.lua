@@ -46,16 +46,16 @@ local function is_plugin(name)
   return name:sub(1, 7) == "plugin/"
 end
 
---- Parse a plugin tool name into owner, repo, and plugin.
+--- Parse a plugin tool name into owner/repo and plugin.
 --- @param name string e.g. "plugin/anthropics/claude-code/commit-commands"
---- @return table { owner: string, repo: string, owner_repo: string, plugin: string }
+--- @return table { owner_repo: string, plugin: string }
 local function parse_plugin(name)
   local path = name:sub(8) -- strip "plugin/"
   local owner, repo, plugin = path:match("^([^/]+)/([^/]+)/(.+)$")
   if not owner then
     error("Invalid plugin format: expected plugin/<owner>/<repo>/<plugin>, got " .. name)
   end
-  return { owner = owner, repo = repo, owner_repo = owner .. "/" .. repo, plugin = plugin }
+  return { owner_repo = owner .. "/" .. repo, plugin = plugin }
 end
 
 return {

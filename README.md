@@ -81,7 +81,7 @@ Under the hood, runs: `npx skills add <owner>/<repo> --skill <skill> -a claude-c
 
 ### `plugin/<owner>/<repo>/<plugin>` — Claude Code Plugins
 
-Native Claude Code plugins from GitHub-hosted marketplaces. The plugin registers the marketplace and installs the plugin using the `claude` CLI.
+Native Claude Code plugins installed from GitHub-based marketplaces using the `claude` CLI.
 
 Format: `plugin/<owner>/<repo>/<plugin>`
 
@@ -90,8 +90,9 @@ Format: `plugin/<owner>/<repo>/<plugin>`
 ```
 
 Under the hood, runs:
-1. `claude plugin marketplace add <owner>/<repo>`
-2. `claude plugin install <plugin>@<repo> --scope project -y`
+1. `claude plugin marketplace add <owner>/<repo>` — registers the marketplace
+2. Parses `claude plugin marketplace list` to find the marketplace name for the repo
+3. `claude plugin install <plugin>@<marketplace> --scope project`
 
 ## Extra Configuration
 

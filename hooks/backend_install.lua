@@ -159,8 +159,33 @@ function PLUGIN:BackendInstall(ctx)
 
   if aliases.is_plugin(ctx.tool) then
     local parsed = aliases.parse_plugin(ctx.tool)
-    cmd.exec("claude plugin marketplace add " .. parsed.owner_repo)
-    cmd.exec("claude plugin install " .. parsed.plugin .. "@" .. parsed.repo .. " --scope project -y")
+    -- marketplace add may fail if already registered or if a parallel install is adding it
+    pcall(cmd.exec, "claude plugin marketplace add " .. parsed.owner_repo)
+    -- Parse marketplace list to find the registered name for this repo
+    local list_output = cmd.exec("claude plugin marketplace list")
+    local marketplace_name = nil
+    for line in list_output:gmatch("[^\n]+") do
+      -- Match lines like "  ❯ marketplace-name"
+      local name = line:match("\226\157\175%s+(.+)$")
+      if name then
+        marketplace_name = name:match("^%s*(.-)%s*$") -- trim
+      end
+      -- Match source lines like "  Source: GitHub (owner/repo)"
+      if marketplace_name then
+        local repo = line:match("Source:%s+GitHub%s+%(([^)]+)%)")
+        if repo then
+          if repo == parsed.owner_repo then
+            break
+          else
+            marketplace_name = nil
+          end
+        end
+      end
+    end
+    if not marketplace_name then
+      error("Could not find marketplace for " .. parsed.owner_repo)
+    end
+    cmd.exec("claude plugin install " .. parsed.plugin .. "@" .. marketplace_name .. " --scope project")
     return {}
   end
 

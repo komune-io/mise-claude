@@ -1,0 +1,3 @@
+[tools]
+claude-code = "latest"
+"claude:plugin/upstash/context7/context7-plugin" = "latest"

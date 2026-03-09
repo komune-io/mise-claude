@@ -1,0 +1,8 @@
+[tools]
+claude-code = "latest"
+"claude:plugin/anthropics/financial-services-plugins/financial-analysis" = "latest"
+"claude:plugin/anthropics/financial-services-plugins/investment-banking" = "latest"
+"claude:plugin/anthropics/financial-services-plugins/equity-research" = "latest"
+"claude:plugin/anthropics/financial-services-plugins/private-equity" = "latest"
+"claude:plugin/anthropics/financial-services-plugins/wealth-management" = "latest"
+
