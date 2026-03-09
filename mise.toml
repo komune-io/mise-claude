@@ -3,3 +3,25 @@
 #        mise install claude:@upstash/context7-mcp@latest
 
 [tools]
+
+[tasks.clean]
+description = "Run clean task in all sample modules"
+run = """
+for dir in $(find sample -name '.mise.toml' -exec dirname {} \\;); do
+  echo "Cleaning $dir..."
+  (cd "$dir" && MISE_AUTO_INSTALL=false mise run clean || true)
+done
+"""
+
+[tasks.test]
+description = "Run integration tests in Docker"
+run = "docker compose -f docker-compose.test.yml run --rm test"
+
+[tasks.localtest]
+description = "Install and test all sample modules"
+run = """
+for dir in $(find sample -name '.mise.toml' -exec dirname {} \\;); do
+  echo "Testing $dir..."
+  (cd "$dir" && mise run clean && mise install && mise run test || true)
+done
+"""

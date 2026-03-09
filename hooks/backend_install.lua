@@ -159,8 +159,21 @@ function PLUGIN:BackendInstall(ctx)
 
   if aliases.is_plugin(ctx.tool) then
     local parsed = aliases.parse_plugin(ctx.tool)
-    -- marketplace add may fail if already registered or if a parallel install is adding it
-    pcall(cmd.exec, "claude plugin marketplace add " .. parsed.owner_repo)
+
+    -- Serialize marketplace registration per repo using mkdir as an atomic lock.
+    -- Without this, parallel installs of plugins from the same repo race on
+    -- `claude plugin marketplace add`, causing intermittent failures.
+    local lock_dir = "/tmp/mise-claude-mktplace-" .. parsed.owner_repo:gsub("/", "-")
+    local got_lock = pcall(cmd.exec, "mkdir " .. lock_dir)
+    if got_lock then
+      -- First install for this repo: register the marketplace
+      pcall(cmd.exec, "claude plugin marketplace add " .. parsed.owner_repo)
+      cmd.exec("touch " .. lock_dir .. "/done")
+    else
+      -- Another install is registering it — wait up to 30s for completion
+      pcall(cmd.exec, "for i in $(seq 1 150); do [ -f '" .. lock_dir .. "/done' ] && break; sleep 0.2; done")
+    end
+
     -- Parse marketplace list to find the registered name for this repo
     local list_output = cmd.exec("claude plugin marketplace list")
     local marketplace_name = nil
@@ -185,7 +198,24 @@ function PLUGIN:BackendInstall(ctx)
     if not marketplace_name then
       error("Could not find marketplace for " .. parsed.owner_repo)
     end
-    cmd.exec("claude plugin install " .. parsed.plugin .. "@" .. marketplace_name .. " --scope project")
+
+    -- Serialize `claude plugin install` calls: concurrent writes to
+    -- .claude/settings.json cause lost updates.  Use flock if available,
+    -- otherwise fall back to a mkdir-based spin lock.
+    local install_cmd = "claude plugin install " .. parsed.plugin .. "@" .. marketplace_name .. " --scope project"
+    local install_lock = "/tmp/mise-claude-install.lock"
+    local has_flock = pcall(cmd.exec, "command -v flock")
+    if has_flock then
+      cmd.exec("flock " .. install_lock .. " " .. install_cmd)
+    else
+      -- mkdir spin lock for macOS (no flock by default)
+      pcall(cmd.exec, "for i in $(seq 1 300); do mkdir " .. install_lock .. ".d 2>/dev/null && break; sleep 0.1; done")
+      local ok, err = pcall(cmd.exec, install_cmd)
+      pcall(cmd.exec, "rmdir " .. install_lock .. ".d 2>/dev/null")
+      if not ok then
+        error(err)
+      end
+    end
     return {}
   end
 
