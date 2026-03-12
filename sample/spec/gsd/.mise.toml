@@ -5,13 +5,13 @@ gradle = "9.3.1"
 claude-code = "latest"
 "claude:spec/gsd" = "latest"
 
+[tasks.test]
+description = "Run integration test"
+run = "bash test.sh"
+
 [tasks.clean]
 description = "Remove install artifacts and uninstall tools"
 run = """
 mise ls -c 2>/dev/null | awk '{print $1"@"$2}' | xargs -I{} mise uninstall {} || true
 rm -rfv .claude/ node_modules/
 """
-
-[tasks.test]
-description = "Verify GSD spec"
-run = "bash test.sh"

@@ -1,6 +1,10 @@
 [tools]
 claude-code = "latest"
-"claude:plugin/ChromeDevTools/chrome-devtools-mcp/chrome-devtools-mcp" = "latest"
+"claude:plugin/ChromeDevTools/chrome-devtools-mcp/chrome-devtools-mcp@chrome-devtools-plugins" = "latest"
+
+[tasks.test]
+description = "Run integration test"
+run = "bash test.sh"
 
 [tasks.clean]
 description = "Remove install artifacts and uninstall tools"
@@ -8,7 +12,3 @@ run = """
 mise ls -c 2>/dev/null | awk '{print $1"@"$2}' | xargs -I{} mise uninstall {} || true
 rm -rfv .claude/settings.json
 """
-
-[tasks.test]
-description = "Verify plugins"
-run = "bash test.sh"

@@ -4,7 +4,7 @@
 function PLUGIN:BackendExecEnv(ctx)
   local aliases = require("lib/aliases")
 
-  if aliases.is_skills_sh(ctx.tool) or aliases.is_plugin(ctx.tool) then
+  if aliases.tool_kind(ctx.tool) ~= "npm" then
     return { env_vars = {} }
   end
 

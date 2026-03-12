@@ -22,7 +22,7 @@ The plugin implements mise's Lua backend hook system. All hooks live in `hooks/`
 - `hooks/backend_list_versions.lua` — Queries the npm registry for versions. Skills and plugins only support `"latest"`.
 - `hooks/backend_install.lua` — Core install logic. Routes by tool type:
   - **`skills.sh/*`** — Runs `npx skills add` with the parsed owner/repo/skill.
-  - **`plugin/*`** — Runs `claude plugin marketplace add` then `claude plugin install`.
+  - **`plugin/*`** — Format: `plugin/<owner>/<repo>/<plugin>@<marketplace>`. Runs `claude plugin marketplace add <owner>/<repo>` then `claude plugin install <plugin>@<marketplace> --scope project`.
   - **npm tools** — Runs `npm install`, then branches:
     - `type = "mcp"` (default) — Detects the binary in `node_modules/.bin/`, merges entry into `.mcp.json`.
     - `type = "cli"` — Skips `.mcp.json`.

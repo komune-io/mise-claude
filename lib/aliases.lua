@@ -1,68 +1,78 @@
 -- =============================================================================
--- Tool Aliases (friendly name → npm package)
+-- Tool Aliases (friendly name -> npm package)
 -- =============================================================================
 
 --- Maps short alias names used in .mise.toml to actual npm package names.
---- Unaliased names pass through as-is (e.g. "shadcn" → "shadcn").
+--- Unaliased names pass through as-is (e.g. "shadcn" -> "shadcn").
 local TOOL_ALIASES = {
-  ["mcp/context7"]        = "@upstash/context7-mcp",
-  ["mcp/chrome-devtools"] = "chrome-devtools-mcp",
-  ["mcp/shadcn"]          = "shadcn",
-  ["spec/gsd"]            = "get-shit-done-cc",
-  ["spec/bmad"]           = "bmad-method",
-  ["spec/openspec"]       = "@fission-ai/openspec",
+	["mcp/context7"] = "@upstash/context7-mcp",
+	["mcp/chrome-devtools"] = "chrome-devtools-mcp",
+	["mcp/shadcn"] = "shadcn",
+	["spec/gsd"] = "get-shit-done-cc",
+	["spec/bmad"] = "bmad-method",
+	["spec/openspec"] = "@fission-ai/openspec",
 }
+
+local SKILLS_SH_PREFIX = "skills.sh/"
+local PLUGIN_PREFIX = "plugin/"
 
 --- Resolve a tool alias to its npm package name.
 --- @param name string
 --- @return string
 local function resolve_alias(name)
-  return TOOL_ALIASES[name] or name
+	return TOOL_ALIASES[name] or name
 end
 
---- Check if a tool name is a skills.sh tool.
+--- Determine the tool kind: "skills_sh", "plugin", or "npm".
 --- @param name string
---- @return boolean
-local function is_skills_sh(name)
-  return name:sub(1, 10) == "skills.sh/"
+--- @return string
+local function tool_kind(name)
+	if name:sub(1, #SKILLS_SH_PREFIX) == SKILLS_SH_PREFIX then
+		return "skills_sh"
+	end
+	if name:sub(1, #PLUGIN_PREFIX) == PLUGIN_PREFIX then
+		return "plugin"
+	end
+	return "npm"
 end
 
---- Parse a skills.sh tool name into owner/repo and skill.
+--- Parse a prefixed tool name (skills.sh/ or plugin/) into owner/repo and trailing component.
 --- @param name string e.g. "skills.sh/vercel-labs/next-skills/next-best-practices"
+--- @param prefix string e.g. "skills.sh/" or "plugin/"
+--- @param label string e.g. "skills.sh" or "plugin" (for error messages)
+--- @return table { owner_repo: string, name: string }
+local function parse_prefixed(name, prefix, label)
+	local path = name:sub(#prefix + 1)
+	local owner, repo, component = path:match("^([^/]+)/([^/]+)/(.+)$")
+	if not owner then
+		error("Invalid " .. label .. " format: expected " .. prefix .. "<owner>/<repo>/<name>, got " .. name)
+	end
+	return { owner_repo = owner .. "/" .. repo, name = component }
+end
+
+--- Parse a skills.sh tool name.
+--- @param name string
 --- @return table { owner_repo: string, skill: string }
 local function parse_skills_sh(name)
-  local path = name:sub(11) -- strip "skills.sh/"
-  local owner, repo, skill = path:match("^([^/]+)/([^/]+)/(.+)$")
-  if not owner then
-    error("Invalid skills.sh format: expected skills.sh/<owner>/<repo>/<skill>, got " .. name)
-  end
-  return { owner_repo = owner .. "/" .. repo, skill = skill }
+	local parsed = parse_prefixed(name, SKILLS_SH_PREFIX, "skills.sh")
+	return { owner_repo = parsed.owner_repo, skill = parsed.name }
 end
 
---- Check if a tool name is a Claude Code plugin.
---- @param name string
---- @return boolean
-local function is_plugin(name)
-  return name:sub(1, 7) == "plugin/"
-end
-
---- Parse a plugin tool name into owner/repo and plugin.
---- @param name string e.g. "plugin/anthropics/claude-code/commit-commands"
---- @return table { owner_repo: string, plugin: string }
+--- Parse a plugin tool name.
+--- @param name string e.g. "plugin/anthropics/claude-code/hookify@claude-code-plugins"
+--- @return table { owner_repo: string, plugin: string, marketplace: string }
 local function parse_plugin(name)
-  local path = name:sub(8) -- strip "plugin/"
-  local owner, repo, plugin = path:match("^([^/]+)/([^/]+)/(.+)$")
-  if not owner then
-    error("Invalid plugin format: expected plugin/<owner>/<repo>/<plugin>, got " .. name)
-  end
-  return { owner_repo = owner .. "/" .. repo, plugin = plugin }
+	local parsed = parse_prefixed(name, PLUGIN_PREFIX, "plugin")
+	local plugin, marketplace = parsed.name:match("^(.+)@(.+)$")
+	if not plugin then
+		error("Invalid plugin format: missing @<marketplace> in " .. name)
+	end
+	return { owner_repo = parsed.owner_repo, plugin = plugin, marketplace = marketplace }
 end
 
 return {
-  TOOL_ALIASES = TOOL_ALIASES,
-  resolve_alias = resolve_alias,
-  is_skills_sh = is_skills_sh,
-  parse_skills_sh = parse_skills_sh,
-  is_plugin = is_plugin,
-  parse_plugin = parse_plugin,
+	resolve_alias = resolve_alias,
+	tool_kind = tool_kind,
+	parse_skills_sh = parse_skills_sh,
+	parse_plugin = parse_plugin,
 }

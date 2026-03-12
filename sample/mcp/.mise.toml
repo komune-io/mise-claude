@@ -4,13 +4,13 @@ claude-code = "latest"
 "claude:mcp/chrome-devtools" = "latest"
 "claude:mcp/shadcn" = "latest"
 
+[tasks.test]
+description = "Run integration test"
+run = "bash test.sh"
+
 [tasks.clean]
 description = "Remove install artifacts and uninstall tools"
 run = """
 mise ls -c 2>/dev/null | awk '{print $1"@"$2}' | xargs -I{} mise uninstall {} || true
 rm -rfv .mcp.json node_modules/
 """
-
-[tasks.test]
-description = "Verify MCP servers"
-run = "bash test.sh"

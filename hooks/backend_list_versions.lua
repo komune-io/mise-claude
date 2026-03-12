@@ -31,17 +31,16 @@ end
 --- @param ctx table { tool: string }
 --- @return table { versions: string[] }
 local aliases = require("lib/aliases")
-local resolve_alias = aliases.resolve_alias
 
 function PLUGIN:BackendListVersions(ctx)
   local http = require("http")
   local json = require("json")
 
-  if aliases.is_skills_sh(ctx.tool) or aliases.is_plugin(ctx.tool) then
+  if aliases.tool_kind(ctx.tool) ~= "npm" then
     return { versions = { "latest" } }
   end
 
-  local tool = resolve_alias(ctx.tool)
+  local tool = aliases.resolve_alias(ctx.tool)
   if not tool or tool == "" then
     error("Tool name cannot be empty")
   end

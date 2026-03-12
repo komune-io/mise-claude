@@ -1,10 +1,14 @@
 [tools]
 claude-code = "latest"
-"claude:plugin/anthropics/financial-services-plugins/financial-analysis" = "latest"
-"claude:plugin/anthropics/financial-services-plugins/investment-banking" = "latest"
-"claude:plugin/anthropics/financial-services-plugins/equity-research" = "latest"
-"claude:plugin/anthropics/financial-services-plugins/private-equity" = "latest"
-"claude:plugin/anthropics/financial-services-plugins/wealth-management" = "latest"
+"claude:plugin/anthropics/financial-services-plugins/financial-analysis@financial-services-plugins" = "latest"
+"claude:plugin/anthropics/financial-services-plugins/investment-banking@financial-services-plugins" = "latest"
+"claude:plugin/anthropics/financial-services-plugins/equity-research@financial-services-plugins" = "latest"
+"claude:plugin/anthropics/financial-services-plugins/private-equity@financial-services-plugins" = "latest"
+"claude:plugin/anthropics/financial-services-plugins/wealth-management@financial-services-plugins" = "latest"
+
+[tasks.test]
+description = "Run integration test"
+run = "bash test.sh"
 
 [tasks.clean]
 description = "Remove install artifacts and uninstall tools"
@@ -12,8 +16,4 @@ run = """
 mise ls -c 2>/dev/null | awk '{print $1"@"$2}' | xargs -I{} mise uninstall {} || true
 rm -rfv .claude/settings.json
 """
-
-[tasks.test]
-description = "Verify plugins"
-run = "bash test.sh"
 

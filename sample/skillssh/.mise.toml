@@ -5,13 +5,13 @@ claude-code = "latest"
 "claude:skills.sh/vercel-labs/next-skills/next-upgrade" = "latest"
 "claude:skills.sh/vercel-labs/agent-skills/web-design-guidelines" = "latest"
 
+[tasks.test]
+description = "Run integration test"
+run = "bash test.sh"
+
 [tasks.clean]
 description = "Remove install artifacts and uninstall tools"
 run = """
 mise ls -c 2>/dev/null | awk '{print $1"@"$2}' | xargs -I{} mise uninstall {} || true
 rm -rfv .agents/ .claude/skills/ skills-lock.json
 """
-
-[tasks.test]
-description = "Verify skills"
-run = "bash test.sh"

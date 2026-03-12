@@ -1,18 +1,22 @@
 [tools]
 claude-code = "latest"
-"claude:plugin/anthropics/claude-code/agent-sdk-dev" = "latest"
-"claude:plugin/anthropics/claude-code/claude-opus-4-5-migration" = "latest"
-"claude:plugin/anthropics/claude-code/code-review" = "latest"
-"claude:plugin/anthropics/claude-code/commit-commands" = "latest"
-"claude:plugin/anthropics/claude-code/explanatory-output-style" = "latest"
-"claude:plugin/anthropics/claude-code/feature-dev" = "latest"
-"claude:plugin/anthropics/claude-code/frontend-design" = "latest"
-"claude:plugin/anthropics/claude-code/hookify" = "latest"
-"claude:plugin/anthropics/claude-code/learning-output-style" = "latest"
-"claude:plugin/anthropics/claude-code/plugin-dev" = "latest"
-"claude:plugin/anthropics/claude-code/pr-review-toolkit" = "latest"
-"claude:plugin/anthropics/claude-code/ralph-wiggum" = "latest"
-"claude:plugin/anthropics/claude-code/security-guidance" = "latest"
+"claude:plugin/anthropics/claude-code/agent-sdk-dev@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/claude-opus-4-5-migration@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/code-review@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/explanatory-output-style@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/feature-dev@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/frontend-design@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/hookify@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/learning-output-style@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/plugin-dev@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/pr-review-toolkit@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/ralph-wiggum@claude-code-plugins" = "latest"
+"claude:plugin/anthropics/claude-code/security-guidance@claude-code-plugins" = "latest"
+
+[tasks.test]
+description = "Run integration test"
+run = "bash test.sh"
 
 [tasks.clean]
 description = "Remove install artifacts and uninstall tools"
@@ -20,7 +24,3 @@ run = """
 mise ls -c 2>/dev/null | awk '{print $1"@"$2}' | xargs -I{} mise uninstall {} || true
 rm -rfv .claude/settings.json
 """
-
-[tasks.test]
-description = "Verify plugins"
-run = "bash test.sh"

@@ -1,5 +1,4 @@
 local aliases = require("lib/aliases")
-local resolve_alias = aliases.resolve_alias
 
 -- =============================================================================
 -- Tool Registry (keyed by npm package name)
@@ -8,319 +7,222 @@ local resolve_alias = aliases.resolve_alias
 --- Known CLI tools: type = "cli" skips .mcp.json, post_install runs after npm install.
 --- Tools not listed here default to type = "mcp" (added to .mcp.json).
 local TOOL_REGISTRY = {
-  ["get-shit-done-cc"] = {
-    type = "cli",
-    post_install = "get-shit-done-cc --claude --local",
-  },
-  ["bmad-method"] = {
-    type = "cli",
-    post_install = "bmad-method install --directory ${PROJECT_ROOT} --modules bmm --tools claude-code --yes",
-  },
-  ["@fission-ai/openspec"] = {
-    type = "cli",
-    post_install = "openspec init --tools claude",
-  },
-  ["shadcn"] = {
-    bin_name = "shadcn",
-    mcp_args = { "mcp" },
-    post_install = "shadcn mcp init --client claude",
-  },
+	["get-shit-done-cc"] = {
+		type = "cli",
+		post_install = "get-shit-done-cc --claude --local",
+	},
+	["bmad-method"] = {
+		type = "cli",
+		post_install = "bmad-method install --directory ${PROJECT_ROOT} --modules bmm --tools claude-code --yes",
+	},
+	["@fission-ai/openspec"] = {
+		type = "cli",
+		post_install = "openspec init --tools claude",
+	},
+	["chrome-devtools-mcp"] = {
+		bin_name = "chrome-devtools-mcp",
+	},
+	["shadcn"] = {
+		bin_name = "shadcn",
+		post_install = "shadcn mcp init --client claude",
+	},
 }
 
 -- =============================================================================
--- JSON helpers
+-- Shell helpers
 -- =============================================================================
 
---- Escape a string for safe JSON output.
+--- Escape a string for use inside single quotes in shell commands.
 --- @param s string
 --- @return string
-local function escape_json(s)
-  return s:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "\\r"):gsub("\t", "\\t")
+local function shell_quote(s)
+	return "'" .. s:gsub("'", "'\\''") .. "'"
 end
 
---- Format the mcpServers data as pretty-printed JSON.
---- @param data table { mcpServers: table }
+-- =============================================================================
+-- Shared helpers
+-- =============================================================================
+
+--- Resolve the project root directory.
+--- @param cmd table the cmd module
 --- @return string
-local function format_mcp_json(data)
-  local lines = { "{" }
-  table.insert(lines, '  "mcpServers": {')
+local function get_project_root(cmd)
+	local root = os.getenv("MISE_PROJECT_ROOT")
+	if root and root ~= "" then
+		return root
+	end
+	return cmd.exec("pwd"):gsub("%s+$", "")
+end
 
-  -- Collect and sort server names for stable output
-  local servers = {}
-  for name in pairs(data.mcpServers) do
-    table.insert(servers, name)
-  end
-  table.sort(servers)
-
-  for i, name in ipairs(servers) do
-    local s = data.mcpServers[name]
-    local trailing = (i < #servers) and "," or ""
-
-    table.insert(lines, '    "' .. escape_json(name) .. '": {')
-    table.insert(lines, '      "type": "' .. escape_json(s.type or "stdio") .. '",')
-    table.insert(lines, '      "command": "' .. escape_json(s.command) .. '",')
-
-    -- Format args array
-    if s.args and #s.args > 0 then
-      local arg_strs = {}
-      for _, a in ipairs(s.args) do
-        table.insert(arg_strs, '"' .. escape_json(a) .. '"')
-      end
-      table.insert(lines, "      \"args\": [" .. table.concat(arg_strs, ", ") .. "],")
-    else
-      table.insert(lines, '      "args": [],')
-    end
-
-    -- Format env object
-    local env_keys = {}
-    if s.env then
-      for k in pairs(s.env) do
-        table.insert(env_keys, k)
-      end
-    end
-    table.sort(env_keys)
-
-    if #env_keys > 0 then
-      table.insert(lines, '      "env": {')
-      for j, k in ipairs(env_keys) do
-        local env_trailing = (j < #env_keys) and "," or ""
-        table.insert(
-          lines,
-          '        "' .. escape_json(k) .. '": "' .. escape_json(s.env[k]) .. '"' .. env_trailing
-        )
-      end
-      table.insert(lines, "      }")
-    else
-      table.insert(lines, '      "env": {}')
-    end
-
-    table.insert(lines, "    }" .. trailing)
-  end
-
-  table.insert(lines, "  }")
-  table.insert(lines, "}")
-
-  return table.concat(lines, "\n") .. "\n"
+--- Resolve ${VAR} references in a string.
+--- @param s string
+--- @param project_root string
+--- @return string
+local function resolve_vars(s, project_root)
+	return s:gsub("%${([^}]+)}", function(var)
+		if var == "PROJECT_ROOT" then
+			return project_root
+		end
+		return os.getenv(var) or ""
+	end)
 end
 
 -- =============================================================================
--- File I/O helpers
+-- Install methods (one per tool kind)
 -- =============================================================================
 
-local function read_file(path)
-  local f = io.open(path, "r")
-  if not f then
-    return nil
-  end
-  local content = f:read("*a")
-  f:close()
-  return content
+--- Install a skills.sh tool via `npx skills add`.
+--- @param cmd table the cmd module
+--- @param ctx table { tool: string }
+local function install_skills_sh(cmd, ctx)
+	local parsed = aliases.parse_skills_sh(ctx.tool)
+	local project_root = get_project_root(cmd)
+	cmd.exec(
+		"cd "
+			.. shell_quote(project_root)
+			.. " && npx skills add "
+			.. shell_quote(parsed.owner_repo)
+			.. " --skill "
+			.. shell_quote(parsed.skill)
+			.. " -a claude-code -y"
+	)
 end
 
-local function write_file(path, content)
-  local f = io.open(path, "w")
-  if not f then
-    error("Cannot write to " .. path)
-  end
-  f:write(content)
-  f:close()
+--- Install a Claude Code plugin via `claude plugin marketplace add` + `claude plugin install`.
+--- @param cmd table the cmd module
+--- @param ctx table { tool: string }
+local function install_plugin(cmd, ctx)
+	local parsed = aliases.parse_plugin(ctx.tool)
+
+	-- Serialize marketplace registration per repo using mkdir as an atomic lock.
+	-- Concurrent `marketplace add` calls for the same repo can race and fail.
+	local lock_dir = "/tmp/mise-claude-mktplace-" .. parsed.owner_repo:gsub("/", "-")
+	local got_lock = pcall(cmd.exec, "mkdir " .. shell_quote(lock_dir))
+	if got_lock then
+		cmd.exec("claude plugin marketplace add " .. shell_quote(parsed.owner_repo))
+		cmd.exec("touch " .. shell_quote(lock_dir .. "/done"))
+	else
+		-- Another install is registering it — wait up to 30s for completion
+		pcall(
+			cmd.exec,
+			"for i in $(seq 1 150); do [ -f "
+				.. shell_quote(lock_dir .. "/done")
+				.. " ] && break; sleep 0.2; done"
+		)
+	end
+
+	-- Serialize `claude plugin install` calls: concurrent writes to
+	-- .claude/settings.json cause lost updates. Use flock if available,
+	-- otherwise fall back to a mkdir-based spin lock.
+	local install_cmd = "claude plugin install "
+		.. shell_quote(parsed.plugin .. "@" .. parsed.marketplace)
+		.. " --scope project"
+	local install_lock = "/tmp/mise-claude-install.lock"
+	local has_flock = pcall(cmd.exec, "command -v flock")
+	if has_flock then
+		cmd.exec("flock " .. shell_quote(install_lock) .. " " .. install_cmd)
+	else
+		-- mkdir spin lock for macOS (no flock by default)
+		pcall(
+			cmd.exec,
+			"for i in $(seq 1 300); do mkdir "
+				.. shell_quote(install_lock .. ".d")
+				.. " 2>/dev/null && break; sleep 0.1; done"
+		)
+		local ok, err = pcall(cmd.exec, install_cmd)
+		pcall(cmd.exec, "rmdir " .. shell_quote(install_lock .. ".d") .. " 2>/dev/null")
+		if not ok then
+			error(err)
+		end
+	end
 end
 
+--- Install an npm package (MCP server or CLI tool).
+--- @param cmd table the cmd module
+--- @param ctx table { tool: string, version: string, install_path: string }
+local function install_npm(cmd, ctx)
+	local tool = aliases.resolve_alias(ctx.tool)
+	local version = ctx.version
+	local install_path = ctx.install_path
+
+	if not tool or tool == "" then
+		error("Tool name cannot be empty")
+	end
+	if not version or version == "" then
+		error("Version cannot be empty")
+	end
+
+	-- Install the npm package
+	cmd.exec(
+		"npm install "
+			.. shell_quote(tool .. "@" .. version)
+			.. " --prefix "
+			.. shell_quote(install_path)
+			.. " --no-save"
+	)
+
+	-- Detect binary name from node_modules/.bin/
+	local bin_dir = install_path .. "/node_modules/.bin"
+	local config = TOOL_REGISTRY[tool] or {}
+	local bin_name = config.bin_name
+	if not bin_name then
+		local bin_listing = cmd.exec("ls -1 " .. shell_quote(bin_dir))
+		for name in bin_listing:gmatch("[^\n]+") do
+			local trimmed = name:match("^%s*(.-)%s*$")
+			if trimmed ~= "" then
+				bin_name = trimmed
+				break
+			end
+		end
+	end
+	if not bin_name then
+		error("No binary found in " .. bin_dir .. " after installing " .. tool)
+	end
+
+	local bin_path = bin_dir .. "/" .. bin_name
+	local project_root = get_project_root(cmd)
+	local tool_type = config.type or "mcp"
+
+	-- Run post_install command if configured
+	if config.post_install then
+		local post_cmd = resolve_vars(config.post_install, project_root)
+		local env_path = bin_dir .. ":" .. (os.getenv("PATH") or "")
+		cmd.exec("cd " .. shell_quote(project_root) .. " && PATH=" .. shell_quote(env_path) .. " " .. post_cmd)
+	end
+
+	-- For CLI tools or tools whose post_install handles MCP registration, we're done
+	if tool_type == "cli" or config.post_install then
+		return
+	end
+
+	-- Register MCP server via `claude mcp add`
+	local mcp_cmd = "cd "
+		.. shell_quote(project_root)
+		.. " && claude mcp add --scope project "
+		.. shell_quote(bin_name)
+		.. " -- "
+		.. shell_quote(bin_path)
+	cmd.exec(mcp_cmd)
+end
 
 -- =============================================================================
 -- Install Hook
 -- =============================================================================
 
---- Install an npm-based Claude tool and configure it.
---- MCP tools get added to .mcp.json. CLI tools run an optional post_install command.
+--- Route install to the appropriate method based on tool kind.
 --- @param ctx table { tool: string, version: string, install_path: string }
 --- @return table
 function PLUGIN:BackendInstall(ctx)
-  local cmd = require("cmd")
-  local json = require("json")
+	local cmd = require("cmd")
+	local kind = aliases.tool_kind(ctx.tool)
 
-  if aliases.is_skills_sh(ctx.tool) then
-    local parsed = aliases.parse_skills_sh(ctx.tool)
-    local project_root = os.getenv("MISE_PROJECT_ROOT")
-    if not project_root or project_root == "" then
-      project_root = cmd.exec("pwd"):gsub("%s+$", "")
-    end
-    cmd.exec(
-      "cd "
-        .. project_root
-        .. " && npx skills add "
-        .. parsed.owner_repo
-        .. " --skill "
-        .. parsed.skill
-        .. " -a claude-code -y"
-    )
-    return {}
-  end
+	if kind == "skills_sh" then
+		install_skills_sh(cmd, ctx)
+	elseif kind == "plugin" then
+		install_plugin(cmd, ctx)
+	else
+		install_npm(cmd, ctx)
+	end
 
-  if aliases.is_plugin(ctx.tool) then
-    local parsed = aliases.parse_plugin(ctx.tool)
-
-    -- Serialize marketplace registration per repo using mkdir as an atomic lock.
-    -- Without this, parallel installs of plugins from the same repo race on
-    -- `claude plugin marketplace add`, causing intermittent failures.
-    local lock_dir = "/tmp/mise-claude-mktplace-" .. parsed.owner_repo:gsub("/", "-")
-    local got_lock = pcall(cmd.exec, "mkdir " .. lock_dir)
-    if got_lock then
-      -- First install for this repo: register the marketplace
-      pcall(cmd.exec, "claude plugin marketplace add " .. parsed.owner_repo)
-      cmd.exec("touch " .. lock_dir .. "/done")
-    else
-      -- Another install is registering it — wait up to 30s for completion
-      pcall(cmd.exec, "for i in $(seq 1 150); do [ -f '" .. lock_dir .. "/done' ] && break; sleep 0.2; done")
-    end
-
-    -- Parse marketplace list to find the registered name for this repo
-    local list_output = cmd.exec("claude plugin marketplace list")
-    local marketplace_name = nil
-    for line in list_output:gmatch("[^\n]+") do
-      -- Match lines like "  ❯ marketplace-name"
-      local name = line:match("\226\157\175%s+(.+)$")
-      if name then
-        marketplace_name = name:match("^%s*(.-)%s*$") -- trim
-      end
-      -- Match source lines like "  Source: GitHub (owner/repo)"
-      if marketplace_name then
-        local repo = line:match("Source:%s+GitHub%s+%(([^)]+)%)")
-        if repo then
-          if repo == parsed.owner_repo then
-            break
-          else
-            marketplace_name = nil
-          end
-        end
-      end
-    end
-    if not marketplace_name then
-      error("Could not find marketplace for " .. parsed.owner_repo)
-    end
-
-    -- Serialize `claude plugin install` calls: concurrent writes to
-    -- .claude/settings.json cause lost updates.  Use flock if available,
-    -- otherwise fall back to a mkdir-based spin lock.
-    local install_cmd = "claude plugin install " .. parsed.plugin .. "@" .. marketplace_name .. " --scope project"
-    local install_lock = "/tmp/mise-claude-install.lock"
-    local has_flock = pcall(cmd.exec, "command -v flock")
-    if has_flock then
-      cmd.exec("flock " .. install_lock .. " " .. install_cmd)
-    else
-      -- mkdir spin lock for macOS (no flock by default)
-      pcall(cmd.exec, "for i in $(seq 1 300); do mkdir " .. install_lock .. ".d 2>/dev/null && break; sleep 0.1; done")
-      local ok, err = pcall(cmd.exec, install_cmd)
-      pcall(cmd.exec, "rmdir " .. install_lock .. ".d 2>/dev/null")
-      if not ok then
-        error(err)
-      end
-    end
-    return {}
-  end
-
-  local tool = resolve_alias(ctx.tool)
-  local version = ctx.version
-  local install_path = ctx.install_path
-
-  if not tool or tool == "" then
-    error("Tool name cannot be empty")
-  end
-  if not version or version == "" then
-    error("Version cannot be empty")
-  end
-
-  -- 1. Install the npm package
-  local npm_cmd = "npm install "
-    .. tool
-    .. "@"
-    .. version
-    .. " --prefix "
-    .. install_path
-    .. " --no-save"
-
-  cmd.exec(npm_cmd)
-
-  -- 2. Detect binary name from node_modules/.bin/
-  local bin_dir = install_path .. "/node_modules/.bin"
-  local config = TOOL_REGISTRY[tool] or {}
-
-  -- Use explicit bin_name from registry if available, otherwise auto-detect (first binary)
-  local bin_name = config.bin_name
-  if not bin_name then
-    local bin_listing = cmd.exec("ls -1 " .. bin_dir)
-    for name in bin_listing:gmatch("[^\n]+") do
-      local trimmed = name:match("^%s*(.-)%s*$")
-      if trimmed ~= "" then
-        bin_name = trimmed
-        break
-      end
-    end
-  end
-
-  if not bin_name then
-    error("No binary found in " .. bin_dir .. " after installing " .. tool)
-  end
-
-  local bin_path = bin_dir .. "/" .. bin_name
-
-  -- 3. Determine project root
-  local project_root = os.getenv("MISE_PROJECT_ROOT")
-  if not project_root or project_root == "" then
-    project_root = cmd.exec("pwd"):gsub("%s+$", "")
-  end
-
-  -- 4. Determine tool type from registry (default: MCP server)
-  local tool_type = config.type or "mcp"
-
-  -- 5. Resolve ${VAR} references in a string
-  local function resolve_vars(s)
-    return s:gsub("%${([^}]+)}", function(var)
-      if var == "PROJECT_ROOT" then
-        return project_root
-      end
-      return os.getenv(var) or ""
-    end)
-  end
-
-  -- 6. Run post_install command if configured (applies to both CLI and MCP tools)
-  if config.post_install then
-    local post_cmd = resolve_vars(config.post_install)
-    local env_path = bin_dir .. ":" .. (os.getenv("PATH") or "")
-    cmd.exec("cd " .. project_root .. " && PATH='" .. env_path .. "' " .. post_cmd)
-  end
-
-  -- 7. For CLI tools, skip .mcp.json generation
-  if tool_type == "cli" then
-    return {}
-  end
-
-  -- 8. Read existing .mcp.json or create new structure
-  local mcp_path = project_root .. "/.mcp.json"
-  local mcp_data = { mcpServers = {} }
-
-  local mcp_content = read_file(mcp_path)
-  if mcp_content and mcp_content ~= "" then
-    local ok, parsed = pcall(json.decode, mcp_content)
-    if ok and parsed then
-      mcp_data = parsed
-    end
-  end
-
-  if not mcp_data.mcpServers then
-    mcp_data.mcpServers = {}
-  end
-
-  -- 9. Add/update the MCP server entry (keyed by binary name)
-  mcp_data.mcpServers[bin_name] = {
-    type = "stdio",
-    command = bin_path,
-    args = config.mcp_args or {},
-    env = {},
-  }
-
-  -- 10. Write .mcp.json with pretty formatting
-  write_file(mcp_path, format_mcp_json(mcp_data))
-
-  return {}
+	return {}
 end

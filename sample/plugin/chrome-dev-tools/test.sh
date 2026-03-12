@@ -4,6 +4,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../../test/lib.sh"
 
 assert_file ".claude/settings.json"
-assert_file_contains ".claude/settings.json" 'chrome-devtools-mcp'
+assert_file_contains ".claude/settings.json" 'chrome-devtools-mcp@chrome-devtools-plugins'
 
 assert_summary

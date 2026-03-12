@@ -31,7 +31,7 @@ Add tools to your `.mise.toml`:
 "claude:skills.sh/anthropics/skills/frontend-design" = "latest"
 
 # Plugins — installed from Claude Code plugin marketplace
-"claude:plugin/anthropics/claude-code/commit-commands" = "latest"
+"claude:plugin/anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
 ```
 
 Then install:
@@ -79,20 +79,19 @@ Format: `skills.sh/<owner>/<repo>/<skill>`
 
 Under the hood, runs: `npx skills add <owner>/<repo> --skill <skill> -a claude-code -y`
 
-### `plugin/<owner>/<repo>/<plugin>` — Claude Code Plugins
+### `plugin/<owner>/<repo>/<plugin>@<marketplace>` — Claude Code Plugins
 
 Native Claude Code plugins installed from GitHub-based marketplaces using the `claude` CLI.
 
-Format: `plugin/<owner>/<repo>/<plugin>`
+Format: `plugin/<owner>/<repo>/<plugin>@<marketplace>`
 
 ```toml
-"claude:plugin/anthropics/claude-code/commit-commands" = "latest"
+"claude:plugin/anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
 ```
 
 Under the hood, runs:
 1. `claude plugin marketplace add <owner>/<repo>` — registers the marketplace
-2. Parses `claude plugin marketplace list` to find the marketplace name for the repo
-3. `claude plugin install <plugin>@<marketplace> --scope project`
+2. `claude plugin install <plugin>@<marketplace> --scope project`
 
 ## Extra Configuration
 
