@@ -25,6 +25,8 @@ local TOOL_REGISTRY = {
 	["shadcn"] = {
 		bin_name = "shadcn",
 		post_install = "shadcn mcp init --client claude",
+		-- tinyexec 1.0.3 ships dist/main.mjs but declares main: dist/main.js
+		extra_deps = { "tinyexec@1.0.2" },
 	},
 }
 
@@ -152,18 +154,19 @@ local function install_npm(cmd, ctx)
 		error("Version cannot be empty")
 	end
 
-	-- Install the npm package
-	cmd.exec(
-		"npm install "
-			.. shell_quote(tool .. "@" .. version)
-			.. " --prefix "
-			.. shell_quote(install_path)
-			.. " --no-save"
-	)
+	local config = TOOL_REGISTRY[tool] or {}
+
+	-- Install the npm package (plus any extra transitive-dep overrides)
+	local install_args = shell_quote(tool .. "@" .. version)
+	if config.extra_deps then
+		for _, dep in ipairs(config.extra_deps) do
+			install_args = install_args .. " " .. shell_quote(dep)
+		end
+	end
+	cmd.exec("npm install " .. install_args .. " --prefix " .. shell_quote(install_path) .. " --no-save")
 
 	-- Detect binary name from node_modules/.bin/
 	local bin_dir = install_path .. "/node_modules/.bin"
-	local config = TOOL_REGISTRY[tool] or {}
 	local bin_name = config.bin_name
 	if not bin_name then
 		local bin_listing = cmd.exec("ls -1 " .. shell_quote(bin_dir))
