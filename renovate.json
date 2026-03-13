@@ -1,0 +1,14 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update npm-backed claude tools in mise sample configs",
+      "fileMatch": ["sample/.*\\.mise\\.toml$"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\n\"claude:[^\"]+\"\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ]
+    }
+  ]
+}

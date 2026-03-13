@@ -3,7 +3,8 @@ java = "25"
 kotlin = "2.3.10"
 gradle = "9.3.1"
 claude-code = "latest"
-"claude:spec/gsd" = "latest"
+# renovate: datasource=npm depName=get-shit-done-cc
+"claude:spec/gsd" = "1.22.4"
 
 [tasks.test]
 description = "Run integration test"

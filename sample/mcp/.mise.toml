@@ -1,8 +1,11 @@
 [tools]
 claude-code = "latest"
-"claude:mcp/context7" = "latest"
-"claude:mcp/chrome-devtools" = "latest"
-"claude:mcp/shadcn" = "latest"
+# renovate: datasource=npm depName=@upstash/context7-mcp
+"claude:mcp/context7" = "2.1.4"
+# renovate: datasource=npm depName=chrome-devtools-mcp
+"claude:mcp/chrome-devtools" = "0.20.0"
+# renovate: datasource=npm depName=shadcn
+"claude:mcp/shadcn" = "4.0.6"
 
 [tasks.test]
 description = "Run integration test"

@@ -3,7 +3,8 @@ java = "25"
 kotlin = "2.3.10"
 gradle = "9.3.1"
 claude-code = "latest"
-"claude:spec/openspec" = "latest"
+# renovate: datasource=npm depName=@fission-ai/openspec
+"claude:spec/openspec" = "1.2.0"
 
 [tasks.test]
 description = "Run integration test"
