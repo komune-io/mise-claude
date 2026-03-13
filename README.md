@@ -17,14 +17,14 @@ Add tools to your `.mise.toml`:
 ```toml
 [tools]
 # MCP servers — automatically configured in .mcp.json
-"claude:mcp/context7" = "latest"
-"claude:mcp/chrome-devtools" = "latest"
-"claude:mcp/shadcn" = "latest"
+"claude:mcp/context7" = "2.1.4"
+"claude:mcp/chrome-devtools" = "0.20.0"
+"claude:mcp/shadcn" = "4.0.6"
 
 # Spec/CLI tools — installed via npm with post-install setup
-"claude:spec/gsd" = "latest"
-"claude:spec/bmad" = "latest"
-"claude:spec/openspec" = "latest"
+"claude:spec/gsd" = "1.22.4"
+"claude:spec/bmad" = "6.1.0"
+"claude:spec/openspec" = "1.2.0"
 
 # Skills — installed from skills.sh marketplace
 "claude:skills.sh/vercel-labs/next-skills/next-best-practices" = "latest"
@@ -42,7 +42,7 @@ mise install
 
 ## Tool Types
 
-### `mcp/<name>` — MCP Servers
+### MCP Servers
 
 MCP servers provide tools and resources to Claude Code via the Model Context Protocol. The plugin installs the npm package and registers the server in `.mcp.json`.
 
@@ -56,7 +56,7 @@ Friendly aliases resolve to npm packages (e.g. `mcp/context7` → `@upstash/cont
 
 Multiple `mise install` runs safely merge into the same `.mcp.json`.
 
-### `spec/<name>` — Spec & CLI Tools
+### Spec & CLI Tools
 
 Spec tools are npm packages that extend Claude Code with slash commands, agents, or workflows. They run a post-install command to scaffold into your project and skip `.mcp.json`.
 
@@ -66,7 +66,7 @@ Spec tools are npm packages that extend Claude Code with slash commands, agents,
 | `spec/bmad` | `bmad-method` | BMAD Method agents and commands for product development |
 | `spec/openspec` | `@fission-ai/openspec` | OpenSpec CLI tool |
 
-### `skills.sh/<owner>/<repo>/<skill>` — Skills
+### Skills.sh
 
 Skills from [skills.sh](https://skills.sh) are curated prompt-based capabilities installed via the skills CLI. They add specialized knowledge and instructions to Claude Code without requiring an MCP server.
 
@@ -79,7 +79,7 @@ Format: `skills.sh/<owner>/<repo>/<skill>`
 
 Under the hood, runs: `npx skills add <owner>/<repo> --skill <skill> -a claude-code -y`
 
-### `plugin/<owner>/<repo>/<plugin>@<marketplace>` — Claude Code Plugins
+### Claude Code Plugins
 
 Native Claude Code plugins installed from GitHub-based marketplaces using the `claude` CLI.
 
