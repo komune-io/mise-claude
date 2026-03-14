@@ -158,6 +158,10 @@ mise ls
 cat .mcp.json
 ```
 
+## Contributing
+
+Contributions are not open at this time. This project is in early development and not yet accepting external pull requests.
+
 ## License
 
 MIT
