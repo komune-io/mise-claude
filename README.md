@@ -1,8 +1,8 @@
 # mise-claude
 
-A [mise](https://mise.jdx.dev) backend plugin for managing your entire [Claude Code](https://docs.anthropic.com/en/docs/claude-code) ecosystem declaratively.
+A plugin for [mise](https://mise.jdx.dev) that lets you set up your entire [Claude Code](https://docs.anthropic.com/en/docs/claude-code) tooling with a single command.
 
-Declare MCP servers, workflow plugins, and CLI tools in `.mise.toml` — one `mise install` sets everything up.
+List the tools you want in a configuration file, run `mise install`, and everything is ready to use.
 
 ## Install
 
@@ -10,65 +10,67 @@ Declare MCP servers, workflow plugins, and CLI tools in `.mise.toml` — one `mi
 mise plugin install claude https://github.com/komune-io/mise-claude
 ```
 
-## Usage
+## Quick Start
 
-Add tools to your `.mise.toml`:
+Add tools to your project's `.mise.toml` file:
 
 ```toml
 [tools]
-# MCP servers — automatically configured in .mcp.json
+# MCP servers — give Claude Code extra capabilities (web search, browser access, UI components)
 "claude:mcp/context7" = "2.1.4"
 "claude:mcp/chrome-devtools" = "0.20.0"
 "claude:mcp/shadcn" = "4.0.6"
 
-# Spec/CLI tools — installed via npm with post-install setup
+# Workflow tools — add structured methodologies and commands to Claude Code
 "claude:spec/gsd" = "1.22.4"
 "claude:spec/bmad" = "6.1.0"
 "claude:spec/openspec" = "1.2.0"
 
-# Skills — installed from skills.sh marketplace
+# Skills — teach Claude Code best practices for specific frameworks
 "claude:skills.sh/vercel-labs/next-skills/next-best-practices" = "latest"
 "claude:skills.sh/anthropics/skills/frontend-design" = "latest"
 
-# Plugins — installed from Claude Code plugin marketplace
+# Plugins — extend Claude Code with new commands
 "claude:plugin/anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
 ```
 
-Then install:
+Then install everything:
 
 ```bash
 mise install
 ```
 
-## Tool Types
+That's it. Claude Code will automatically pick up all the tools you've configured.
+
+## What Can You Install?
 
 ### MCP Servers
 
-MCP servers provide tools and resources to Claude Code via the Model Context Protocol. The plugin installs the npm package and registers the server in `.mcp.json`.
+MCP servers extend what Claude Code can do — browse the web, access documentation, generate UI components, and more. The plugin handles all the setup automatically.
 
-Friendly aliases resolve to npm packages (e.g. `mcp/context7` → `@upstash/context7-mcp`). Unaliased names pass through as-is — you can use any npm package directly (e.g. `claude:@anthropic-ai/claude-code-mcp`).
+Short aliases are available for popular servers:
 
-| Alias | npm Package |
-|-------|-------------|
+| You write | What gets installed |
+|-----------|-------------------|
 | `mcp/context7` | `@upstash/context7-mcp` |
 | `mcp/chrome-devtools` | `chrome-devtools-mcp` |
 | `mcp/shadcn` | `shadcn` |
 
-Multiple `mise install` runs safely merge into the same `.mcp.json`.
+You can also use any npm package name directly (e.g. `claude:@anthropic-ai/claude-code-mcp`).
 
-### Spec & CLI Tools
+### Workflow Tools
 
-Spec tools are npm packages that extend Claude Code with slash commands, agents, or workflows. They run a post-install command to scaffold into your project and skip `.mcp.json`.
+Workflow tools add structured methodologies, slash commands, and agents to Claude Code. They set themselves up in your project when installed.
 
-| Alias | npm Package | Description |
-|-------|-------------|-------------|
-| `spec/gsd` | `get-shit-done-cc` | GSD workflow plugin for structured project execution |
-| `spec/bmad` | `bmad-method` | BMAD Method agents and commands for product development |
-| `spec/openspec` | `@fission-ai/openspec` | OpenSpec CLI tool |
+| You write | What it does |
+|-----------|-------------|
+| `spec/gsd` | GSD — structured project execution workflow |
+| `spec/bmad` | BMAD Method — product development agents and commands |
+| `spec/openspec` | OpenSpec — API specification tool |
 
-### Skills.sh
+### Skills
 
-Skills from [skills.sh](https://skills.sh) are curated prompt-based capabilities installed via the skills CLI. They add specialized knowledge and instructions to Claude Code without requiring an MCP server.
+Skills from [skills.sh](https://skills.sh) teach Claude Code best practices for specific frameworks and topics — no server required.
 
 Format: `skills.sh/<owner>/<repo>/<skill>`
 
@@ -77,11 +79,9 @@ Format: `skills.sh/<owner>/<repo>/<skill>`
 "claude:skills.sh/anthropics/skills/frontend-design" = "latest"
 ```
 
-Under the hood, runs: `npx skills add <owner>/<repo> --skill <skill> -a claude-code -y`
+### Plugins
 
-### Claude Code Plugins
-
-Native Claude Code plugins installed from GitHub-based marketplaces using the `claude` CLI.
+Native Claude Code plugins from GitHub-based marketplaces.
 
 Format: `plugin/<owner>/<repo>/<plugin>@<marketplace>`
 
@@ -89,73 +89,39 @@ Format: `plugin/<owner>/<repo>/<plugin>@<marketplace>`
 "claude:plugin/anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
 ```
 
-Under the hood, runs:
-1. `claude plugin marketplace add <owner>/<repo>` — registers the marketplace
-2. `claude plugin install <plugin>@<marketplace> --scope project`
-
 ## Extra Configuration
 
-Create a `.mcp-config.toml` in your project root to pass additional args or env vars to MCP servers:
+To pass additional settings to MCP servers, create a `.mcp-config.toml` file in your project:
 
 ```toml
 ["@upstash/context7-mcp"]
 args = ["--api-key", "${CONTEXT7_API_KEY}"]
 env = { LOG_LEVEL = "debug" }
-
-["chrome-devtools-mcp"]
-# no extra config needed — omit or leave empty
 ```
 
-- `args`: array of strings passed to the server command
-- `env`: inline table of environment variables
-- `${VAR}` references are resolved from your environment at install time
-
-## Generated `.mcp.json`
-
-The plugin generates a `.mcp.json` that Claude Code reads automatically:
-
-```json
-{
-  "mcpServers": {
-    "context7-mcp": {
-      "type": "stdio",
-      "command": "~/.local/share/mise/installs/claude-upstash-context7-mcp/1.0.0/node_modules/.bin/context7-mcp",
-      "args": ["--api-key", "actual-key-value"],
-      "env": {}
-    }
-  }
-}
-```
+- `args` — extra arguments passed to the server
+- `env` — environment variables for the server
+- `${VAR}` references are replaced with values from your environment
 
 ## How It Works
 
-The plugin uses mise's Lua backend hook system:
+The plugin hooks into mise's install lifecycle:
 
-| Hook | Purpose |
-|------|---------|
-| `backend_list_versions` | Queries the npm registry for available versions |
-| `backend_install` | Runs `npm install`, detects the binary, updates `.mcp.json` or runs post-install |
-| `backend_exec_env` | Adds `node_modules/.bin` to PATH |
+1. **List versions** — checks the npm registry for available versions
+2. **Install** — downloads the package and either registers it as an MCP server or runs its setup command
+3. **Configure PATH** — makes installed binaries available in your terminal
 
-Key design decisions:
-
-- **No npx at runtime** — binaries are installed directly for faster startup
-- **Merge strategy** — each install reads and merges `.mcp.json` so multiple servers coexist
-- **Tool registry** — distinguishes MCP servers from CLI plugins, with optional post-install hooks
-- **Server naming** — derived from the binary name in `node_modules/.bin/`
+Design principles:
+- **Fast startup** — binaries are installed directly, no wrapper scripts
+- **Safe to re-run** — running `mise install` again merges new tools without overwriting existing ones
+- **Convention over configuration** — sensible defaults, override only when needed
 
 ## Local Development
 
 ```bash
-# Link the plugin locally
 mise plugin link claude ./
-
-# Test installation
 mise install claude:@upstash/context7-mcp@latest
-
-# Check the result
 mise ls
-cat .mcp.json
 ```
 
 ## Contributing
