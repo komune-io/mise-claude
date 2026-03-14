@@ -13,7 +13,6 @@ assert_file_contains ".claude/settings.json" '"legal@knowledge-work-plugins": tr
 assert_file_contains ".claude/settings.json" '"finance@knowledge-work-plugins": true'
 assert_file_contains ".claude/settings.json" '"data@knowledge-work-plugins": true'
 assert_file_contains ".claude/settings.json" '"enterprise-search@knowledge-work-plugins": true'
-assert_file_contains ".claude/settings.json" '"bio-research@knowledge-work-plugins": true'
 assert_file_contains ".claude/settings.json" '"cowork-plugin-management@knowledge-work-plugins": true'
 
 assert_summary

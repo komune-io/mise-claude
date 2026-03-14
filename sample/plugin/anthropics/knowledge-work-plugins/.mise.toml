@@ -9,7 +9,6 @@ claude-code = "latest"
 "claude:plugin/anthropics/knowledge-work-plugins/finance@knowledge-work-plugins" = "latest"
 "claude:plugin/anthropics/knowledge-work-plugins/data@knowledge-work-plugins" = "latest"
 "claude:plugin/anthropics/knowledge-work-plugins/enterprise-search@knowledge-work-plugins" = "latest"
-"claude:plugin/anthropics/knowledge-work-plugins/bio-research@knowledge-work-plugins" = "latest"
 "claude:plugin/anthropics/knowledge-work-plugins/cowork-plugin-management@knowledge-work-plugins" = "latest"
 
 [tasks.test]
