@@ -20,16 +20,16 @@ jobs:
         run: docker compose -f docker-compose.test.yml run --rm test
 
   security-review:
-    if: github.event_name == 'pull_request'
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 2
 
       - uses: anthropics/claude-code-security-review@main
         with:
+          comment-pr: ${{ github.event_name == 'pull_request' }}
           claude-api-key: ${{ secrets.CLAUDE_API_KEY }}
           custom-security-scan-instructions: .github/security-scan-instructions.md
