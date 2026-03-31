@@ -15,7 +15,7 @@ done
 
 [tasks.test]
 description = "Run integration tests in Docker"
-run = "docker compose -f docker-compose.test.yml run --rm test"
+run = "docker compose -f docker-compose.test.yml build && docker compose -f docker-compose.test.yml run --rm test"
 
 [tasks.localtest]
 description = "Install and test all sample modules"
