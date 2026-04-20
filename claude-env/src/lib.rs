@@ -1,6 +1,7 @@
 pub mod cli;
 pub mod config;
 pub mod error;
+pub mod installer;
 pub mod lockfile;
 pub mod mcp_config;
 pub mod npm;

@@ -1,0 +1,19 @@
+#!/bin/bash
+echo "$@" >> "${CLAUDE_ENV_TEST_LOG}/npm_calls.log"
+if [[ "$1" == "install" ]]; then
+    prefix=""
+    prev=""
+    for arg in "$@"; do
+        if [[ "$prev" == "--prefix" ]]; then
+            prefix="$arg"
+        fi
+        prev="$arg"
+    done
+    if [[ -n "$prefix" ]]; then
+        mkdir -p "$prefix/node_modules/.bin"
+        pkg=$(echo "$2" | sed 's/@[^/]*$//' | sed 's/.*\///')
+        echo '#!/bin/bash' > "$prefix/node_modules/.bin/$pkg"
+        chmod +x "$prefix/node_modules/.bin/$pkg"
+    fi
+fi
+exit 0

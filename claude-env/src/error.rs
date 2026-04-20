@@ -1,5 +1,14 @@
 use thiserror::Error;
 
+/// Errors that can occur during tool installation.
+#[derive(Error, Debug)]
+pub enum InstallError {
+    #[error("{0}: {1}")]
+    Command(String, String),
+    #[error("failed to update {0}: {1}")]
+    Config(String, String),
+}
+
 /// Errors that can occur when interacting with the npm registry.
 #[derive(Error, Debug)]
 pub enum NpmError {
