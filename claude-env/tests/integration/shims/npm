@@ -12,7 +12,11 @@ if [[ "$1" == "install" ]]; then
     if [[ -n "$prefix" ]]; then
         mkdir -p "$prefix/node_modules/.bin"
         pkg=$(echo "$2" | sed 's/@[^/]*$//' | sed 's/.*\///')
-        echo '#!/bin/bash' > "$prefix/node_modules/.bin/$pkg"
+        cat > "$prefix/node_modules/.bin/$pkg" <<'SHIM'
+#!/bin/bash
+echo "$0 $@" >> "${CLAUDE_ENV_TEST_LOG}/post_install_calls.log"
+exit 0
+SHIM
         chmod +x "$prefix/node_modules/.bin/$pkg"
     fi
 fi

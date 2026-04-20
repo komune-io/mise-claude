@@ -1,3 +1,4 @@
+pub mod cli_tool;
 pub mod mcp;
 
 use crate::error::InstallError;

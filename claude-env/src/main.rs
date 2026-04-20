@@ -1,6 +1,7 @@
 use clap::Parser;
 use claude_env::cli::{Cli, Command};
 use claude_env::config::Config;
+use claude_env::installer::cli_tool::CliToolInstaller;
 use claude_env::installer::mcp::McpInstaller;
 use claude_env::installer::{InstallContext, Installer};
 use claude_env::lockfile::{LockedTool, Lockfile};
@@ -88,6 +89,7 @@ fn run_install(verbose: bool) {
     };
 
     let mcp_installer = McpInstaller::default();
+    let cli_installer = CliToolInstaller::default();
 
     let mut installed = 0usize;
     let mut failed = 0usize;
@@ -107,36 +109,40 @@ fn run_install(verbose: bool) {
                     _ => unreachable!(),
                 };
 
-                match action.tool_type {
-                    ToolType::Mcp => match mcp_installer.install(action, &ctx) {
-                        Ok(result) => {
-                            println!(
-                                "  {verb}   {} @ {} {}",
-                                action.name,
-                                action.version,
-                                if result.installed { "✓" } else { "(already present)" }
-                            );
+                let install_result = match action.tool_type {
+                    ToolType::Mcp => Some(mcp_installer.install(action, &ctx)),
+                    ToolType::Cli => Some(cli_installer.install(action, &ctx)),
+                    _ => None,
+                };
 
-                            // Determine the section for the lockfile.
-                            let section = section_name(&action.tool_type);
-                            lockfile.set(
-                                section,
-                                &action.name,
-                                LockedTool {
-                                    package: Some(action.package.clone()),
-                                    version: action.version.clone(),
-                                    integrity: result.integrity,
-                                    resolved_at: None,
-                                },
-                            );
-                            installed += 1;
-                        }
-                        Err(e) => {
-                            eprintln!("  error   {} : {e}", action.name);
-                            failed += 1;
-                        }
-                    },
-                    _ => {
+                match install_result {
+                    Some(Ok(result)) => {
+                        println!(
+                            "  {verb}   {} @ {} {}",
+                            action.name,
+                            action.version,
+                            if result.installed { "✓" } else { "(already present)" }
+                        );
+
+                        // Determine the section for the lockfile.
+                        let section = section_name(&action.tool_type);
+                        lockfile.set(
+                            section,
+                            &action.name,
+                            LockedTool {
+                                package: Some(action.package.clone()),
+                                version: action.version.clone(),
+                                integrity: result.integrity,
+                                resolved_at: None,
+                            },
+                        );
+                        installed += 1;
+                    }
+                    Some(Err(e)) => {
+                        eprintln!("  error   {} : {e}", action.name);
+                        failed += 1;
+                    }
+                    None => {
                         println!(
                             "  skip    {} (type not yet implemented)",
                             action.name
