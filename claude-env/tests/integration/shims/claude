@@ -1,0 +1,14 @@
+#!/bin/bash
+echo "$@" >> "${CLAUDE_ENV_TEST_LOG}/claude_calls.log"
+if [[ "$1" == "plugin" && "$2" == "install" ]]; then
+    plugin_id="$3"
+    mkdir -p .claude
+    if [[ -f .claude/settings.json ]]; then
+        content=$(cat .claude/settings.json)
+        content="${content%\}}"
+        echo "${content}, \"${plugin_id}\": true}" > .claude/settings.json
+    else
+        echo "{\"${plugin_id}\": true}" > .claude/settings.json
+    fi
+fi
+exit 0

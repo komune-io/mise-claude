@@ -3,6 +3,7 @@ use claude_env::cli::{Cli, Command};
 use claude_env::config::Config;
 use claude_env::installer::cli_tool::CliToolInstaller;
 use claude_env::installer::mcp::McpInstaller;
+use claude_env::installer::plugin::PluginInstaller;
 use claude_env::installer::skill::SkillInstaller;
 use claude_env::installer::{InstallContext, Installer};
 use claude_env::lockfile::{LockedTool, Lockfile};
@@ -92,6 +93,7 @@ fn run_install(verbose: bool) {
     let mcp_installer = McpInstaller::default();
     let cli_installer = CliToolInstaller::default();
     let skill_installer = SkillInstaller;
+    let plugin_installer = PluginInstaller;
 
     let mut installed = 0usize;
     let mut failed = 0usize;
@@ -115,7 +117,7 @@ fn run_install(verbose: bool) {
                     ToolType::Mcp => Some(mcp_installer.install(action, &ctx)),
                     ToolType::Cli => Some(cli_installer.install(action, &ctx)),
                     ToolType::Skill => Some(skill_installer.install(action, &ctx)),
-                    _ => None,
+                    ToolType::Plugin => Some(plugin_installer.install(action, &ctx)),
                 };
 
                 match install_result {
@@ -129,7 +131,9 @@ fn run_install(verbose: bool) {
 
                         // Determine the section for the lockfile.
                         let section = section_name(&action.tool_type);
-                        let locked_tool = if action.tool_type == ToolType::Skill {
+                        let locked_tool = if action.tool_type == ToolType::Skill
+                            || action.tool_type == ToolType::Plugin
+                        {
                             LockedTool {
                                 package: None,
                                 version: action.version.clone(),
