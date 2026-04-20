@@ -1,7 +1,7 @@
 // Scanner: discovers installed Claude Code configuration from project and global scopes.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde_json::Value;
 
