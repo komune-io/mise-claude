@@ -9,3 +9,6 @@ mod install_skill_test;
 
 #[path = "integration/install_plugin_test.rs"]
 mod install_plugin_test;
+
+#[path = "integration/full_install_test.rs"]
+mod full_install_test;
