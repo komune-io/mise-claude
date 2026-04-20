@@ -1,0 +1,17 @@
+#!/bin/bash
+echo "$@" >> "${CLAUDE_ENV_TEST_LOG}/npx_calls.log"
+if [[ "$1" == "skills" && "$2" == "add" ]]; then
+    skill=""
+    prev=""
+    for arg in "$@"; do
+        if [[ "$prev" == "--skill" ]]; then
+            skill="$arg"
+        fi
+        prev="$arg"
+    done
+    if [[ -n "$skill" ]]; then
+        mkdir -p ".claude/skills/$skill"
+        echo "# $skill" > ".claude/skills/$skill/SKILL.md"
+    fi
+fi
+exit 0

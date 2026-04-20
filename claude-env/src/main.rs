@@ -3,6 +3,7 @@ use claude_env::cli::{Cli, Command};
 use claude_env::config::Config;
 use claude_env::installer::cli_tool::CliToolInstaller;
 use claude_env::installer::mcp::McpInstaller;
+use claude_env::installer::skill::SkillInstaller;
 use claude_env::installer::{InstallContext, Installer};
 use claude_env::lockfile::{LockedTool, Lockfile};
 use claude_env::resolver::{self, Action, ToolType};
@@ -90,6 +91,7 @@ fn run_install(verbose: bool) {
 
     let mcp_installer = McpInstaller::default();
     let cli_installer = CliToolInstaller::default();
+    let skill_installer = SkillInstaller;
 
     let mut installed = 0usize;
     let mut failed = 0usize;
@@ -112,6 +114,7 @@ fn run_install(verbose: bool) {
                 let install_result = match action.tool_type {
                     ToolType::Mcp => Some(mcp_installer.install(action, &ctx)),
                     ToolType::Cli => Some(cli_installer.install(action, &ctx)),
+                    ToolType::Skill => Some(skill_installer.install(action, &ctx)),
                     _ => None,
                 };
 
@@ -126,16 +129,24 @@ fn run_install(verbose: bool) {
 
                         // Determine the section for the lockfile.
                         let section = section_name(&action.tool_type);
-                        lockfile.set(
-                            section,
-                            &action.name,
+                        let locked_tool = if action.tool_type == ToolType::Skill {
+                            LockedTool {
+                                package: None,
+                                version: action.version.clone(),
+                                integrity: None,
+                                resolved_at: Some(
+                                    chrono::Utc::now().format("%Y-%m-%d").to_string(),
+                                ),
+                            }
+                        } else {
                             LockedTool {
                                 package: Some(action.package.clone()),
                                 version: action.version.clone(),
                                 integrity: result.integrity,
                                 resolved_at: None,
-                            },
-                        );
+                            }
+                        };
+                        lockfile.set(section, &action.name, locked_tool);
                         installed += 1;
                     }
                     Some(Err(e)) => {

@@ -1,5 +1,6 @@
 pub mod cli_tool;
 pub mod mcp;
+pub mod skill;
 
 use crate::error::InstallError;
 use crate::resolver::PlannedAction;
