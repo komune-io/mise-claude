@@ -1,6 +1,9 @@
 #[path = "unit/config_test.rs"]
 mod config_test;
 
+#[path = "unit/scanner_test.rs"]
+mod scanner_test;
+
 #[path = "unit/lockfile_test.rs"]
 mod lockfile_test;
 
