@@ -26,8 +26,8 @@ pub enum Command {
 
     /// Show the diff between declared config and what is currently installed.
     Diff {
-        /// Limit diff output to this specific tool.
-        tool: Option<String>,
+        /// Tool to show changelog for.
+        tool: String,
     },
 
     /// List all tools currently installed by claude-env.

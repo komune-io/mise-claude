@@ -17,8 +17,7 @@ fn main() {
             println!("not yet implemented: update {target}");
         }
         Command::Diff { tool } => {
-            let target = tool.as_deref().unwrap_or("all");
-            println!("not yet implemented: diff {target}");
+            println!("not yet implemented: diff {tool}");
         }
         Command::List => {
             println!("not yet implemented: list");

@@ -9,7 +9,7 @@ use std::io::Write;
 
 #[test]
 fn empty_string_yields_default_config() {
-    let cfg = Config::from_str("").unwrap();
+    let cfg = Config::parse("").unwrap();
     assert!(cfg.mcp.is_empty());
     assert!(cfg.skills.is_empty());
     assert!(cfg.plugins.is_empty());
@@ -22,7 +22,7 @@ fn minimal_config_only_mcp_section() {
         [mcp]
         context7 = "latest"
     "#;
-    let cfg = Config::from_str(toml).unwrap();
+    let cfg = Config::parse(toml).unwrap();
     assert_eq!(cfg.mcp.len(), 1);
     assert_eq!(cfg.mcp["context7"], "latest");
     assert!(cfg.skills.is_empty());
@@ -46,7 +46,7 @@ fn full_config_all_four_sections() {
         [cli]
         some-tool = "1.2.3"
     "#;
-    let cfg = Config::from_str(toml).unwrap();
+    let cfg = Config::parse(toml).unwrap();
 
     assert_eq!(cfg.mcp.len(), 2);
     assert_eq!(cfg.mcp["context7"], "latest");
@@ -65,7 +65,7 @@ fn full_config_all_four_sections() {
 #[test]
 fn invalid_toml_returns_parse_error() {
     let bad = "this is [not valid toml {{";
-    let err = Config::from_str(bad).unwrap_err();
+    let err = Config::parse(bad).unwrap_err();
     assert!(
         matches!(err, ConfigError::Parse(_)),
         "expected ConfigError::Parse, got {err:?}"
@@ -78,7 +78,7 @@ fn unknown_top_level_section_returns_parse_error() {
         [unknown_section]
         foo = "bar"
     "#;
-    let err = Config::from_str(toml).unwrap_err();
+    let err = Config::parse(toml).unwrap_err();
     assert!(
         matches!(err, ConfigError::Parse(_)),
         "expected ConfigError::Parse for unknown section, got {err:?}"
@@ -96,7 +96,7 @@ fn unknown_sibling_field_in_known_section_still_errors() {
         [extra]
         foo = "bar"
     "#;
-    let err = Config::from_str(toml).unwrap_err();
+    let err = Config::parse(toml).unwrap_err();
     assert!(matches!(err, ConfigError::Parse(_)));
 }
 
@@ -143,7 +143,7 @@ fn mcp_entries_are_sorted_by_key() {
         alpha = "2"
         mango = "3"
     "#;
-    let cfg = Config::from_str(toml).unwrap();
+    let cfg = Config::parse(toml).unwrap();
     let keys: Vec<&str> = cfg.mcp.keys().map(String::as_str).collect();
     assert_eq!(keys, vec!["alpha", "mango", "zebra"]);
 }

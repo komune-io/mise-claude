@@ -37,11 +37,11 @@ impl Config {
     /// `ConfigError::Parse` if the TOML is malformed or contains unknown fields.
     pub fn from_file(path: &Path) -> Result<Self, ConfigError> {
         let content = std::fs::read_to_string(path)?;
-        Self::from_str(&content)
+        Self::parse(&content)
     }
 
     /// Parse configuration from a TOML string.
-    pub fn from_str(content: &str) -> Result<Self, ConfigError> {
+    pub fn parse(content: &str) -> Result<Self, ConfigError> {
         let config: Config = toml::from_str(content)?;
         Ok(config)
     }
@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn empty_config_parses_to_defaults() {
-        let cfg = Config::from_str("").unwrap();
+        let cfg = Config::parse("").unwrap();
         assert_eq!(cfg, Config::default());
     }
 
@@ -63,7 +63,7 @@ mod tests {
             [mcp]
             context7 = "latest"
         "#;
-        let cfg = Config::from_str(toml).unwrap();
+        let cfg = Config::parse(toml).unwrap();
         assert_eq!(cfg.mcp.get("context7").map(String::as_str), Some("latest"));
         assert!(cfg.skills.is_empty());
         assert!(cfg.plugins.is_empty());
@@ -86,7 +86,7 @@ mod tests {
             [cli]
             some-tool = "1.2.3"
         "#;
-        let cfg = Config::from_str(toml).unwrap();
+        let cfg = Config::parse(toml).unwrap();
         assert_eq!(cfg.mcp.len(), 2);
         assert_eq!(cfg.skills.len(), 1);
         assert_eq!(cfg.plugins.len(), 1);
@@ -101,7 +101,7 @@ mod tests {
     #[test]
     fn invalid_toml_returns_parse_error() {
         let bad_toml = "this is [not valid toml {{";
-        let err = Config::from_str(bad_toml).unwrap_err();
+        let err = Config::parse(bad_toml).unwrap_err();
         assert!(matches!(err, ConfigError::Parse(_)));
     }
 
@@ -111,7 +111,7 @@ mod tests {
             [unknown_section]
             foo = "bar"
         "#;
-        let err = Config::from_str(toml).unwrap_err();
+        let err = Config::parse(toml).unwrap_err();
         assert!(matches!(err, ConfigError::Parse(_)));
     }
 }
