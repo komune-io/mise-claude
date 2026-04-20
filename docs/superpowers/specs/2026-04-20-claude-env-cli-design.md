@@ -192,6 +192,93 @@ $ claude-env install
 - Homebrew tap
 - Optionally: `mise install claude-env` (mise is great at installing standalone binaries)
 
+## Testing Strategy
+
+Three layers: unit, integration, end-to-end.
+
+### Unit Tests
+
+Pure Rust tests (`#[cfg(test)]`) covering internal logic without I/O:
+
+- **Config parsing** — valid TOML → struct, invalid TOML → clear error, missing sections tolerated, unknown keys rejected
+- **Alias resolution** — known alias → package name, unknown alias → pass-through, scoped packages (`@org/pkg`) → unchanged
+- **Lockfile parsing/serialization** — round-trip fidelity, handles missing fields gracefully
+- **Version comparison** — semver ordering, `"latest"` resolution, pre-release filtering
+- **Integrity verification** — sha512 match → pass, mismatch → fail with clear message
+- **Registry lookup** — override merging, `extra_deps` expansion, `${PROJECT_ROOT}` substitution
+
+### Integration Tests
+
+Test each tool type's install pipeline against real (or mocked) external services. Use `assert_cmd` + `assert_fs` crates for CLI invocation and filesystem assertions.
+
+**With mocked HTTP (wiremock):**
+- **npm resolution** — mock registry response, verify correct version selected and lockfile written
+- **Changelog fetching** — mock GitHub releases API, verify `claude-env diff` output
+
+**With real filesystem (temp dirs):**
+- **MCP install** — run `claude-env install` with a config containing one MCP tool, assert:
+  - Package exists in `~/.claude-env/packages/<name>/`
+  - `.mcp.json` contains correct entry (command, args, type)
+  - Lockfile updated with integrity hash
+- **CLI install + post_install** — assert:
+  - Package installed, binary callable
+  - `post_install` command executed (verify side effects, e.g., directory created)
+  - `.mcp.json` NOT modified
+- **Skills install** — assert:
+  - `npx skills add` invoked with correct args (capture via mock script)
+  - Lockfile records `resolved_at`
+- **Plugin install** — assert:
+  - `claude plugin marketplace add` + `claude plugin install` invoked in order
+  - `.claude/settings.json` contains plugin entry
+- **Idempotency** — run `claude-env install` twice, second run reports all tools as "skipped"
+- **Partial failure** — one tool fails, others still install, exit code = 1
+
+**Command shims for external tools:**
+Tests that invoke `npm`, `npx`, `claude` use shim scripts in a test-only PATH that record invocations to a log file. This avoids hitting real registries/CLIs while verifying correct argument construction.
+
+### End-to-End Tests
+
+Full pipeline against real services. Run in CI (not locally by default) with network access.
+
+- **Matrix:** macOS arm64, Linux x86_64
+- **Scenarios:**
+  - Fresh install of 1 MCP + 1 skill + 1 plugin → verify all output files
+  - `claude-env update` detects real version bump on a known package
+  - `claude-env remove` cleans up `.mcp.json` entry and package directory
+  - `claude-env add` with interactive input (simulated via stdin pipe)
+
+### Test Infrastructure
+
+```
+tests/
+├── unit/              # Pure logic tests (no I/O)
+├── integration/       # CLI invocation + filesystem + mocked HTTP
+│   ├── fixtures/      # Sample claude-env.toml files
+│   ├── shims/         # Mock scripts for npm, npx, claude
+│   └── mod.rs
+└── e2e/               # Real network, real tools (Docker-only)
+    ├── Dockerfile     # Node 20 + claude CLI + claude-env binary
+    ├── docker-compose.yml
+    └── scenarios/     # Full install/update/remove test scripts
+```
+
+**Execution model:**
+
+| Layer | Runs where | Command | Speed |
+|-------|-----------|---------|-------|
+| Unit + Integration | Local + CI | `cargo test` | ~2s |
+| E2E | Docker only | `docker compose run e2e` | ~30-60s |
+
+**Why Docker for E2E only:**
+- Integration tests use shims (no real tools needed) — Docker would add startup overhead for no benefit.
+- E2E tests require real `npm`, `npx`, `claude` CLI at specific versions — Docker guarantees consistent environment across machines.
+- Network isolation at container level enables testing offline/degraded scenarios.
+
+**CI setup:**
+- Every push/PR: `cargo test` (unit + integration, fast, no network)
+- Merge to main + release: `docker compose run e2e` (full pipeline, real tools)
+- Coverage target: 80%+ on unit/integration combined
+
 ## Non-Goals
 
 - Not a version manager — doesn't manage Node, Rust, etc.
