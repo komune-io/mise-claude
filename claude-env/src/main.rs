@@ -73,6 +73,9 @@ fn main() {
         Command::Remove { tool } => {
             run_remove(&tool, cli.verbose);
         }
+        Command::Inspect { section, json } => {
+            println!("not yet implemented: inspect section={:?} json={}", section, json);
+        }
     }
 }
 

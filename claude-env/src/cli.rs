@@ -44,4 +44,15 @@ pub enum Command {
         /// Tool name to remove (e.g. `context7`).
         tool: String,
     },
+
+    /// Audit all Claude Code configuration (project + global).
+    Inspect {
+        /// Filter to a specific category (mcp, plugins, skills, commands, agents).
+        #[arg(long)]
+        section: Option<String>,
+
+        /// Output as JSON.
+        #[arg(long)]
+        json: bool,
+    },
 }
