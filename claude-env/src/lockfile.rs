@@ -85,6 +85,18 @@ impl Lockfile {
         self.sections.get(section)?.get(name)
     }
 
+    /// Remove a tool entry identified by `section` and `name`.
+    ///
+    /// No-op if the section or entry does not exist.
+    pub fn remove(&mut self, section: &str, name: &str) {
+        if let Some(sec) = self.sections.get_mut(section) {
+            sec.remove(name);
+            if sec.is_empty() {
+                self.sections.remove(section);
+            }
+        }
+    }
+
     /// Insert or update a tool entry identified by `section` and `name`.
     pub fn set(&mut self, section: &str, name: &str, tool: LockedTool) {
         self.sections

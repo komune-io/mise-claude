@@ -7,6 +7,7 @@ use claude_env::installer::plugin::PluginInstaller;
 use claude_env::installer::skill::SkillInstaller;
 use claude_env::installer::{InstallContext, Installer};
 use claude_env::lockfile::{LockedTool, Lockfile};
+use claude_env::mcp_config;
 use claude_env::output::Reporter;
 use claude_env::resolver::{self, Action, ToolType};
 use std::path::PathBuf;
@@ -70,9 +71,101 @@ fn main() {
             println!("not yet implemented: add {tool}");
         }
         Command::Remove { tool } => {
-            println!("not yet implemented: remove {tool}");
+            run_remove(&tool, cli.verbose);
         }
     }
+}
+
+fn run_remove(tool: &str, _verbose: bool) {
+    // 1. Read claude-env.toml.
+    let config_path = PathBuf::from("claude-env.toml");
+    let mut config = match Config::from_file(&config_path) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("error: failed to read claude-env.toml: {e}");
+            process::exit(2);
+        }
+    };
+
+    // 2. Find which section the tool belongs to.
+    let section = if config.mcp.contains_key(tool) {
+        "mcp"
+    } else if config.cli.contains_key(tool) {
+        "cli"
+    } else if config.skills.contains_key(tool) {
+        "skills"
+    } else if config.plugins.contains_key(tool) {
+        "plugins"
+    } else {
+        eprintln!("error: tool '{tool}' not found in claude-env.toml");
+        process::exit(2);
+    };
+
+    // 3. Remove from in-memory config and rewrite TOML.
+    match section {
+        "mcp" => {
+            config.mcp.remove(tool);
+        }
+        "cli" => {
+            config.cli.remove(tool);
+        }
+        "skills" => {
+            config.skills.remove(tool);
+        }
+        "plugins" => {
+            config.plugins.remove(tool);
+        }
+        _ => unreachable!(),
+    }
+
+    let toml_content = match toml::to_string_pretty(&config) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("error: failed to serialize claude-env.toml: {e}");
+            process::exit(2);
+        }
+    };
+    if let Err(e) = std::fs::write(&config_path, &toml_content) {
+        eprintln!("error: failed to write claude-env.toml: {e}");
+        process::exit(2);
+    }
+
+    // 4. If MCP tool, remove from .mcp.json.
+    if section == "mcp" {
+        let project_root = PathBuf::from(".");
+        if let Err(e) = mcp_config::remove_server(&project_root, tool) {
+            eprintln!("error: failed to update .mcp.json: {e}");
+            process::exit(2);
+        }
+    }
+
+    // 5. Remove package directory if it exists.
+    let packages_dir: PathBuf = std::env::var("CLAUDE_ENV_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            dirs::home_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".claude-env")
+                .join("packages")
+        });
+    let pkg_dir = packages_dir.join(tool);
+    if pkg_dir.exists() {
+        if let Err(e) = std::fs::remove_dir_all(&pkg_dir) {
+            eprintln!("warning: failed to remove package directory: {e}");
+        }
+    }
+
+    // 6. Remove from lockfile and rewrite.
+    let lock_path = PathBuf::from("claude-env.lock");
+    let mut lockfile = Lockfile::from_file(&lock_path).unwrap_or_default();
+    lockfile.remove(section, tool);
+    if let Err(e) = lockfile.write_to_file(&lock_path) {
+        eprintln!("error: failed to write lockfile: {e}");
+        process::exit(2);
+    }
+
+    // 7. Report.
+    println!("removed {tool} (from [{section}])");
 }
 
 fn run_install(verbose: bool) {

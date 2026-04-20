@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::ConfigError;
 
@@ -10,7 +10,7 @@ use crate::error::ConfigError;
 /// Each section is a flat `BTreeMap<String, String>` so that individual tool
 /// entries can carry arbitrary version / options strings without a fixed schema.
 /// Unknown top-level keys are rejected via `#[serde(deny_unknown_fields)]`.
-#[derive(Debug, Default, Deserialize, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     /// MCP server declarations (`[mcp]` table).

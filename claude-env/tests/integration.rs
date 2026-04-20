@@ -15,3 +15,6 @@ mod full_install_test;
 
 #[path = "integration/list_test.rs"]
 mod list_test;
+
+#[path = "integration/remove_test.rs"]
+mod remove_test;
