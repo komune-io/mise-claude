@@ -45,6 +45,21 @@ impl Config {
         let config: Config = toml::from_str(content)?;
         Ok(config)
     }
+
+    /// Return the declared version string for `name` in the given `section`.
+    ///
+    /// `section` must be one of `"mcp"`, `"cli"`, `"skills"`, or `"plugins"`.
+    /// Returns `None` for unknown sections or missing keys.
+    pub fn version_for_section(&self, section: &str, name: &str) -> Option<String> {
+        let tools = match section {
+            "mcp" => &self.mcp,
+            "cli" => &self.cli,
+            "skills" => &self.skills,
+            "plugins" => &self.plugins,
+            _ => return None,
+        };
+        tools.get(name).cloned()
+    }
 }
 
 #[cfg(test)]

@@ -15,3 +15,6 @@ mod registry_test;
 
 #[path = "unit/resolver_test.rs"]
 mod resolver_test;
+
+#[path = "unit/reconciler_test.rs"]
+mod reconciler_test;
