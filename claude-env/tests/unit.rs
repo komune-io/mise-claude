@@ -9,3 +9,6 @@ mod npm_test;
 
 #[path = "unit/registry_test.rs"]
 mod registry_test;
+
+#[path = "unit/resolver_test.rs"]
+mod resolver_test;
