@@ -77,3 +77,43 @@ impl Category {
 pub struct AuditReport {
     pub entries: Vec<(Category, Vec<AuditEntry>)>,
 }
+
+use crate::config::Config;
+use std::path::Path;
+
+pub fn run_inspect(
+    project_root: &Path,
+    home_dir: &Path,
+    config: &Config,
+    section_filter: Option<&str>,
+    json_output: bool,
+) {
+    let categories: Vec<Category> = if let Some(filter) = section_filter {
+        Category::all()
+            .into_iter()
+            .filter(|c| c.cli_name() == filter)
+            .collect()
+    } else {
+        Category::all()
+    };
+
+    let mut report_entries = Vec::new();
+    for category in categories {
+        let discovered = match category {
+            Category::Mcp => scanner::scan_mcp(project_root, home_dir),
+            Category::Plugins => scanner::scan_plugins(project_root, home_dir),
+            Category::Skills => scanner::scan_skills(project_root, home_dir),
+            Category::Commands => scanner::scan_commands(project_root, home_dir),
+            Category::Agents => scanner::scan_agents(project_root, home_dir),
+        };
+        let entries = reconciler::reconcile(category.clone(), &discovered, config);
+        report_entries.push((category, entries));
+    }
+
+    let report = AuditReport { entries: report_entries };
+    if json_output {
+        renderer::render_json(&report);
+    } else {
+        renderer::render_terminal(&report);
+    }
+}

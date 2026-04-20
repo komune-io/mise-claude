@@ -74,7 +74,18 @@ fn main() {
             run_remove(&tool, cli.verbose);
         }
         Command::Inspect { section, json } => {
-            println!("not yet implemented: inspect section={:?} json={}", section, json);
+            let project_root = std::path::PathBuf::from(".");
+            let home_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+            let config_path = std::path::PathBuf::from("claude-env.toml");
+            let config = Config::from_file(&config_path).unwrap_or_default();
+
+            claude_env::inspect::run_inspect(
+                &project_root,
+                &home_dir,
+                &config,
+                section.as_deref(),
+                json,
+            );
         }
     }
 }
