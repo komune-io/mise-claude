@@ -12,3 +12,6 @@ mod install_plugin_test;
 
 #[path = "integration/full_install_test.rs"]
 mod full_install_test;
+
+#[path = "integration/list_test.rs"]
+mod list_test;

@@ -31,7 +31,40 @@ fn main() {
             println!("not yet implemented: diff {tool}");
         }
         Command::List => {
-            println!("not yet implemented: list");
+            let config_path = PathBuf::from("claude-env.toml");
+            let lock_path = PathBuf::from("claude-env.lock");
+
+            let config = Config::from_file(&config_path).unwrap_or_default();
+            let lockfile = Lockfile::from_file(&lock_path).unwrap_or_default();
+
+            let packages_dir: PathBuf = std::env::var("CLAUDE_ENV_HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| {
+                    dirs::home_dir()
+                        .unwrap_or_else(|| PathBuf::from("."))
+                        .join(".claude-env")
+                        .join("packages")
+                });
+
+            println!("  {:<25} {:<12} {}", "TOOL", "VERSION", "STATUS");
+            println!("  {}", "─".repeat(50));
+
+            for (section, tools) in [
+                ("mcp", &config.mcp),
+                ("cli", &config.cli),
+                ("skills", &config.skills),
+                ("plugins", &config.plugins),
+            ] {
+                for (name, _requested) in tools {
+                    let locked_ver = lockfile
+                        .get(section, name)
+                        .map(|l| l.version.as_str())
+                        .unwrap_or("?");
+                    let installed = packages_dir.join(name).join("node_modules").exists();
+                    let status = if installed { "✓ installed" } else { "✗ missing" };
+                    println!("  {:<25} {:<12} {}", name, locked_ver, status);
+                }
+            }
         }
         Command::Add { tool } => {
             println!("not yet implemented: add {tool}");
