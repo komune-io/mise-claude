@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Declarative Claude Code environment manager"
 license = "MIT"
+repository = "https://github.com/komune-io/claude-env"
+keywords = ["claude", "mcp", "ai", "tooling"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 chrono = "0.4"
