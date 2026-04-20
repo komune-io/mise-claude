@@ -18,3 +18,6 @@ mod list_test;
 
 #[path = "integration/remove_test.rs"]
 mod remove_test;
+
+#[path = "integration/inspect_test.rs"]
+mod inspect_test;
