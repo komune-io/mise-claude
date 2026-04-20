@@ -7,6 +7,7 @@ use claude_env::installer::plugin::PluginInstaller;
 use claude_env::installer::skill::SkillInstaller;
 use claude_env::installer::{InstallContext, Installer};
 use claude_env::lockfile::{LockedTool, Lockfile};
+use claude_env::output::Reporter;
 use claude_env::resolver::{self, Action, ToolType};
 use std::path::PathBuf;
 use std::process;
@@ -95,39 +96,31 @@ fn run_install(verbose: bool) {
     let skill_installer = SkillInstaller;
     let plugin_installer = PluginInstaller;
 
-    let mut installed = 0usize;
-    let mut failed = 0usize;
-    let mut skipped = 0usize;
+    let mut reporter = Reporter::new();
 
     // 5. Execute each action.
     for action in &plan.actions {
         match &action.action {
             Action::Skip => {
-                println!("  skip    {} ({})", action.name, action.version);
-                skipped += 1;
+                reporter.skip(&action.name, &action.version);
             }
             Action::Install | Action::Upgrade => {
-                let verb = match &action.action {
-                    Action::Install => "install",
-                    Action::Upgrade => "upgrade",
+                let detail = match &action.action {
+                    Action::Install => "installed",
+                    Action::Upgrade => "upgraded",
                     _ => unreachable!(),
                 };
 
                 let install_result = match action.tool_type {
-                    ToolType::Mcp => Some(mcp_installer.install(action, &ctx)),
-                    ToolType::Cli => Some(cli_installer.install(action, &ctx)),
-                    ToolType::Skill => Some(skill_installer.install(action, &ctx)),
-                    ToolType::Plugin => Some(plugin_installer.install(action, &ctx)),
+                    ToolType::Mcp => mcp_installer.install(action, &ctx),
+                    ToolType::Cli => cli_installer.install(action, &ctx),
+                    ToolType::Skill => skill_installer.install(action, &ctx),
+                    ToolType::Plugin => plugin_installer.install(action, &ctx),
                 };
 
                 match install_result {
-                    Some(Ok(result)) => {
-                        println!(
-                            "  {verb}   {} @ {} {}",
-                            action.name,
-                            action.version,
-                            if result.installed { "✓" } else { "(already present)" }
-                        );
+                    Ok(result) => {
+                        reporter.success(&action.name, &action.version, detail);
 
                         // Determine the section for the lockfile.
                         let section = section_name(&action.tool_type);
@@ -151,18 +144,9 @@ fn run_install(verbose: bool) {
                             }
                         };
                         lockfile.set(section, &action.name, locked_tool);
-                        installed += 1;
                     }
-                    Some(Err(e)) => {
-                        eprintln!("  error   {} : {e}", action.name);
-                        failed += 1;
-                    }
-                    None => {
-                        println!(
-                            "  skip    {} (type not yet implemented)",
-                            action.name
-                        );
-                        skipped += 1;
+                    Err(e) => {
+                        reporter.failure(&action.name, &action.version, &e.to_string());
                     }
                 }
             }
@@ -170,21 +154,15 @@ fn run_install(verbose: bool) {
     }
 
     // 6. Write updated lockfile.
-    if installed > 0 {
+    if reporter.installed > 0 {
         if let Err(e) = lockfile.write_to_file(&lock_path) {
             eprintln!("error: failed to write lockfile: {e}");
         }
     }
 
-    // 7. Print summary.
-    println!(
-        "\n{installed} installed, {failed} failed, {skipped} skipped"
-    );
-
-    // 8. Exit 1 if any failures.
-    if failed > 0 {
-        process::exit(1);
-    }
+    // 7. Print summary and exit.
+    reporter.summary();
+    process::exit(reporter.exit_code());
 }
 
 fn section_name(tool_type: &ToolType) -> &'static str {
