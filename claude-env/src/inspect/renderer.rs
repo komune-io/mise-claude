@@ -31,6 +31,8 @@ pub fn render_terminal(report: &AuditReport) {
                 format!("{YELLOW}⚠{RESET}")
             } else if entry.management == Management::Managed {
                 format!("{GREEN}✓{RESET}")
+            } else if entry.enabled {
+                format!("{GREEN}●{RESET}")
             } else {
                 format!("{DIM}●{RESET}")
             };
@@ -125,6 +127,7 @@ pub fn render_json(report: &AuditReport) {
                     "source": source_str,
                     "path": entry.path,
                     "drift": entry.drift,
+                    "enabled": entry.enabled,
                     "overridden_by": entry.overridden_by,
                 })
             })

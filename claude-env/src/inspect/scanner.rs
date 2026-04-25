@@ -5,6 +5,8 @@ use std::path::Path;
 
 use serde_json::Value;
 
+use std::collections::HashSet;
+
 use super::{DiscoveredItem, Scope};
 
 // ---------------------------------------------------------------------------
@@ -30,6 +32,7 @@ fn extract_mcp_servers(json: &Value, scope: Scope, source: &str) -> Vec<Discover
             version: None,
             scope: scope.clone(),
             source_path: source.to_string(),
+            from_plugin: None,
         })
         .collect()
 }
@@ -47,8 +50,30 @@ fn extract_plugins(json: &Value, scope: Scope, source: &str) -> Vec<DiscoveredIt
             version: None,
             scope: scope.clone(),
             source_path: source.to_string(),
+            from_plugin: None,
         })
         .collect()
+}
+
+/// Collect all enabled plugin identifiers from project + global settings.
+/// Returns set of "plugin@marketplace" strings.
+pub fn collect_enabled_plugins(project_root: &Path, home_dir: &Path) -> HashSet<String> {
+    let mut enabled = HashSet::new();
+
+    for settings_path in [
+        project_root.join(".claude").join("settings.json"),
+        home_dir.join(".claude").join("settings.json"),
+    ] {
+        if let Some(json) = read_json(&settings_path) {
+            if let Some(plugins) = json.get("enabledPlugins").and_then(|v| v.as_object()) {
+                for key in plugins.keys() {
+                    enabled.insert(key.clone());
+                }
+            }
+        }
+    }
+
+    enabled
 }
 
 /// Scan `dir/*/marker` — each subdirectory that contains `marker` yields one item.
@@ -87,6 +112,7 @@ fn scan_md_dirs(
             version: None,
             scope: scope.clone(),
             source_path: marker_path.to_string_lossy().into_owned(),
+            from_plugin: None,
         });
     }
 }
@@ -153,6 +179,7 @@ fn scan_md_files_in_dir(
             version: None,
             scope: scope.clone(),
             source_path: entry_path.to_string_lossy().into_owned(),
+            from_plugin: None,
         });
     }
 }
@@ -220,9 +247,11 @@ fn scan_plugin_cache(
                 }
             }
 
-            // Override source_path to the plugin identifier for clean grouping
+            // Tag items with plugin origin for grouping and enabled detection
+            let plugin_id = format!("{}@{}", plugin_name, mp_name);
             for item in &mut plugin_items {
                 item.source_path = source.clone();
+                item.from_plugin = Some(plugin_id.clone());
             }
             items.extend(plugin_items);
         }

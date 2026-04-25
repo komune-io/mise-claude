@@ -61,10 +61,20 @@ fn match_names_for(category: &Category, key: &str, registry: &Registry) -> Vec<S
 /// - Discovered items tagged as `Managed` or `Manual`.
 /// - Config entries that were never discovered (drift entries).
 /// - Override annotations when the same name appears at both scopes.
+/// Check if a plugin (from cache: "name@cache-marketplace") is enabled
+/// (in settings: "name@settings-marketplace"). Match on plugin name only.
+fn is_plugin_enabled(from_plugin: &str, enabled_plugins: &HashSet<String>) -> bool {
+    let cache_name = from_plugin.split('@').next().unwrap_or(from_plugin);
+    enabled_plugins.iter().any(|ep| {
+        ep.split('@').next().unwrap_or(ep) == cache_name
+    })
+}
+
 pub fn reconcile(
     category: Category,
     discovered: &[DiscoveredItem],
     config: &Config,
+    enabled_plugins: &HashSet<String>,
 ) -> Vec<AuditEntry> {
     let registry = Registry::default();
     let section = category.cli_name();
@@ -80,14 +90,20 @@ pub fn reconcile(
             // Commands / Agents: no config section, everything is Manual.
             return discovered
                 .iter()
-                .map(|item| AuditEntry {
-                    name: item.name.clone(),
-                    version: item.version.clone(),
-                    scope: Some(item.scope.clone()),
-                    management: Management::Manual,
-                    path: Some(item.source_path.clone()),
-                    drift: false,
-                    overridden_by: None,
+                .map(|item| {
+                    let enabled = item.from_plugin.as_ref()
+                        .map(|p| is_plugin_enabled(p, enabled_plugins))
+                        .unwrap_or(true);
+                    AuditEntry {
+                        name: item.name.clone(),
+                        version: item.version.clone(),
+                        scope: Some(item.scope.clone()),
+                        management: Management::Manual,
+                        path: Some(item.source_path.clone()),
+                        drift: false,
+                        overridden_by: None,
+                        enabled,
+                    }
                 })
                 .collect();
         }
@@ -121,6 +137,9 @@ pub fn reconcile(
             Management::Manual
         };
 
+        let enabled = item.from_plugin.as_ref()
+            .map(|p| is_plugin_enabled(p, enabled_plugins))
+            .unwrap_or(true);
         entries.push(AuditEntry {
             name: item.name.clone(),
             version: item.version.clone(),
@@ -129,6 +148,7 @@ pub fn reconcile(
             path: Some(item.source_path.clone()),
             drift: false,
             overridden_by: None,
+            enabled,
         });
     }
 
@@ -143,6 +163,7 @@ pub fn reconcile(
                 management: Management::Managed,
                 drift: true,
                 overridden_by: None,
+                enabled: false,
             });
         }
     }
@@ -174,6 +195,7 @@ mod tests {
             version: Some("1.0.0".to_string()),
             scope,
             source_path: "/some/path".to_string(),
+            from_plugin: None,
         }
     }
 }

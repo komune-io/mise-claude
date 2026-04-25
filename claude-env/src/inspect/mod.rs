@@ -20,6 +20,8 @@ pub struct DiscoveredItem {
     pub version: Option<String>,
     pub scope: Scope,
     pub source_path: String,
+    /// For plugin-cache items: "plugin@marketplace" identifier
+    pub from_plugin: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -31,6 +33,8 @@ pub struct AuditEntry {
     pub path: Option<String>,
     pub drift: bool,
     pub overridden_by: Option<String>,
+    /// Whether this item's parent plugin is enabled
+    pub enabled: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -88,6 +92,9 @@ pub fn run_inspect(
     section_filter: Option<&str>,
     json_output: bool,
 ) {
+    // Collect enabled plugins to tag active items
+    let enabled_plugins = scanner::collect_enabled_plugins(project_root, home_dir);
+
     let categories: Vec<Category> = if let Some(filter) = section_filter {
         Category::all()
             .into_iter()
@@ -106,7 +113,7 @@ pub fn run_inspect(
             Category::Commands => scanner::scan_commands(project_root, home_dir),
             Category::Agents => scanner::scan_agents(project_root, home_dir),
         };
-        let entries = reconciler::reconcile(category.clone(), &discovered, config);
+        let entries = reconciler::reconcile(category.clone(), &discovered, config, &enabled_plugins);
         report_entries.push((category, entries));
     }
 

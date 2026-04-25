@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use claude_env::config::Config;
 use claude_env::inspect::reconciler::reconcile;
 use claude_env::inspect::{Category, DiscoveredItem, Management, Scope};
@@ -8,7 +9,12 @@ fn make_item(name: &str, scope: Scope) -> DiscoveredItem {
         version: Some("1.0.0".to_string()),
         scope,
         source_path: "/some/path".to_string(),
+        from_plugin: None,
     }
+}
+
+fn no_plugins() -> HashSet<String> {
+    HashSet::new()
 }
 
 fn config_with_mcp(key: &str) -> Config {
@@ -28,7 +34,7 @@ fn managed_item_matched_in_config() {
     let config = config_with_mcp("context7");
     let discovered = vec![make_item("context7-mcp", Scope::Project)];
 
-    let entries = reconcile(Category::Mcp, &discovered, &config);
+    let entries = reconcile(Category::Mcp, &discovered, &config, &no_plugins());
 
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].name, "context7-mcp");
@@ -42,7 +48,7 @@ fn manual_item_not_in_config() {
     let config = Config::default();
     let discovered = vec![make_item("some-tool", Scope::Global)];
 
-    let entries = reconcile(Category::Mcp, &discovered, &config);
+    let entries = reconcile(Category::Mcp, &discovered, &config, &no_plugins());
 
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].management, Management::Manual);
@@ -55,7 +61,7 @@ fn drift_declared_but_not_discovered() {
     let config = config_with_mcp("shadcn");
     let discovered = vec![];
 
-    let entries = reconcile(Category::Mcp, &discovered, &config);
+    let entries = reconcile(Category::Mcp, &discovered, &config, &no_plugins());
 
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].name, "shadcn");
@@ -74,7 +80,7 @@ fn override_detected_same_name_both_scopes() {
         make_item("my-mcp", Scope::Global),
     ];
 
-    let entries = reconcile(Category::Mcp, &discovered, &config);
+    let entries = reconcile(Category::Mcp, &discovered, &config, &no_plugins());
 
     assert_eq!(entries.len(), 2);
 
@@ -101,7 +107,7 @@ fn plugin_reconciliation() {
     // Short form = last '/' segment = "code-review@claude-code-plugins"
     let discovered = vec![make_item("code-review@claude-code-plugins", Scope::Project)];
 
-    let entries = reconcile(Category::Plugins, &discovered, &config);
+    let entries = reconcile(Category::Plugins, &discovered, &config, &no_plugins());
 
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].management, Management::Managed);
@@ -119,7 +125,7 @@ fn skills_reconciliation() {
     .unwrap();
     let discovered = vec![make_item("next-best-practices", Scope::Project)];
 
-    let entries = reconcile(Category::Skills, &discovered, &config);
+    let entries = reconcile(Category::Skills, &discovered, &config, &no_plugins());
 
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].management, Management::Managed);
