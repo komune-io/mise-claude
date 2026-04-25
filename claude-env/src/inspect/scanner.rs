@@ -157,6 +157,96 @@ fn scan_md_files_in_dir(
     }
 }
 
+/// Walk `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/` and scan
+/// the given `subdir` (e.g., "skills", "commands", "agents") inside each plugin.
+///
+/// For skills: looks for `*/SKILL.md` (marker-based).
+/// For commands: looks for `**/*.md` (recursive).
+/// For agents: looks for `*.md` (flat).
+fn scan_plugin_cache(
+    home_dir: &Path,
+    subdir: &str,
+    mode: ScanMode,
+    items: &mut Vec<DiscoveredItem>,
+) {
+    let cache_dir = home_dir.join(".claude").join("plugins").join("cache");
+    let marketplaces = match fs::read_dir(&cache_dir) {
+        Ok(rd) => rd,
+        Err(_) => return,
+    };
+
+    for mp_entry in marketplaces.flatten() {
+        let mp_path = mp_entry.path();
+        if !mp_path.is_dir() {
+            continue;
+        }
+        let mp_name = mp_entry.file_name().to_string_lossy().to_string();
+
+        let plugins = match fs::read_dir(&mp_path) {
+            Ok(rd) => rd,
+            Err(_) => continue,
+        };
+
+        for plugin_entry in plugins.flatten() {
+            let plugin_path = plugin_entry.path();
+            if !plugin_path.is_dir() {
+                continue;
+            }
+            let plugin_name = plugin_entry.file_name().to_string_lossy().to_string();
+
+            let version_dir = match latest_version_dir(&plugin_path) {
+                Some(d) => d,
+                None => continue,
+            };
+
+            let target_dir = version_dir.join(subdir);
+            if !target_dir.is_dir() {
+                continue;
+            }
+
+            // Use plugin identifier as source (for grouping in renderer)
+            let source = format!("plugin {}@{}", plugin_name, mp_name);
+
+            let mut plugin_items = Vec::new();
+            match mode {
+                ScanMode::SkillMarker => {
+                    scan_md_dirs(&target_dir, Scope::Global, "", "SKILL.md", &mut plugin_items);
+                }
+                ScanMode::Recursive => {
+                    scan_md_files_recursive(&target_dir, Scope::Global, "", &mut plugin_items);
+                }
+                ScanMode::Flat => {
+                    scan_md_files_flat(&target_dir, Scope::Global, "", &mut plugin_items);
+                }
+            }
+
+            // Override source_path to the plugin identifier for clean grouping
+            for item in &mut plugin_items {
+                item.source_path = source.clone();
+            }
+            items.extend(plugin_items);
+        }
+    }
+}
+
+enum ScanMode {
+    SkillMarker,
+    Recursive,
+    Flat,
+}
+
+/// Pick the latest version directory inside a plugin dir.
+/// Sorts entries and takes the last (works for semver and hash-based names).
+fn latest_version_dir(plugin_dir: &Path) -> Option<std::path::PathBuf> {
+    let mut versions: Vec<_> = fs::read_dir(plugin_dir)
+        .ok()?
+        .flatten()
+        .filter(|e| e.path().is_dir())
+        .collect();
+    versions.sort_by_key(|e| e.file_name());
+    versions.last().map(|e| e.path())
+}
+
 // ---------------------------------------------------------------------------
 // Public scanners
 // ---------------------------------------------------------------------------
@@ -213,6 +303,9 @@ pub fn scan_skills(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> 
     let global_skills_dir = home_dir.join(".claude").join("skills");
     scan_md_dirs(&global_skills_dir, Scope::Global, "", "SKILL.md", &mut items);
 
+    // Plugin cache: ~/.claude/plugins/cache/<mp>/<plugin>/<ver>/skills/
+    scan_plugin_cache(home_dir, "skills", ScanMode::SkillMarker, &mut items);
+
     items
 }
 
@@ -226,6 +319,9 @@ pub fn scan_commands(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem
     let global_commands_dir = home_dir.join(".claude").join("commands");
     scan_md_files_recursive(&global_commands_dir, Scope::Global, "", &mut items);
 
+    // Plugin cache: ~/.claude/plugins/cache/<mp>/<plugin>/<ver>/commands/
+    scan_plugin_cache(home_dir, "commands", ScanMode::Recursive, &mut items);
+
     items
 }
 
@@ -238,6 +334,9 @@ pub fn scan_agents(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> 
 
     let global_agents_dir = home_dir.join(".claude").join("agents");
     scan_md_files_flat(&global_agents_dir, Scope::Global, "", &mut items);
+
+    // Plugin cache: ~/.claude/plugins/cache/<mp>/<plugin>/<ver>/agents/
+    scan_plugin_cache(home_dir, "agents", ScanMode::Flat, &mut items);
 
     items
 }
