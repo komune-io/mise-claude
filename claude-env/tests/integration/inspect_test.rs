@@ -194,5 +194,5 @@ fn inspect_drift_shown_for_missing_tool() {
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
 
     assert!(stdout.contains("shadcn"), "stdout should contain 'shadcn', got:\n{stdout}");
-    assert!(stdout.contains("MISSING"), "stdout should contain 'MISSING', got:\n{stdout}");
+    assert!(stdout.contains("missing") || stdout.contains("not installed"), "stdout should contain drift indicator, got:\n{stdout}");
 }

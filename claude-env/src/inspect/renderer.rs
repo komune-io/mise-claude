@@ -2,63 +2,95 @@
 
 use crate::inspect::{AuditReport, Management, Scope};
 
+const DIM: &str = "\x1b[90m";
+const GREEN: &str = "\x1b[32m";
+const YELLOW: &str = "\x1b[33m";
+const BOLD: &str = "\x1b[1m";
+const RESET: &str = "\x1b[0m";
+
 /// Print the audit report to the terminal with colour-coded symbols.
 pub fn render_terminal(report: &AuditReport) {
+    let mut first = true;
     for (category, entries) in &report.entries {
         if entries.is_empty() {
             continue;
         }
 
-        println!("\n{}", category.label());
+        if !first {
+            println!();
+        }
+        first = false;
+
+        println!("{BOLD}{}{RESET}", category.label());
+
+        // Group entries by source path to reduce noise
+        let mut last_source: Option<&str> = None;
 
         for entry in entries {
-            // Symbol
             let symbol = if entry.drift {
-                "\x1b[33m⚠\x1b[0m"
+                format!("{YELLOW}⚠{RESET}")
             } else if entry.management == Management::Managed {
-                "\x1b[32m✓\x1b[0m"
+                format!("{GREEN}✓{RESET}")
             } else {
-                "●"
+                format!("{DIM}●{RESET}")
             };
 
-            // Version
-            let version = entry.version.as_deref().unwrap_or("—");
-
-            // Scope
-            let scope = if entry.drift {
-                "MISSING".to_string()
+            let scope_tag = if entry.drift {
+                format!("{YELLOW}missing{RESET}")
             } else {
                 match &entry.scope {
-                    Some(Scope::Project) => "project".to_string(),
-                    Some(Scope::Global) => "global".to_string(),
-                    None => "—".to_string(),
+                    Some(Scope::Project) => format!("{GREEN}project{RESET}"),
+                    Some(Scope::Global) => format!("{DIM}global{RESET}"),
+                    None => String::new(),
                 }
             };
 
-            // Management label
-            let management = if entry.drift {
-                "declared in claude-env.toml but not installed"
+            let mgmt_tag = if entry.drift {
+                format!("{YELLOW}not installed{RESET}")
             } else if entry.management == Management::Managed {
-                "managed (claude-env.toml)"
+                format!("{DIM}managed{RESET}")
             } else {
-                "manual"
+                String::new()
             };
 
-            println!(
-                "  {} {:<35} {:<8} {:<10} {}",
-                symbol, entry.name, version, scope, management
-            );
-
-            // Path (only when present)
-            if let Some(path) = &entry.path {
-                println!("    → {}", path);
+            // Show source path header when it changes
+            let current_source = entry.path.as_deref();
+            if current_source != last_source.as_deref() {
+                if let Some(path) = current_source {
+                    println!("  {DIM}{path}{RESET}");
+                }
+                last_source = current_source;
             }
 
-            // Override annotation
+            // Main line: symbol + name + optional version
+            let version_str = entry
+                .version
+                .as_ref()
+                .map(|v| format!(" {DIM}@{v}{RESET}"))
+                .unwrap_or_default();
+
+            let tags = [scope_tag, mgmt_tag]
+                .into_iter()
+                .filter(|t| !t.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ");
+
+            let tags_str = if tags.is_empty() {
+                String::new()
+            } else {
+                format!(" {DIM}({RESET}{tags}{DIM}){RESET}")
+            };
+
+            println!("    {symbol} {}{version_str}{tags_str}", entry.name);
+
             if let Some(overridden_by) = &entry.overridden_by {
-                println!("    └─ overridden by {} config", overridden_by);
+                println!("      {DIM}└─ overridden by {overridden_by}{RESET}");
             }
         }
+    }
+
+    if first {
+        println!("{DIM}No Claude Code configuration found.{RESET}");
     }
 }
 
