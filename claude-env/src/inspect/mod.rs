@@ -44,6 +44,7 @@ pub enum Category {
     Skills,
     Commands,
     Agents,
+    Hooks,
 }
 
 impl Category {
@@ -54,6 +55,7 @@ impl Category {
             Category::Skills => "Skills",
             Category::Commands => "Commands",
             Category::Agents => "Agents",
+            Category::Hooks => "Hooks",
         }
     }
 
@@ -64,6 +66,7 @@ impl Category {
             Category::Skills => "skills",
             Category::Commands => "commands",
             Category::Agents => "agents",
+            Category::Hooks => "hooks",
         }
     }
 
@@ -74,6 +77,7 @@ impl Category {
             Category::Skills,
             Category::Commands,
             Category::Agents,
+            Category::Hooks,
         ]
     }
 }
@@ -112,6 +116,7 @@ pub fn run_inspect(
             Category::Skills => scanner::scan_skills(project_root, home_dir),
             Category::Commands => scanner::scan_commands(project_root, home_dir),
             Category::Agents => scanner::scan_agents(project_root, home_dir),
+            Category::Hooks => scanner::scan_hooks(project_root, home_dir),
         };
         let entries = reconciler::reconcile(category.clone(), &discovered, config, &enabled_plugins);
         report_entries.push((category, entries));

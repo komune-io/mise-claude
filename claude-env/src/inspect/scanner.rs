@@ -369,3 +369,84 @@ pub fn scan_agents(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> 
 
     items
 }
+
+/// Scan for hooks from project `.claude/settings.json` and global `~/.claude/settings.json`.
+///
+/// Hooks structure: `{ "hooks": { "EventName": [{ "matcher": "...", "hooks": [{ "type": "...", "command": "..." }] }] } }`
+/// Each hook becomes a DiscoveredItem named "EventName [matcher]" with the command as version (for display).
+pub fn scan_hooks(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> {
+    let mut items = Vec::new();
+
+    for (settings_path, scope) in [
+        (project_root.join(".claude").join("settings.json"), Scope::Project),
+        (home_dir.join(".claude").join("settings.json"), Scope::Global),
+    ] {
+        if let Some(json) = read_json(&settings_path) {
+            let source = settings_path.to_string_lossy().into_owned();
+            extract_hooks(&json, scope, &source, &mut items);
+        }
+    }
+
+    items
+}
+
+fn extract_hooks(json: &Value, scope: Scope, source: &str, items: &mut Vec<DiscoveredItem>) {
+    let hooks = match json.get("hooks").and_then(|v| v.as_object()) {
+        Some(obj) => obj,
+        None => return,
+    };
+
+    for (event_name, matchers_val) in hooks {
+        let matchers = match matchers_val.as_array() {
+            Some(arr) => arr,
+            None => continue,
+        };
+
+        for matcher_obj in matchers {
+            let matcher = matcher_obj
+                .get("matcher")
+                .and_then(|m| m.as_str())
+                .unwrap_or("*");
+
+            let hook_list = match matcher_obj.get("hooks").and_then(|h| h.as_array()) {
+                Some(arr) => arr,
+                None => continue,
+            };
+
+            for hook in hook_list {
+                let hook_type = hook
+                    .get("type")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("command");
+                let command = hook
+                    .get("command")
+                    .and_then(|c| c.as_str())
+                    .unwrap_or("?");
+
+                // Shorten command for display: use basename
+                let cmd_short = command
+                    .split('/')
+                    .last()
+                    .unwrap_or(command)
+                    .split('\'')
+                    .filter(|s| !s.is_empty())
+                    .last()
+                    .unwrap_or(command);
+
+                let name = if matcher == "*" {
+                    event_name.clone()
+                } else {
+                    format!("{} [{}]", event_name, matcher)
+                };
+
+                items.push(DiscoveredItem {
+                    name,
+                    version: Some(format!("{} → {}", hook_type, cmd_short)),
+                    scope: scope.clone(),
+                    source_path: source.to_string(),
+                    from_plugin: None,
+                });
+            }
+        }
+    }
+}

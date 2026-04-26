@@ -30,6 +30,7 @@ pub fn run_tui(project_root: &Path, home_dir: &Path, config: &Config) -> io::Res
             Category::Skills => scanner::scan_skills(project_root, home_dir),
             Category::Commands => scanner::scan_commands(project_root, home_dir),
             Category::Agents => scanner::scan_agents(project_root, home_dir),
+            Category::Hooks => scanner::scan_hooks(project_root, home_dir),
         };
         let entries = reconciler::reconcile(category.clone(), &discovered, config, &enabled_plugins);
         report_entries.push((category, entries));

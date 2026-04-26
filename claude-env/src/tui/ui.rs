@@ -172,6 +172,7 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
         NodeKind::Command => "Command",
         NodeKind::Agent => "Agent",
         NodeKind::McpServer => "MCP Server",
+        NodeKind::Hook => "Hook",
     };
     lines.push(Line::from(vec![
         Span::styled("Type:   ", Style::default().add_modifier(Modifier::BOLD)),

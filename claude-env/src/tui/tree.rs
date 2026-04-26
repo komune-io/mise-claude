@@ -10,6 +10,7 @@ pub enum NodeKind {
     Command,
     Agent,
     McpServer,
+    Hook,
 }
 
 #[derive(Debug, Clone)]
@@ -160,18 +161,25 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
     let mut standalone: BTreeMap<&'static str, Vec<TreeNode>> = BTreeMap::new();
     let mut mcp_nodes: Vec<TreeNode> = Vec::new();
 
+    let mut hook_nodes: Vec<TreeNode> = Vec::new();
+
     for (category, entries) in &report.entries {
         let kind = match category {
             Category::Skills => NodeKind::Skill,
             Category::Commands => NodeKind::Command,
             Category::Agents => NodeKind::Agent,
             Category::Mcp => NodeKind::McpServer,
+            Category::Hooks => NodeKind::Hook,
             Category::Plugins => continue, // already handled
         };
 
         for entry in entries {
             if *category == Category::Mcp {
                 mcp_nodes.push(TreeNode::leaf(&entry.name, NodeKind::McpServer, entry));
+                continue;
+            }
+            if *category == Category::Hooks {
+                hook_nodes.push(TreeNode::leaf(&entry.name, NodeKind::Hook, entry));
                 continue;
             }
 
@@ -230,6 +238,13 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
     let mut mcp_section = TreeNode::section(&format!("MCP Servers ({})", mcp_count));
     mcp_section.children = mcp_nodes;
     tree.push(mcp_section);
+
+    // Hooks section
+    if !hook_nodes.is_empty() {
+        let mut hooks_section = TreeNode::section(&format!("Hooks ({})", hook_nodes.len()));
+        hooks_section.children = hook_nodes;
+        tree.push(hooks_section);
+    }
 
     // Standalone sections (only when non-empty), in a stable order
     for label in &["Skills", "Commands", "Agents"] {
