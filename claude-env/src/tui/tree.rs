@@ -77,6 +77,53 @@ impl TreeNode {
     }
 }
 
+/// Reorganize a plugin node's flat children into type sub-groups:
+/// Skills (N), Commands (N), Agents (N) — each as a sub-header with children.
+fn organize_plugin_children(plugin: &mut TreeNode) {
+    if plugin.children.is_empty() {
+        return;
+    }
+
+    let mut skills = Vec::new();
+    let mut commands = Vec::new();
+    let mut agents = Vec::new();
+    let mut other = Vec::new();
+
+    for child in std::mem::take(&mut plugin.children) {
+        match child.kind {
+            NodeKind::Skill => skills.push(child),
+            NodeKind::Command => commands.push(child),
+            NodeKind::Agent => agents.push(child),
+            _ => other.push(child),
+        }
+    }
+
+    let enabled = plugin.enabled;
+
+    if !skills.is_empty() {
+        let mut header = TreeNode::section(&format!("Skills ({})", skills.len()));
+        header.enabled = enabled;
+        header.expanded = true;
+        header.children = skills;
+        plugin.children.push(header);
+    }
+    if !commands.is_empty() {
+        let mut header = TreeNode::section(&format!("Commands ({})", commands.len()));
+        header.enabled = enabled;
+        header.expanded = true;
+        header.children = commands;
+        plugin.children.push(header);
+    }
+    if !agents.is_empty() {
+        let mut header = TreeNode::section(&format!("Agents ({})", agents.len()));
+        header.enabled = enabled;
+        header.expanded = true;
+        header.children = agents;
+        plugin.children.push(header);
+    }
+    plugin.children.extend(other);
+}
+
 /// If `path` starts with "plugin ", return the remainder (the plugin id).
 fn extract_plugin_from_path(path: Option<&str>) -> Option<String> {
     path?.strip_prefix("plugin ")
@@ -168,8 +215,11 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
     // ── Build final tree ──────────────────────────────────────────────────
     let mut tree: Vec<TreeNode> = Vec::new();
 
-    // Plugins section
-    let plugin_list: Vec<TreeNode> = plugins.into_values().collect();
+    // Organize each plugin's children into type sub-groups
+    let mut plugin_list: Vec<TreeNode> = plugins.into_values().collect();
+    for plugin in &mut plugin_list {
+        organize_plugin_children(plugin);
+    }
     let plugin_count = plugin_list.len();
     let mut plugins_section = TreeNode::section(&format!("Plugins ({})", plugin_count));
     plugins_section.children = plugin_list;

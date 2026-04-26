@@ -52,12 +52,18 @@ fn build_tree_groups_by_plugin() {
         .expect("plugin node should exist");
     assert_eq!(plugin_node.kind, NodeKind::Plugin);
 
-    // The skill should be a child of the plugin node
-    let skill_node = plugin_node
+    // The skill should be under a "Skills (1)" sub-header inside the plugin
+    let skills_header = plugin_node
+        .children
+        .iter()
+        .find(|n| n.name.starts_with("Skills"))
+        .expect("Skills sub-header should exist in plugin");
+    assert_eq!(skills_header.kind, NodeKind::SectionHeader);
+    let skill_node = skills_header
         .children
         .iter()
         .find(|n| n.name == "my-skill")
-        .expect("skill should be child of plugin");
+        .expect("skill should be under Skills sub-header");
     assert_eq!(skill_node.kind, NodeKind::Skill);
 
     // No standalone Skills section
