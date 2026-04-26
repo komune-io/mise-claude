@@ -18,3 +18,6 @@ mod resolver_test;
 
 #[path = "unit/reconciler_test.rs"]
 mod reconciler_test;
+
+#[path = "unit/tree_test.rs"]
+mod tree_test;
