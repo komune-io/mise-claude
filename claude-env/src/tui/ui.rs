@@ -44,6 +44,8 @@ fn render_main(frame: &mut Frame, app: &App) {
 fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
     let title = if app.mode == Mode::Search && !app.search_query.is_empty() {
         format!(" claude-env [/{}] ", app.search_query)
+    } else if app.show_enabled_only {
+        " claude-env [enabled only] ".to_string()
     } else {
         " claude-env ".to_string()
     };
@@ -232,8 +234,9 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
     lines.push(Line::from(""));
 
     // Keybinding hints
+    let filter_label = if app.show_enabled_only { "all" } else { "enabled" };
     lines.push(Line::from(Span::styled(
-        "[e] toggle  [v] view  [/] search  [q] quit",
+        format!("[e] toggle  [v] view  [i] {}  [/] search  [q] quit", filter_label),
         Style::default().fg(Color::DarkGray),
     )));
 
@@ -252,7 +255,10 @@ fn render_status(frame: &mut Frame, app: &App, area: Rect) {
             if let Some((msg, _)) = &app.status_message {
                 msg.clone()
             } else {
-                "claude-env inspect — press [q] to quit, [/] to search".to_string()
+                {
+                    let filter = if app.show_enabled_only { " [enabled only]" } else { "" };
+                    format!("claude-env inspect{} — [q] quit [/] search [i] toggle filter", filter)
+                }
             }
         }
     };

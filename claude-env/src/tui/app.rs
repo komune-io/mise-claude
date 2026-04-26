@@ -26,6 +26,7 @@ pub struct App {
     pub markdown_scroll: u16,
     pub status_message: Option<(String, std::time::Instant)>,
     pub should_quit: bool,
+    pub show_enabled_only: bool,
 }
 
 impl App {
@@ -41,6 +42,7 @@ impl App {
             markdown_scroll: 0,
             status_message: None,
             should_quit: false,
+            show_enabled_only: false,
         };
         app.rebuild_flat();
         app
@@ -59,7 +61,16 @@ impl App {
         if node.hidden {
             return;
         }
-        let is_expandable = !node.children.is_empty();
+        // When filtering enabled-only, skip non-enabled non-section nodes
+        // Section headers are always shown if they have visible children
+        if self.show_enabled_only && !node.enabled && node.kind != crate::tui::tree::NodeKind::SectionHeader {
+            return;
+        }
+        let is_expandable = if self.show_enabled_only {
+            node.children.iter().any(|c| c.enabled || c.kind == crate::tui::tree::NodeKind::SectionHeader)
+        } else {
+            !node.children.is_empty()
+        };
         let expanded = node.expanded;
         self.flat.push(FlatEntry {
             depth,
@@ -158,6 +169,14 @@ impl App {
             }
             self.rebuild_flat();
         }
+    }
+
+    pub fn toggle_enabled_filter(&mut self) {
+        self.show_enabled_only = !self.show_enabled_only;
+        self.rebuild_flat();
+        self.selected = 0;
+        let label = if self.show_enabled_only { "enabled only" } else { "all" };
+        self.set_status(format!("Filter: {}", label));
     }
 
     pub fn set_status(&mut self, msg: String) {

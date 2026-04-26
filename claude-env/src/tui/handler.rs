@@ -63,6 +63,11 @@ fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()
             }
         }
 
+        // Toggle enabled/all filter
+        KeyCode::Char('i') => {
+            app.toggle_enabled_filter();
+        }
+
         // View markdown
         KeyCode::Char('v') => {
             if let Some(node) = app.selected_node() {
