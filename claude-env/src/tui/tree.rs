@@ -131,10 +131,27 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
             let leaf = TreeNode::leaf(&entry.name, kind.clone(), entry);
 
             if let Some(plugin_id) = extract_plugin_from_path(entry.path.as_deref()) {
-                if let Some(plugin_node) = plugins.get_mut(&plugin_id) {
-                    plugin_node.children.push(leaf);
-                    continue;
+                // Try exact match first, then fuzzy match on name (before @)
+                let matched_key = if plugins.contains_key(&plugin_id) {
+                    Some(plugin_id.clone())
+                } else {
+                    let cache_name = plugin_id.split('@').next().unwrap_or(&plugin_id);
+                    plugins.keys()
+                        .find(|k| k.split('@').next().unwrap_or(k) == cache_name)
+                        .cloned()
+                };
+                if let Some(key) = matched_key {
+                    if let Some(plugin_node) = plugins.get_mut(&key) {
+                        plugin_node.children.push(leaf);
+                        continue;
+                    }
                 }
+                // No matching plugin node yet — create one from cache info
+                let node = plugins.entry(plugin_id.clone()).or_insert_with(|| {
+                    TreeNode::plugin(&plugin_id, entry.enabled, entry.scope.clone(), Some(format!("plugin {}", plugin_id)))
+                });
+                node.children.push(leaf);
+                continue;
             }
 
             // Standalone
