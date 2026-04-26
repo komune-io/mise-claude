@@ -9,3 +9,4 @@ pub mod npm;
 pub mod output;
 pub mod registry;
 pub mod resolver;
+pub mod tui;

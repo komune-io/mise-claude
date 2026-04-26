@@ -54,5 +54,9 @@ pub enum Command {
         /// Output as JSON.
         #[arg(long)]
         json: bool,
+
+        /// Launch interactive TUI mode.
+        #[arg(long)]
+        tui: bool,
     },
 }

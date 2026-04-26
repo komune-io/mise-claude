@@ -73,19 +73,26 @@ fn main() {
         Command::Remove { tool } => {
             run_remove(&tool, cli.verbose);
         }
-        Command::Inspect { section, json } => {
+        Command::Inspect { section, json, tui } => {
             let project_root = std::path::PathBuf::from(".");
             let home_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
             let config_path = std::path::PathBuf::from("claude-env.toml");
             let config = Config::from_file(&config_path).unwrap_or_default();
 
-            claude_env::inspect::run_inspect(
-                &project_root,
-                &home_dir,
-                &config,
-                section.as_deref(),
-                json,
-            );
+            if tui {
+                if let Err(e) = claude_env::tui::run_tui(&project_root, &home_dir, &config) {
+                    eprintln!("TUI error: {e}");
+                    process::exit(1);
+                }
+            } else {
+                claude_env::inspect::run_inspect(
+                    &project_root,
+                    &home_dir,
+                    &config,
+                    section.as_deref(),
+                    json,
+                );
+            }
         }
     }
 }
