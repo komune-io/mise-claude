@@ -21,3 +21,6 @@ mod reconciler_test;
 
 #[path = "unit/tree_test.rs"]
 mod tree_test;
+
+#[path = "unit/actions_test.rs"]
+mod actions_test;
