@@ -35,6 +35,8 @@ pub struct AuditEntry {
     pub overridden_by: Option<String>,
     /// Whether this item's parent plugin is enabled
     pub enabled: bool,
+    /// For plugin-cache items: "plugin@marketplace". For hooks: "hook:EventName".
+    pub from_plugin: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

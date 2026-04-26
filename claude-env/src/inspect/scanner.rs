@@ -413,6 +413,13 @@ fn extract_hooks(json: &Value, scope: Scope, source: &str, items: &mut Vec<Disco
                 None => continue,
             };
 
+            // Event+matcher label for grouping
+            let event_label = if matcher == "*" {
+                event_name.clone()
+            } else {
+                format!("{} [{}]", event_name, matcher)
+            };
+
             for hook in hook_list {
                 let hook_type = hook
                     .get("type")
@@ -423,28 +430,20 @@ fn extract_hooks(json: &Value, scope: Scope, source: &str, items: &mut Vec<Disco
                     .and_then(|c| c.as_str())
                     .unwrap_or("?");
 
-                // Shorten command for display: use basename
+                // Shorten command for display
                 let cmd_short = command
                     .split('/')
                     .last()
                     .unwrap_or(command)
-                    .split('\'')
-                    .filter(|s| !s.is_empty())
-                    .last()
-                    .unwrap_or(command);
-
-                let name = if matcher == "*" {
-                    event_name.clone()
-                } else {
-                    format!("{} [{}]", event_name, matcher)
-                };
+                    .trim_matches('\'');
 
                 items.push(DiscoveredItem {
-                    name,
-                    version: Some(format!("{} → {}", hook_type, cmd_short)),
+                    name: format!("[{}] {}", hook_type, cmd_short),
+                    version: Some(command.to_string()),
                     scope: scope.clone(),
                     source_path: source.to_string(),
-                    from_plugin: None,
+                    // Use from_plugin to encode the event group for tree building
+                    from_plugin: Some(format!("hook:{}", event_label)),
                 });
             }
         }

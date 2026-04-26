@@ -16,6 +16,7 @@ fn make_entry(
         drift: false,
         overridden_by: None,
         enabled,
+        from_plugin: None,
     }
 }
 

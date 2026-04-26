@@ -239,11 +239,33 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
     mcp_section.children = mcp_nodes;
     tree.push(mcp_section);
 
-    // Hooks section
-    if !hook_nodes.is_empty() {
-        let mut hooks_section = TreeNode::section(&format!("Hooks ({})", hook_nodes.len()));
-        hooks_section.children = hook_nodes;
-        tree.push(hooks_section);
+    // Hooks section — group by event name (from_plugin = "hook:EventName")
+    {
+        let mut event_groups: BTreeMap<String, Vec<TreeNode>> = BTreeMap::new();
+        for (category, entries) in &report.entries {
+            if *category != Category::Hooks {
+                continue;
+            }
+            for entry in entries {
+                let event_label = entry.from_plugin.as_deref()
+                    .and_then(|fp| fp.strip_prefix("hook:"))
+                    .unwrap_or("unknown")
+                    .to_string();
+                let leaf = TreeNode::leaf(&entry.name, NodeKind::Hook, entry);
+                event_groups.entry(event_label).or_default().push(leaf);
+            }
+        }
+        if !event_groups.is_empty() {
+            let total: usize = event_groups.values().map(|v| v.len()).sum();
+            let mut hooks_section = TreeNode::section(&format!("Hooks ({})", total));
+            for (event_name, commands) in event_groups {
+                let mut event_node = TreeNode::section(&format!("{} ({})", event_name, commands.len()));
+                event_node.expanded = false;
+                event_node.children = commands;
+                hooks_section.children.push(event_node);
+            }
+            tree.push(hooks_section);
+        }
     }
 
     // Standalone sections (only when non-empty), in a stable order

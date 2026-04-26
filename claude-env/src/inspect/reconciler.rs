@@ -103,6 +103,7 @@ pub fn reconcile(
                         drift: false,
                         overridden_by: None,
                         enabled,
+                        from_plugin: item.from_plugin.clone(),
                     }
                 })
                 .collect();
@@ -149,6 +150,7 @@ pub fn reconcile(
             drift: false,
             overridden_by: None,
             enabled,
+            from_plugin: item.from_plugin.clone(),
         });
     }
 
@@ -164,6 +166,7 @@ pub fn reconcile(
                 drift: true,
                 overridden_by: None,
                 enabled: false,
+                from_plugin: None,
             });
         }
     }
