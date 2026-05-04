@@ -1,0 +1,42 @@
+[tools]
+rust = "latest"
+
+[tasks.clean]
+description = "Remove build artifacts"
+run = "cargo clean"
+
+[tasks.build]
+description = "Build in debug mode"
+run = "cargo build"
+
+[tasks."build:release"]
+description = "Build optimized release binary"
+run = "cargo build --release"
+
+[tasks.test]
+description = "Run all tests"
+run = "cargo test"
+
+[tasks.run]
+description = "Run inspect (default)"
+run = "cargo run -- inspect"
+
+[tasks."run:tui"]
+description = "Run inspect TUI"
+run = "cargo run -- inspect --tui"
+
+[tasks."run:install"]
+description = "Run install"
+run = "cargo run -- install"
+
+[tasks.lint]
+description = "Check for warnings"
+run = "cargo clippy -- -D warnings"
+
+[tasks.fmt]
+description = "Format code"
+run = "cargo fmt"
+
+[tasks."fmt:check"]
+description = "Check formatting"
+run = "cargo fmt -- --check"

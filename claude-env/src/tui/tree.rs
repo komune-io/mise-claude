@@ -239,30 +239,53 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
     mcp_section.children = mcp_nodes;
     tree.push(mcp_section);
 
-    // Hooks section — group by event name (from_plugin = "hook:EventName")
+    // Hooks section — group by plugin, then by event
+    // from_plugin format: "hook:<plugin>/<event_label>"
     {
-        let mut event_groups: BTreeMap<String, Vec<TreeNode>> = BTreeMap::new();
+        // plugin_name → event_label → Vec<TreeNode>
+        let mut by_plugin: BTreeMap<String, BTreeMap<String, Vec<TreeNode>>> = BTreeMap::new();
+        let mut total = 0usize;
+
         for (category, entries) in &report.entries {
             if *category != Category::Hooks {
                 continue;
             }
             for entry in entries {
-                let event_label = entry.from_plugin.as_deref()
+                let (plugin_name, event_label) = entry.from_plugin.as_deref()
                     .and_then(|fp| fp.strip_prefix("hook:"))
-                    .unwrap_or("unknown")
-                    .to_string();
+                    .and_then(|rest| rest.split_once('/'))
+                    .map(|(p, e)| (p.to_string(), e.to_string()))
+                    .unwrap_or_else(|| ("unknown".to_string(), "unknown".to_string()));
+
                 let leaf = TreeNode::leaf(&entry.name, NodeKind::Hook, entry);
-                event_groups.entry(event_label).or_default().push(leaf);
+                by_plugin.entry(plugin_name).or_default().entry(event_label).or_default().push(leaf);
+                total += 1;
             }
         }
-        if !event_groups.is_empty() {
-            let total: usize = event_groups.values().map(|v| v.len()).sum();
+
+        if !by_plugin.is_empty() {
             let mut hooks_section = TreeNode::section(&format!("Hooks ({})", total));
-            for (event_name, commands) in event_groups {
-                let mut event_node = TreeNode::section(&format!("{} ({})", event_name, commands.len()));
-                event_node.expanded = false;
-                event_node.children = commands;
-                hooks_section.children.push(event_node);
+
+            for (plugin_name, events) in by_plugin {
+                let plugin_hook_count: usize = events.values().map(|v| v.len()).sum();
+                let mut plugin_node = TreeNode::section(&format!("{} ({})", plugin_name, plugin_hook_count));
+                plugin_node.expanded = false;
+
+                for (event_name, commands) in events {
+                    if commands.len() == 1 {
+                        // Single command per event — show inline without sub-group
+                        let mut leaf = commands.into_iter().next().unwrap();
+                        leaf.name = format!("{} → {}", event_name, leaf.name);
+                        plugin_node.children.push(leaf);
+                    } else {
+                        let mut event_node = TreeNode::section(&format!("{} ({})", event_name, commands.len()));
+                        event_node.expanded = false;
+                        event_node.children = commands;
+                        plugin_node.children.push(event_node);
+                    }
+                }
+
+                hooks_section.children.push(plugin_node);
             }
             tree.push(hooks_section);
         }

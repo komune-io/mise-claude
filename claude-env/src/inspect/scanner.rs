@@ -394,7 +394,6 @@ fn extract_hooks(json: &Value, scope: Scope, source: &str, items: &mut Vec<Disco
                 None => continue,
             };
 
-            // Event+matcher label for grouping
             let event_label = if matcher == "*" {
                 event_name.clone()
             } else {
@@ -411,22 +410,55 @@ fn extract_hooks(json: &Value, scope: Scope, source: &str, items: &mut Vec<Disco
                     .and_then(|c| c.as_str())
                     .unwrap_or("?");
 
-                // Shorten command for display
                 let cmd_short = command
                     .split('/')
                     .last()
                     .unwrap_or(command)
                     .trim_matches('\'');
 
+                // Derive plugin name from command path
+                let hook_plugin = derive_hook_plugin(command);
+
+                // Encode as hook:<plugin>/<event> for tree grouping
                 items.push(DiscoveredItem {
                     name: format!("[{}] {}", hook_type, cmd_short),
                     version: Some(command.to_string()),
                     scope: scope.clone(),
                     source_path: source.to_string(),
-                    // Use from_plugin to encode the event group for tree building
-                    from_plugin: Some(format!("hook:{}", event_label)),
+                    from_plugin: Some(format!("hook:{}/{}", hook_plugin, event_label)),
                 });
             }
         }
     }
+}
+
+/// Derive a human-readable plugin/source name from a hook command path.
+/// e.g. "/path/to/OpenIslandHooks --source claude" → "OpenIsland"
+///      "/path/to/rtk-rewrite.sh" → "rtk"
+fn derive_hook_plugin(command: &str) -> String {
+    let basename = command
+        .split('/')
+        .last()
+        .unwrap_or(command)
+        .trim_matches('\'')
+        .trim();
+
+    // Strip common suffixes and flags
+    let name = basename
+        .split_whitespace()
+        .next()
+        .unwrap_or(basename);
+
+    // Known patterns
+    if name.contains("OpenIsland") {
+        return "OpenIsland".to_string();
+    }
+    if name.starts_with("rtk") {
+        return "rtk".to_string();
+    }
+
+    // Generic: strip extension, use as-is
+    name.trim_end_matches(".sh")
+        .trim_end_matches("Hooks")
+        .to_string()
 }
