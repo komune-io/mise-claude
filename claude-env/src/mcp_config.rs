@@ -11,13 +11,16 @@ pub struct McpEntry {
 /// If the file does not exist, returns an empty `{"mcpServers": {}}` object.
 fn read_mcp_json(project_root: &Path) -> std::io::Result<Value> {
     let path = project_root.join(".mcp.json");
-    if path.exists() {
-        let content = std::fs::read_to_string(&path)?;
-        let value: Value = serde_json::from_str(&content)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        Ok(value)
-    } else {
-        Ok(json!({ "mcpServers": {} }))
+    match std::fs::read_to_string(&path) {
+        Ok(content) => {
+            let value: Value = serde_json::from_str(&content)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+            Ok(value)
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            Ok(json!({ "mcpServers": {} }))
+        }
+        Err(e) => Err(e),
     }
 }
 
@@ -66,12 +69,11 @@ pub fn ensure_server(project_root: &Path, name: &str, entry: &McpEntry) -> std::
 ///
 /// If the file or the entry does not exist, this is a no-op.
 pub fn remove_server(project_root: &Path, name: &str) -> std::io::Result<()> {
-    let path = project_root.join(".mcp.json");
-    if !path.exists() {
-        return Ok(());
-    }
-
-    let mut root = read_mcp_json(project_root)?;
+    let mut root = match read_mcp_json(project_root) {
+        Ok(v) => v,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e),
+    };
 
     let servers = root
         .get_mut("mcpServers")

@@ -50,41 +50,9 @@ impl App {
 
     pub fn rebuild_flat(&mut self) {
         self.flat.clear();
-        // Collect nodes to flatten without holding a borrow on self
-        let nodes: Vec<TreeNode> = self.tree.clone();
-        for (i, node) in nodes.iter().enumerate() {
-            self.flatten_node(node, vec![i], 0);
-        }
-    }
-
-    fn flatten_node(&mut self, node: &TreeNode, path: Vec<usize>, depth: usize) {
-        if node.hidden {
-            return;
-        }
-        // When filtering enabled-only, skip non-enabled non-section nodes
-        // Section headers are always shown if they have visible children
-        if self.show_enabled_only && !node.enabled && node.kind != crate::tui::tree::NodeKind::SectionHeader {
-            return;
-        }
-        let is_expandable = if self.show_enabled_only {
-            node.children.iter().any(|c| c.enabled || c.kind == crate::tui::tree::NodeKind::SectionHeader)
-        } else {
-            !node.children.is_empty()
-        };
-        let expanded = node.expanded;
-        self.flat.push(FlatEntry {
-            depth,
-            node_index: path.clone(),
-            is_expandable,
-            expanded,
-        });
-        if expanded {
-            let children: Vec<TreeNode> = node.children.clone();
-            for (i, child) in children.iter().enumerate() {
-                let mut child_path = path.clone();
-                child_path.push(i);
-                self.flatten_node(child, child_path, depth + 1);
-            }
+        let enabled_only = self.show_enabled_only;
+        for i in 0..self.tree.len() {
+            flatten_node(&self.tree[i], vec![i], 0, enabled_only, &mut self.flat);
         }
     }
 
@@ -114,11 +82,6 @@ impl App {
             node = node.children.get_mut(idx)?;
         }
         Some(node)
-    }
-
-    /// Public wrapper for use in ui.rs
-    pub fn resolve_node_pub(&self, path: &[usize]) -> Option<&TreeNode> {
-        self.resolve_node(path)
     }
 
     pub fn move_up(&mut self) {
@@ -197,6 +160,41 @@ impl App {
         }
         self.rebuild_flat();
         self.selected = 0;
+    }
+}
+
+fn flatten_node(
+    node: &TreeNode,
+    path: Vec<usize>,
+    depth: usize,
+    enabled_only: bool,
+    flat: &mut Vec<FlatEntry>,
+) {
+    use crate::tui::tree::NodeKind;
+
+    if node.hidden {
+        return;
+    }
+    if enabled_only && !node.enabled && node.kind != NodeKind::SectionHeader {
+        return;
+    }
+    let is_expandable = if enabled_only {
+        node.children.iter().any(|c| c.enabled || c.kind == NodeKind::SectionHeader)
+    } else {
+        !node.children.is_empty()
+    };
+    flat.push(FlatEntry {
+        depth,
+        node_index: path.clone(),
+        is_expandable,
+        expanded: node.expanded,
+    });
+    if node.expanded {
+        for (i, child) in node.children.iter().enumerate() {
+            let mut child_path = path.clone();
+            child_path.push(i);
+            flatten_node(child, child_path, depth + 1, enabled_only, flat);
+        }
     }
 }
 

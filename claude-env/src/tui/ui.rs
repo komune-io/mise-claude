@@ -63,7 +63,7 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
         .iter()
         .enumerate()
         .map(|(i, entry)| {
-            let node = match app.resolve_node_pub(&entry.node_index) {
+            let node = match app.resolve_node(&entry.node_index) {
                 Some(n) => n,
                 None => return ListItem::new(""),
             };

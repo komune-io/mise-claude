@@ -38,14 +38,7 @@ fn main() {
             let config = Config::from_file(&config_path).unwrap_or_default();
             let lockfile = Lockfile::from_file(&lock_path).unwrap_or_default();
 
-            let packages_dir: PathBuf = std::env::var("CLAUDE_ENV_HOME")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| {
-                    dirs::home_dir()
-                        .unwrap_or_else(|| PathBuf::from("."))
-                        .join(".claude-env")
-                        .join("packages")
-                });
+            let packages_dir = packages_dir();
 
             println!("  {:<25} {:<12} {}", "TOOL", "VERSION", "STATUS");
             println!("  {}", "─".repeat(50));
@@ -160,20 +153,12 @@ fn run_remove(tool: &str, _verbose: bool) {
         }
     }
 
-    // 5. Remove package directory if it exists.
-    let packages_dir: PathBuf = std::env::var("CLAUDE_ENV_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            dirs::home_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join(".claude-env")
-                .join("packages")
-        });
-    let pkg_dir = packages_dir.join(tool);
-    if pkg_dir.exists() {
-        if let Err(e) = std::fs::remove_dir_all(&pkg_dir) {
-            eprintln!("warning: failed to remove package directory: {e}");
-        }
+    // 5. Remove package directory.
+    let pkg_dir = packages_dir().join(tool);
+    match std::fs::remove_dir_all(&pkg_dir) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => eprintln!("warning: failed to remove package directory: {e}"),
     }
 
     // 6. Remove from lockfile and rewrite.
@@ -200,15 +185,7 @@ fn run_install(verbose: bool) {
         }
     };
 
-    // 2. Determine packages_dir.
-    let packages_dir: PathBuf = std::env::var("CLAUDE_ENV_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            dirs::home_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join(".claude-env")
-                .join("packages")
-        });
+    let packages_dir = packages_dir();
 
     // 3. Read lockfile (empty if missing).
     let lock_path = PathBuf::from("claude-env.lock");
@@ -310,6 +287,17 @@ fn run_install(verbose: bool) {
     // 7. Print summary and exit.
     reporter.summary();
     process::exit(reporter.exit_code());
+}
+
+fn packages_dir() -> PathBuf {
+    std::env::var("CLAUDE_ENV_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            dirs::home_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".claude-env")
+                .join("packages")
+        })
 }
 
 fn section_name(tool_type: &ToolType) -> &'static str {

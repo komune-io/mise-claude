@@ -101,9 +101,6 @@ impl Installer for PluginInstaller {
             ));
         }
 
-        Ok(InstallResult {
-            installed: true,
-            integrity: None,
-        })
+        Ok(InstallResult { integrity: None })
     }
 }

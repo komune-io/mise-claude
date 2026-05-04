@@ -19,32 +19,13 @@ fn read_json(path: &Path) -> Option<Value> {
     serde_json::from_str(&contents).ok()
 }
 
-/// Extract keys from `json["mcpServers"]` as DiscoveredItems.
-fn extract_mcp_servers(json: &Value, scope: Scope, source: &str) -> Vec<DiscoveredItem> {
-    let servers = match json.get("mcpServers").and_then(|v| v.as_object()) {
+/// Extract keys from a named JSON object field as DiscoveredItems.
+fn extract_json_keys(json: &Value, field: &str, scope: Scope, source: &str) -> Vec<DiscoveredItem> {
+    let obj = match json.get(field).and_then(|v| v.as_object()) {
         Some(obj) => obj,
         None => return vec![],
     };
-    servers
-        .keys()
-        .map(|name| DiscoveredItem {
-            name: name.clone(),
-            version: None,
-            scope: scope.clone(),
-            source_path: source.to_string(),
-            from_plugin: None,
-        })
-        .collect()
-}
-
-/// Extract keys from `json["enabledPlugins"]` as DiscoveredItems.
-fn extract_plugins(json: &Value, scope: Scope, source: &str) -> Vec<DiscoveredItem> {
-    let plugins = match json.get("enabledPlugins").and_then(|v| v.as_object()) {
-        Some(obj) => obj,
-        None => return vec![],
-    };
-    plugins
-        .keys()
+    obj.keys()
         .map(|name| DiscoveredItem {
             name: name.clone(),
             version: None,
@@ -288,14 +269,14 @@ pub fn scan_mcp(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> {
     let project_mcp = project_root.join(".mcp.json");
     if let Some(json) = read_json(&project_mcp) {
         let source = project_mcp.to_string_lossy().into_owned();
-        items.extend(extract_mcp_servers(&json, Scope::Project, &source));
+        items.extend(extract_json_keys(&json, "mcpServers", Scope::Project, &source));
     }
 
     // Global scope: ~/.claude/settings.json
     let global_settings = home_dir.join(".claude").join("settings.json");
     if let Some(json) = read_json(&global_settings) {
         let source = global_settings.to_string_lossy().into_owned();
-        items.extend(extract_mcp_servers(&json, Scope::Global, &source));
+        items.extend(extract_json_keys(&json, "mcpServers", Scope::Global, &source));
     }
 
     items
@@ -309,14 +290,14 @@ pub fn scan_plugins(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem>
     let project_settings = project_root.join(".claude").join("settings.json");
     if let Some(json) = read_json(&project_settings) {
         let source = project_settings.to_string_lossy().into_owned();
-        items.extend(extract_plugins(&json, Scope::Project, &source));
+        items.extend(extract_json_keys(&json, "enabledPlugins", Scope::Project, &source));
     }
 
     // Global scope: ~/.claude/settings.json
     let global_settings = home_dir.join(".claude").join("settings.json");
     if let Some(json) = read_json(&global_settings) {
         let source = global_settings.to_string_lossy().into_owned();
-        items.extend(extract_plugins(&json, Scope::Global, &source));
+        items.extend(extract_json_keys(&json, "enabledPlugins", Scope::Global, &source));
     }
 
     items

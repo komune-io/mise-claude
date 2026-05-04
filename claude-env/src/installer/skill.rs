@@ -65,9 +65,6 @@ impl Installer for SkillInstaller {
             ));
         }
 
-        Ok(InstallResult {
-            installed: true,
-            integrity: None,
-        })
+        Ok(InstallResult { integrity: None })
     }
 }
