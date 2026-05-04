@@ -12,7 +12,10 @@ const RESET: &str = "\x1b[0m";
 pub fn render_terminal(report: &AuditReport) {
     let mut first = true;
     for (category, entries) in &report.entries {
-        if entries.is_empty() {
+        let visible: Vec<_> = entries.iter()
+            .filter(|e| e.enabled || e.management == Management::Managed || e.drift)
+            .collect();
+        if visible.is_empty() {
             continue;
         }
 
@@ -27,6 +30,11 @@ pub fn render_terminal(report: &AuditReport) {
         let mut last_source: Option<&str> = None;
 
         for entry in entries {
+            // Static output: only show enabled/managed/drift items by default
+            if !entry.enabled && entry.management != Management::Managed && !entry.drift {
+                continue;
+            }
+
             let symbol = if entry.drift {
                 format!("{YELLOW}⚠{RESET}")
             } else if entry.management == Management::Managed {
