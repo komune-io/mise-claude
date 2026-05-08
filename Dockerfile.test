@@ -5,5 +5,9 @@ RUN curl https://mise.run | sh
 ENV PATH="/root/.local/bin:$PATH"
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install Rust for building claude-env from source
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+ENV PATH="/root/.cargo/bin:$PATH"
+
 WORKDIR /app
 ENTRYPOINT ["bash", "test/integration.sh"]

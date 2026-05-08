@@ -10,6 +10,18 @@ PASS=0
 FAIL=0
 FAILURES=()
 
+# ─── Build claude-env from source ─────────────────────────────────────────────
+# claude-env is not yet published to crates.io, so we build from the repo.
+
+echo -e "${YELLOW}Building claude-env...${NC}"
+if ! cargo build --manifest-path /app/claude-env/Cargo.toml --release --quiet 2>&1; then
+  echo -e "${RED}Failed to build claude-env — cannot run integration tests${NC}"
+  exit 1
+fi
+CLAUDE_ENV=/app/claude-env/target/release/claude-env
+echo -e "${GREEN}claude-env ready${NC}"
+echo ""
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 # Link the plugin once
@@ -29,14 +41,19 @@ for sample_dir in $SAMPLES; do
   # Copy sample to a temp dir to avoid polluting the repo
   tmpdir=$(mktemp -d)
 
-  # Copy .mise.toml but strip non-claude tools from [tools] section
+  # Strip the [tools] section entirely — claude-env handles tool installs directly,
+  # and claude-code is pre-installed globally in the Docker image.
   awk '
-    /^\[tools\]/ { in_tools=1; print; next }
+    /^\[tools\]/ { in_tools=1; next }
     /^\[/         { in_tools=0; print; next }
-    in_tools && /^"claude:/ { print; next }
-    in_tools { next }
+    in_tools      { next }
     { print }
   ' "$sample_dir/.mise.toml" > "$tmpdir/.mise.toml"
+
+  # Copy claude-env.toml (the new source of truth for Claude tools)
+  if [ -f "$sample_dir/claude-env.toml" ]; then
+    cp "$sample_dir/claude-env.toml" "$tmpdir/claude-env.toml"
+  fi
 
   # Copy test script and assertion helpers
   cp /app/test/lib.sh "$tmpdir/lib.sh"
@@ -57,14 +74,16 @@ for sample_dir in $SAMPLES; do
     continue
   fi
 
-  # Install tools
-  if ! mise install 2>&1; then
-    FAIL=$((FAIL + 1))
-    FAILURES+=("$name: mise install failed")
-    echo -e "  ${RED}FAIL${NC} ${name} — mise install failed"
-    rm -rf "$tmpdir"
-    cd /app
-    continue
+  # Install Claude tools via claude-env (reads claude-env.toml)
+  if [ -f "claude-env.toml" ]; then
+    if ! "$CLAUDE_ENV" install 2>&1; then
+      FAIL=$((FAIL + 1))
+      FAILURES+=("$name: claude-env install failed")
+      echo -e "  ${RED}FAIL${NC} ${name} — claude-env install failed"
+      rm -rf "$tmpdir"
+      cd /app
+      continue
+    fi
   fi
 
   # Run the sample's test task
