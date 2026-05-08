@@ -127,9 +127,15 @@ All Claude tool management (MCP servers, skills, plugins, CLI specs) is handled 
 ## Local Development
 
 ```bash
+# Link the plugin locally
 mise plugin link claude ./
-mise install claude:@upstash/context7-mcp@latest
-mise ls
+mise install
+
+# Declare tools in claude-env.toml, then install them
+claude-env install
+
+# Inspect current state
+claude-env inspect
 ```
 
 ## Contributing
