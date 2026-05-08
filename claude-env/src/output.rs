@@ -16,14 +16,15 @@ impl Reporter {
 
     pub fn success(&mut self, name: &str, version: &str, detail: &str) {
         self.installed += 1;
+        // Print even in quiet mode: something changed and the user should see it.
         println!("  \x1b[32m✓\x1b[0m {:<25} {} {}", name, version, detail);
     }
 
     pub fn failure(&mut self, name: &str, version: &str, error: &str) {
         self.failed += 1;
-        println!("  \x1b[31m✗\x1b[0m {:<25} {} failed", name, version);
+        eprintln!("  \x1b[31m✗\x1b[0m {:<25} {} failed", name, version);
         for line in error.lines() {
-            println!("    \x1b[90m│\x1b[0m {}", line);
+            eprintln!("    \x1b[90m│\x1b[0m {}", line);
         }
     }
 
