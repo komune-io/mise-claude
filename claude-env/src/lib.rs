@@ -5,6 +5,7 @@ pub mod inspect;
 pub mod installer;
 pub mod lockfile;
 pub mod mcp_config;
+pub mod migrate;
 pub mod npm;
 pub mod output;
 pub mod registry;

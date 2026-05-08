@@ -27,3 +27,6 @@ mod actions_test;
 
 #[path = "unit/reporter_test.rs"]
 mod reporter_test;
+
+#[path = "unit/migrate_test.rs"]
+mod migrate_test;

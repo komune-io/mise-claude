@@ -53,6 +53,13 @@ pub enum Command {
         tool: String,
     },
 
+    /// Migrate Claude tool declarations from .mise.toml to claude-env.toml.
+    ///
+    /// Reads the current directory's .mise.toml, finds all `claude:mcp/*`,
+    /// `claude:skills.sh/*`, `claude:plugin/*`, and `claude:spec/*` entries,
+    /// and writes a `claude-env.toml` with equivalent declarations.
+    Migrate,
+
     /// Audit all Claude Code configuration (project + global).
     Inspect {
         /// Filter to a specific category (mcp, plugins, skills, commands, agents).

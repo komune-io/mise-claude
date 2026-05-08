@@ -1,6 +1,7 @@
 use clap::Parser;
 use claude_env::cli::{Cli, Command};
 use claude_env::config::Config;
+use claude_env::migrate;
 use claude_env::installer::cli_tool::CliToolInstaller;
 use claude_env::installer::mcp::McpInstaller;
 use claude_env::installer::plugin::PluginInstaller;
@@ -65,6 +66,28 @@ fn main() {
         }
         Command::Remove { tool } => {
             run_remove(&tool, cli.verbose);
+        }
+        Command::Migrate => {
+            let project_dir = PathBuf::from(".");
+            let total;
+            let config = match migrate::migrate(&project_dir) {
+                Ok(c) => {
+                    total = c.mcp.len() + c.cli.len() + c.skills.len() + c.plugins.len();
+                    c
+                }
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    process::exit(2);
+                }
+            };
+            if let Err(e) = migrate::write_claude_env_toml(&config, &project_dir) {
+                eprintln!("error: failed to write claude-env.toml: {e}");
+                process::exit(2);
+            }
+            println!("✓ Found {} claude: tools in .mise.toml", total);
+            println!("✓ Written claude-env.toml");
+            println!("→ Remove claude:mcp/*, claude:skills.sh/*, claude:plugin/*, claude:spec/* from .mise.toml");
+            println!("→ Keep `claude = \"latest\"` — that installs the claude-env binary itself");
         }
         Command::Inspect { section, json, tui } => {
             let project_root = std::path::PathBuf::from(".");
