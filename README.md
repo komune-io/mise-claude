@@ -82,21 +82,22 @@ Workflow tools add structured methodologies, slash commands, and agents to Claud
 
 Skills from [skills.sh](https://skills.sh) teach Claude Code best practices for specific frameworks and topics — no server required.
 
-Format: `skills.sh/<owner>/<repo>/<skill>`
-
 ```toml
-"claude:skills.sh/vercel-labs/next-skills/next-best-practices" = "latest"
-"claude:skills.sh/anthropics/skills/frontend-design" = "latest"
+# claude-env.toml
+[skills]
+"vercel-labs/next-skills/next-best-practices" = "latest"
+"anthropics/skills/frontend-design" = "latest"
 ```
 
 ### Plugins
 
 Native Claude Code plugins from GitHub-based marketplaces.
 
-Format: `plugin/<owner>/<repo>/<plugin>@<marketplace>`
-
 ```toml
-"claude:plugin/anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
+# claude-env.toml
+[plugins]
+"anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
+"upstash/context7/context7-plugin@context7-marketplace" = "latest"
 ```
 
 ## Extra Configuration
@@ -115,16 +116,13 @@ env = { LOG_LEVEL = "debug" }
 
 ## How It Works
 
-The plugin hooks into mise's install lifecycle:
+The plugin hooks into mise's install lifecycle to bootstrap the `claude-env` binary:
 
-1. **List versions** — checks the npm registry for available versions
-2. **Install** — downloads the package and either registers it as an MCP server or runs its setup command
-3. **Configure PATH** — makes installed binaries available in your terminal
+1. **List versions** — queries crates.io for available `claude-env` releases
+2. **Install** — runs `cargo install claude-env` to put the binary in PATH
+3. **Shell entry** — `claude-env install --idempotent --quiet` runs automatically when `claude-env.toml` exists in the project root, installing any missing or outdated tools silently
 
-Design principles:
-- **Fast startup** — binaries are installed directly, no wrapper scripts
-- **Safe to re-run** — running `mise install` again merges new tools without overwriting existing ones
-- **Convention over configuration** — sensible defaults, override only when needed
+All Claude tool management (MCP servers, skills, plugins, CLI specs) is handled by `claude-env`, not by mise directly.
 
 ## Local Development
 
