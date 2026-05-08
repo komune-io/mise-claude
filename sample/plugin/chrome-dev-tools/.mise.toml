@@ -1,6 +1,6 @@
 [tools]
 claude-code = "latest"
-"claude:plugin/ChromeDevTools/chrome-devtools-mcp/chrome-devtools-mcp@chrome-devtools-plugins" = "latest"
+claude = "latest"
 
 [tasks.test]
 description = "Run integration test"

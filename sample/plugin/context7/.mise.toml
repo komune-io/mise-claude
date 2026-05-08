@@ -1,6 +1,6 @@
 [tools]
 claude-code = "latest"
-"claude:plugin/upstash/context7/context7-plugin@context7-marketplace" = "latest"
+claude = "latest"
 
 [tasks.test]
 description = "Run integration test"

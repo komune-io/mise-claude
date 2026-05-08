@@ -1,6 +1,6 @@
 [tools]
 claude-code = "latest"
-"claude:plugin/nicobailon/visual-explainer/visual-explainer@visual-explainer-marketplace" = "latest"
+claude = "latest"
 
 [tasks.test]
 description = "Run integration test"

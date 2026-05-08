@@ -1,0 +1,11 @@
+[plugins]
+"anthropics/knowledge-work-plugins/productivity@knowledge-work-plugins" = "latest"
+"anthropics/knowledge-work-plugins/sales@knowledge-work-plugins" = "latest"
+"anthropics/knowledge-work-plugins/customer-support@knowledge-work-plugins" = "latest"
+"anthropics/knowledge-work-plugins/product-management@knowledge-work-plugins" = "latest"
+"anthropics/knowledge-work-plugins/marketing@knowledge-work-plugins" = "latest"
+"anthropics/knowledge-work-plugins/legal@knowledge-work-plugins" = "latest"
+"anthropics/knowledge-work-plugins/finance@knowledge-work-plugins" = "latest"
+"anthropics/knowledge-work-plugins/data@knowledge-work-plugins" = "latest"
+"anthropics/knowledge-work-plugins/enterprise-search@knowledge-work-plugins" = "latest"
+"anthropics/knowledge-work-plugins/cowork-plugin-management@knowledge-work-plugins" = "latest"

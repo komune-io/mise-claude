@@ -1,0 +1,2 @@
+[plugins]
+"ChromeDevTools/chrome-devtools-mcp/chrome-devtools-mcp@chrome-devtools-plugins" = "latest"

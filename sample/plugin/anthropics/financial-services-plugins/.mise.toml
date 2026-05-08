@@ -1,10 +1,6 @@
 [tools]
 claude-code = "latest"
-"claude:plugin/anthropics/financial-services-plugins/financial-analysis@financial-services-plugins" = "latest"
-"claude:plugin/anthropics/financial-services-plugins/investment-banking@financial-services-plugins" = "latest"
-"claude:plugin/anthropics/financial-services-plugins/equity-research@financial-services-plugins" = "latest"
-"claude:plugin/anthropics/financial-services-plugins/private-equity@financial-services-plugins" = "latest"
-"claude:plugin/anthropics/financial-services-plugins/wealth-management@financial-services-plugins" = "latest"
+claude = "latest"
 
 [tasks.test]
 description = "Run integration test"
@@ -16,4 +12,3 @@ run = """
 mise ls -c 2>/dev/null | awk '{print $1"@"$2}' | xargs -I{} mise uninstall {} || true
 rm -rfv .claude/settings.json
 """
-

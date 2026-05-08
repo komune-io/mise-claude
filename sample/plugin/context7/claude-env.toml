@@ -1,0 +1,2 @@
+[plugins]
+"upstash/context7/context7-plugin@context7-marketplace" = "latest"

@@ -1,6 +1,6 @@
 [tools]
 claude-code = "latest"
-"claude:plugin/JuliusBrussee/caveman/caveman@caveman" = "latest"
+claude = "latest"
 
 [tasks.test]
 description = "Run integration test"

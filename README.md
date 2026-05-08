@@ -10,37 +10,47 @@ List the tools you want in a configuration file, run `mise install`, and everyth
 mise plugin install claude https://github.com/komune-io/mise-claude
 ```
 
-## Quick Start
+## Quick start
 
-Add tools to your project's `.mise.toml` file:
-
+**1. Bootstrap claude-env via mise:**
 ```toml
+# .mise.toml
 [tools]
-# MCP servers — give Claude Code extra capabilities (web search, browser access, UI components)
-"claude:mcp/context7" = "2.1.4"
-"claude:mcp/chrome-devtools" = "0.20.0"
-"claude:mcp/shadcn" = "4.0.6"
-
-# Workflow tools — add structured methodologies and commands to Claude Code
-"claude:spec/gsd" = "1.22.4"
-"claude:spec/bmad" = "6.1.0"
-"claude:spec/openspec" = "1.2.0"
-
-# Skills — teach Claude Code best practices for specific frameworks
-"claude:skills.sh/vercel-labs/next-skills/next-best-practices" = "latest"
-"claude:skills.sh/anthropics/skills/frontend-design" = "latest"
-
-# Plugins — extend Claude Code with new commands
-"claude:plugin/anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
+claude = "latest"
 ```
-
-Then install everything:
-
 ```bash
 mise install
 ```
 
-That's it. Claude Code will automatically pick up all the tools you've configured.
+**2. Declare Claude tools in `claude-env.toml`:**
+```toml
+[mcp]
+context7 = "2.1.4"
+
+[skills]
+"vercel-labs/next-skills/next-best-practices" = "latest"
+
+[plugins]
+"upstash/context7/context7-plugin@context7-marketplace" = "latest"
+
+[cli]
+gsd = "1.22.4"
+```
+
+**3. Install (auto-runs on shell entry after step 1):**
+```bash
+claude-env install
+```
+
+**4. Audit your environment:**
+```bash
+claude-env inspect
+```
+
+**Migrating from the old mise plugin?**
+```bash
+claude-env migrate   # reads .mise.toml claude:* entries → writes claude-env.toml
+```
 
 ## What Can You Install?
 

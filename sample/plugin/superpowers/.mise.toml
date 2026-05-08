@@ -1,6 +1,6 @@
 [tools]
 claude-code = "latest"
-"claude:plugin/obra/superpowers-marketplace/superpowers@superpowers-marketplace" = "latest"
+claude = "latest"
 
 [tasks.test]
 description = "Run integration test"

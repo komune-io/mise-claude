@@ -2,9 +2,7 @@
 java = "25"
 kotlin = "2.3.10"
 gradle = "9.3.1"
-claude-code = "latest"
-# renovate: datasource=npm depName=bmad-method
-"claude:spec/bmad" = "6.1.0"
+claude = "latest"
 
 [tasks.test]
 description = "Run integration test"
