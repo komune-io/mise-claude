@@ -80,6 +80,10 @@ fn main() {
                     process::exit(2);
                 }
             };
+            if project_dir.join("claude-env.toml").exists() {
+                eprintln!("error: claude-env.toml already exists — remove it first to re-run migrate");
+                process::exit(2);
+            }
             if let Err(e) = migrate::write_claude_env_toml(&config, &project_dir) {
                 eprintln!("error: failed to write claude-env.toml: {e}");
                 process::exit(2);
