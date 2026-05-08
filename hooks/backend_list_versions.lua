@@ -1,3 +1,4 @@
+-- Semver helpers duplicated from backend_install.lua — keep in sync.
 --- Parse a semver string into a list of numeric parts.
 local function parse_version(v)
   local parts = {}

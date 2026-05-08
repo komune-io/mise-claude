@@ -1,3 +1,4 @@
+-- Semver helpers duplicated in backend_list_versions.lua — keep in sync.
 --- Parse a semver string into a list of numeric parts.
 local function parse_version(v)
   local parts = {}
@@ -41,6 +42,7 @@ local function fetch_latest_version()
   end
   table.sort(versions, version_lt)
   if #versions == 0 then error("No versions found for claude-env on crates.io") end
+  -- versions is sorted ascending; last element is the latest release
   return versions[#versions]
 end
 
@@ -60,9 +62,13 @@ function PLUGIN:BackendInstall(ctx)
     .. " --locked"
   )
 
-  -- Sentinel so mise considers the tool installed.
+  -- Write a sentinel file that mise checks to determine if the tool is
+  -- installed. The actual idempotency check is done by cargo install --locked.
   local f = io.open(ctx.install_path .. "/.installed", "w")
-  if f then f:write("1") f:close() end
+  if f then
+    f:write("1")
+    f:close()
+  end
 
   return {}
 end

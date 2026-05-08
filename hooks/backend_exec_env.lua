@@ -10,8 +10,10 @@ function PLUGIN:BackendExecEnv(ctx)
 
   -- Trigger install only when claude-env.toml exists in the project root.
   -- Failures are swallowed so a broken config never breaks the shell.
-  pcall(function()
+  local ok, err = pcall(function()
     local cmd = require("cmd")
+    -- Use pwd, not MISE_PROJECT_ROOT: MISE_PROJECT_ROOT can point to a parent
+    -- directory when running inside `mise run` tasks, causing false positives.
     local project_root = cmd.exec("pwd"):gsub("%s+$", "")
     local f = io.open(project_root .. "/claude-env.toml", "r")
     if f then
@@ -23,6 +25,9 @@ function PLUGIN:BackendExecEnv(ctx)
       )
     end
   end)
+  if not ok then
+    io.stderr:write("mise-claude: claude-env install failed: " .. tostring(err) .. "\n")
+  end
 
   return { env_vars = { { key = "PATH", value = bin_dir } } }
 end
