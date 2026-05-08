@@ -261,7 +261,7 @@ fn latest_version_dir(plugin_dir: &Path) -> Option<std::path::PathBuf> {
 // Public scanners
 // ---------------------------------------------------------------------------
 
-/// Scan for MCP servers from project `.mcp.json` and global `~/.claude/settings.json`.
+/// Scan for MCP servers from project `.mcp.json`, user `~/.claude.json`, and global `~/.claude/settings.json`.
 pub fn scan_mcp(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> {
     let mut items = Vec::new();
 
@@ -270,6 +270,13 @@ pub fn scan_mcp(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> {
     if let Some(json) = read_json(&project_mcp) {
         let source = project_mcp.to_string_lossy().into_owned();
         items.extend(extract_json_keys(&json, "mcpServers", Scope::Project, &source));
+    }
+
+    // User scope: ~/.claude.json (Claude Code's user-level MCP config)
+    let user_claude_json = home_dir.join(".claude.json");
+    if let Some(json) = read_json(&user_claude_json) {
+        let source = user_claude_json.to_string_lossy().into_owned();
+        items.extend(extract_json_keys(&json, "mcpServers", Scope::Global, &source));
     }
 
     // Global scope: ~/.claude/settings.json
