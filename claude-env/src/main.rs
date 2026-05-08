@@ -21,8 +21,8 @@ fn main() {
     }
 
     match cli.command {
-        Command::Install => {
-            run_install(cli.verbose);
+        Command::Install { quiet, idempotent } => {
+            run_install(cli.verbose, quiet || idempotent);
         }
         Command::Update { tool } => {
             let target = tool.as_deref().unwrap_or("all");
@@ -174,7 +174,7 @@ fn run_remove(tool: &str, _verbose: bool) {
     println!("removed {tool} (from [{section}])");
 }
 
-fn run_install(verbose: bool) {
+fn run_install(verbose: bool, quiet: bool) {
     // 1. Read claude-env.toml from current dir.
     let config_path = PathBuf::from("claude-env.toml");
     let config = match Config::from_file(&config_path) {
@@ -220,7 +220,7 @@ fn run_install(verbose: bool) {
     let skill_installer = SkillInstaller;
     let plugin_installer = PluginInstaller;
 
-    let mut reporter = Reporter::new();
+    let mut reporter = if quiet { Reporter::new_quiet() } else { Reporter::new() };
 
     // 5. Execute each action.
     for action in &plan.actions {

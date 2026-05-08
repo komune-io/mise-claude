@@ -24,3 +24,6 @@ mod tree_test;
 
 #[path = "unit/actions_test.rs"]
 mod actions_test;
+
+#[path = "unit/reporter_test.rs"]
+mod reporter_test;

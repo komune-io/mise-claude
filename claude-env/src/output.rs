@@ -1,17 +1,17 @@
-/// Tracks install progress and prints formatted terminal output.
 pub struct Reporter {
     pub installed: u32,
     pub skipped: u32,
     pub failed: u32,
+    quiet: bool,
 }
 
 impl Reporter {
     pub fn new() -> Self {
-        Self {
-            installed: 0,
-            skipped: 0,
-            failed: 0,
-        }
+        Self { installed: 0, skipped: 0, failed: 0, quiet: false }
+    }
+
+    pub fn new_quiet() -> Self {
+        Self { installed: 0, skipped: 0, failed: 0, quiet: true }
     }
 
     pub fn success(&mut self, name: &str, version: &str, detail: &str) {
@@ -29,10 +29,15 @@ impl Reporter {
 
     pub fn skip(&mut self, name: &str, version: &str) {
         self.skipped += 1;
-        println!("  \x1b[90m⊘\x1b[0m {:<25} {} skipped", name, version);
+        if !self.quiet {
+            println!("  \x1b[90m⊘\x1b[0m {:<25} {} skipped", name, version);
+        }
     }
 
     pub fn summary(&self) {
+        if self.quiet && self.installed == 0 && self.failed == 0 {
+            return;
+        }
         println!();
         println!(
             "  {} installed, {} failed, {} skipped",
@@ -41,11 +46,7 @@ impl Reporter {
     }
 
     pub fn exit_code(&self) -> i32 {
-        if self.failed > 0 {
-            1
-        } else {
-            0
-        }
+        if self.failed > 0 { 1 } else { 0 }
     }
 }
 

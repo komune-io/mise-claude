@@ -16,7 +16,15 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Install all tools declared in `claude-env.toml`.
-    Install,
+    Install {
+        /// Suppress output when nothing changed (for shell hook use).
+        #[arg(long)]
+        quiet: bool,
+
+        /// Document intent: all installs are idempotent by default (resolver skips already-installed tools).
+        #[arg(long)]
+        idempotent: bool,
+    },
 
     /// Update installed tools to their latest matching version.
     Update {
