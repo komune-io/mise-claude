@@ -13,7 +13,7 @@ After merging the standalone `claude-env` Rust CLI into the `mise-claude` Lua ba
 - `claude-env/tests/e2e/` was the standalone repo's smoke harness; superseded by the root `Dockerfile.test` + `test/integration.sh` setup.
 - `.github/VOUCHED.td` has a typo extension (`.td` should be `.md`).
 - `.superpowers/` (brainstorm session state) is untracked and not in `.gitignore`.
-- `GITHUB.md` is a legitimate, current doc that was never committed.
+- `GITHUB.md` is an untracked working-tree doc; will be removed (not committed).
 
 ## Goals
 
@@ -77,9 +77,9 @@ Not invoked from `.github/workflows/`, root `mise.toml`, or `claude-env/mise.tom
 
 Append `.superpowers/` line. Existing brainstorm session state on disk is unaffected.
 
-### 6. Commit `GITHUB.md`
+### 6. Remove `GITHUB.md`
 
-`git add GITHUB.md`. Content already documents the current `main` branch protection and CI workflows — no edits needed.
+`rm GITHUB.md`. Untracked working-tree file; user opted not to commit it.
 
 ## Commit Plan
 
@@ -90,11 +90,12 @@ Six commits, one per change, on the existing `feat/claude-env-design` branch:
 3. `chore: remove unused claude-env/tests/e2e/ harness`
 4. `chore: rename VOUCHED.td → VOUCHED.md and update workflow`
 5. `chore: gitignore .superpowers/ brainstorm session state`
-6. `docs: add GITHUB.md describing branch protection and workflows`
+6. (no commit) — delete untracked `GITHUB.md` from working tree
 
 ## Verification
 
-- After #1, #2, #6 — visual review of each file.
+- After #1, #2 — visual review of each file.
+- After #6 — `ls GITHUB.md` returns "No such file or directory".
 - After #3 — `cd claude-env && cargo test` still passes.
 - After #4 — `cat .github/workflows/pr-vouch.yml | grep VOUCHED` shows `.md`, not `.td`.
 - After #5 — `git status` no longer reports `.superpowers/` as untracked.
@@ -102,5 +103,5 @@ Six commits, one per change, on the existing `feat/claude-env-design` branch:
 
 ## Risks
 
-- Low across the board. Doc rewrites are reversible. The `e2e/` deletion has no callers. The rename is two-line. The gitignore change has no behavioral effect on tooling. Committing `GITHUB.md` adds a doc.
+- Low across the board. Doc rewrites are reversible. The `e2e/` deletion has no callers. The rename is two-line. The gitignore change has no behavioral effect on tooling. The `GITHUB.md` removal only deletes an untracked file (nothing in git history is touched).
 - One subtle risk: the `pr-vouch.yml` workflow trigger on `.github/VOUCHED.td` will not match the renamed file until the workflow file is updated in the same commit. Doing rename + workflow edit atomically (single commit) avoids any window where the trigger is broken.
