@@ -10,22 +10,22 @@ PASS=0
 FAIL=0
 FAILURES=()
 
-# ─── Build claude-env from source ─────────────────────────────────────────────
-# claude-env is not yet published to crates.io, so we build from the repo.
+# ─── Build chord from source ─────────────────────────────────────────────
+# chord is not yet published to crates.io, so we build from the repo.
 
-echo -e "${YELLOW}Building claude-env...${NC}"
-if ! cargo build --manifest-path /app/claude-env/Cargo.toml --release --quiet 2>&1; then
-  echo -e "${RED}Failed to build claude-env — cannot run integration tests${NC}"
+echo -e "${YELLOW}Building chord...${NC}"
+if ! cargo build --manifest-path /app/chord/Cargo.toml --release --quiet 2>&1; then
+  echo -e "${RED}Failed to build chord — cannot run integration tests${NC}"
   exit 1
 fi
-CLAUDE_ENV=/app/claude-env/target/release/claude-env
-echo -e "${GREEN}claude-env ready${NC}"
+CHORD=/app/chord/target/release/chord
+echo -e "${GREEN}chord ready${NC}"
 echo ""
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 # Link the plugin once
-mise plugin link claude /app
+mise plugin link chord /app
 
 # Find all sample directories with .mise.toml
 SAMPLES=$(find /app/sample -name '.mise.toml' -print0 | xargs -0 -n1 dirname | sort)
@@ -48,7 +48,7 @@ for sample_dir in $SAMPLES; do
   # Copy sample to a temp dir to avoid polluting the repo
   tmpdir=$(mktemp -d)
 
-  # Strip the [tools] section entirely — claude-env handles tool installs directly,
+  # Strip the [tools] section entirely — chord handles tool installs directly,
   # and claude-code is pre-installed globally in the Docker image.
   awk '
     /^\[tools\]/ { in_tools=1; next }
@@ -57,9 +57,9 @@ for sample_dir in $SAMPLES; do
     { print }
   ' "$sample_dir/.mise.toml" > "$tmpdir/.mise.toml"
 
-  # Copy claude-env.toml (the new source of truth for Claude tools)
-  if [ -f "$sample_dir/claude-env.toml" ]; then
-    cp "$sample_dir/claude-env.toml" "$tmpdir/claude-env.toml"
+  # Copy chord.toml (the new source of truth for Claude tools)
+  if [ -f "$sample_dir/chord.toml" ]; then
+    cp "$sample_dir/chord.toml" "$tmpdir/chord.toml"
   fi
 
   # Copy test script and assertion helpers
@@ -81,12 +81,12 @@ for sample_dir in $SAMPLES; do
     continue
   fi
 
-  # Install Claude tools via claude-env (reads claude-env.toml)
-  if [ -f "claude-env.toml" ]; then
-    if ! "$CLAUDE_ENV" install 2>&1; then
+  # Install Claude tools via chord (reads chord.toml)
+  if [ -f "chord.toml" ]; then
+    if ! "$CHORD" install 2>&1; then
       FAIL=$((FAIL + 1))
-      FAILURES+=("$name: claude-env install failed")
-      echo -e "  ${RED}FAIL${NC} ${name} — claude-env install failed"
+      FAILURES+=("$name: chord install failed")
+      echo -e "  ${RED}FAIL${NC} ${name} — chord install failed"
       rm -rf "$tmpdir"
       cd /app
       continue

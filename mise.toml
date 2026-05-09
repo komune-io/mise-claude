@@ -1,5 +1,5 @@
 # Dev config for local testing
-# Usage: mise plugin link claude ./
+# Usage: mise plugin link chord ./
 #        mise install
 
 [tools]
