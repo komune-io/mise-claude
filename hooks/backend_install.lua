@@ -26,27 +26,27 @@ local function shell_quote(s)
   return "'" .. s:gsub("'", "'\\''") .. "'"
 end
 
---- Fetch the latest non-yanked claude-env version from crates.io.
+--- Fetch the latest non-yanked rytmyk-chord version from crates.io.
 local function fetch_latest_version()
   local http = require("http")
   local json = require("json")
   local resp, err = http.get({
-    url = "https://crates.io/api/v1/crates/claude-env/versions",
-    headers = { ["User-Agent"] = "mise-claude/2.0" },
+    url = "https://crates.io/api/v1/crates/rytmyk-chord/versions",
+    headers = { ["User-Agent"] = "rytmyk-chord/2.0" },
   })
-  if err then error("Failed to fetch claude-env versions: " .. err) end
+  if err then error("Failed to fetch rytmyk-chord versions: " .. err) end
   local data = json.decode(resp.body)
   local versions = {}
   for _, v in ipairs(data.versions) do
     if not v.yanked then table.insert(versions, v.num) end
   end
   table.sort(versions, version_lt)
-  if #versions == 0 then error("No versions found for claude-env on crates.io") end
+  if #versions == 0 then error("No versions found for rytmyk-chord on crates.io") end
   -- versions is sorted ascending; last element is the latest release
   return versions[#versions]
 end
 
---- Install the claude-env binary via cargo.
+--- Install the chord binary via cargo.
 function PLUGIN:BackendInstall(ctx)
   local cmd = require("cmd")
 
@@ -56,7 +56,7 @@ function PLUGIN:BackendInstall(ctx)
   end
 
   cmd.exec(
-    "cargo install claude-env"
+    "cargo install rytmyk-chord"
     .. " --version " .. shell_quote(version)
     .. " --root " .. shell_quote(ctx.install_path)
     .. " --locked"

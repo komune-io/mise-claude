@@ -21,14 +21,14 @@ local function version_lt(a, b)
   return false
 end
 
---- Return available claude-env versions from crates.io, sorted ascending.
+--- Return available rytmyk-chord versions from crates.io, sorted ascending.
 function PLUGIN:BackendListVersions(_ctx)
   local http = require("http")
   local json = require("json")
 
   local resp, err = http.get({
-    url = "https://crates.io/api/v1/crates/claude-env/versions",
-    headers = { ["User-Agent"] = "mise-claude/2.0" },
+    url = "https://crates.io/api/v1/crates/rytmyk-chord/versions",
+    headers = { ["User-Agent"] = "rytmyk-chord/2.0" },
   })
   if err then error("Failed to fetch versions from crates.io: " .. err) end
 
