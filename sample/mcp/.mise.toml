@@ -1,6 +1,6 @@
 [tools]
 claude-code = "latest"
-claude = "latest"
+chord = "latest"
 
 [tasks.test]
 description = "Run integration test"
