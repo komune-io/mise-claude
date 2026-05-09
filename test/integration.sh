@@ -36,6 +36,13 @@ echo ""
 for sample_dir in $SAMPLES; do
   # Derive a readable name from the path (e.g. "mcp", "spec/gsd", "plugin/anthropics/claude-code")
   name="${sample_dir#/app/sample/}"
+
+  # Skip samples marked with .test-skip (e.g. speculative examples with non-existent plugins)
+  if [ -f "$sample_dir/.test-skip" ]; then
+    echo -e "  skip ${name}"
+    continue
+  fi
+
   echo -e "${YELLOW}Testing${NC} ${name}"
 
   # Copy sample to a temp dir to avoid polluting the repo

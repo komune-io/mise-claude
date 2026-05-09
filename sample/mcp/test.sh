@@ -5,8 +5,8 @@ source "$SCRIPT_DIR/../../test/lib.sh"
 
 assert_file ".mcp.json"
 assert_file_contains ".mcp.json" '"mcpServers"'
-assert_file_contains ".mcp.json" '"context7-mcp"'
-assert_file_contains ".mcp.json" '"chrome-devtools-mcp"'
+assert_file_contains ".mcp.json" '"context7"'
+assert_file_contains ".mcp.json" '"chrome-devtools"'
 assert_file_contains ".mcp.json" '"shadcn"'
 assert_file_contains ".mcp.json" '"command"'
 assert_file_contains ".mcp.json" '"args"'
