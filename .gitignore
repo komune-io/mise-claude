@@ -7,3 +7,6 @@ sample/**/.claude/settings.json
 sample/**/.agents/
 sample/**/skills-lock.json
 sample/skillssh/.claude/skills/
+
+# Brainstorming session state (HTML mockups, server logs, PIDs)
+.superpowers/
