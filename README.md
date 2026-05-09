@@ -1,28 +1,41 @@
-# mise-claude
+# chord
 
-A plugin for [mise](https://mise.jdx.dev) that lets you set up your entire [Claude Code](https://docs.anthropic.com/en/docs/claude-code) tooling with a single command.
+Declarative agent-tool environment manager. Declare your MCP servers, skills, plugins, and CLI tools in one file — `chord install` handles the rest.
 
-List the tools you want in a configuration file, run `mise install`, and everything is ready to use.
+`chord` is part of the [rytmyk](https://github.com/rytmyk) toolchain. The repo also ships a [mise](https://mise.jdx.dev) backend plugin that bootstraps the binary automatically.
 
 ## Install
 
+Via mise (recommended):
+
 ```bash
-mise plugin install claude https://github.com/komune-io/mise-claude
+mise plugin install chord https://github.com/rytmyk/chord
 ```
 
-## Quick start
+Then, in your project:
 
-**1. Bootstrap claude-env via mise:**
 ```toml
 # .mise.toml
 [tools]
-claude = "latest"
+chord = "latest"
 ```
+
 ```bash
 mise install
 ```
 
-**2. Declare Claude tools in `claude-env.toml`:**
+Or directly via cargo:
+
+```bash
+cargo install rytmyk-chord
+```
+
+(The cargo package is `rytmyk-chord` — org-prefixed because the bare name `chord` is held by an unrelated dormant crate. The installed binary is just `chord`.)
+
+## Quick start
+
+Declare what you want in `chord.toml`:
+
 ```toml
 [mcp]
 context7 = "2.1.4"
@@ -37,43 +50,40 @@ context7 = "2.1.4"
 gsd = "1.22.4"
 ```
 
-**3. Install (auto-runs on shell entry after step 1):**
+Install:
+
 ```bash
-claude-env install
+chord install
 ```
 
-**4. Audit your environment:**
+Audit your environment:
+
 ```bash
-claude-env inspect
+chord inspect
 ```
 
-**Migrating from the old mise plugin?**
-```bash
-claude-env migrate   # reads .mise.toml claude:* entries → writes claude-env.toml
-```
+When you `cd` into a directory containing `chord.toml`, the mise plugin runs `chord install --idempotent --quiet` automatically. Missing tools are installed silently; nothing happens if everything is up to date.
 
-## What Can You Install?
+## What can you install?
 
-### MCP Servers
+### MCP servers
 
-MCP servers extend what Claude Code can do — browse the web, access documentation, generate UI components, and more. The plugin handles all the setup automatically.
-
-Short aliases are available for popular servers:
+MCP servers extend what your agent can do — browse the web, access documentation, generate UI components, and more. Short aliases are available for popular servers:
 
 | You write | What gets installed |
-|-----------|-------------------|
+|-----------|--------------------|
 | `mcp/context7` | `@upstash/context7-mcp` |
 | `mcp/chrome-devtools` | `chrome-devtools-mcp` |
 | `mcp/shadcn` | `shadcn` |
 
-You can also use any npm package name directly (e.g. `claude:@anthropic-ai/claude-code-mcp`).
+You can also use any npm package name directly.
 
-### Workflow Tools
+### Workflow tools
 
 Workflow tools add structured methodologies, slash commands, and agents to Claude Code. They set themselves up in your project when installed.
 
 | You write | What it does |
-|-----------|-------------|
+|-----------|--------------|
 | `spec/gsd` | GSD — structured project execution workflow |
 | `spec/bmad` | BMAD Method — product development agents and commands |
 | `spec/openspec` | OpenSpec — API specification tool |
@@ -83,7 +93,7 @@ Workflow tools add structured methodologies, slash commands, and agents to Claud
 Skills from [skills.sh](https://skills.sh) teach Claude Code best practices for specific frameworks and topics — no server required.
 
 ```toml
-# claude-env.toml
+# chord.toml
 [skills]
 "vercel-labs/next-skills/next-best-practices" = "latest"
 "anthropics/skills/frontend-design" = "latest"
@@ -94,13 +104,13 @@ Skills from [skills.sh](https://skills.sh) teach Claude Code best practices for 
 Native Claude Code plugins from GitHub-based marketplaces.
 
 ```toml
-# claude-env.toml
+# chord.toml
 [plugins]
 "anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
 "upstash/context7/context7-plugin@context7-marketplace" = "latest"
 ```
 
-## Extra Configuration
+## Extra configuration
 
 To pass additional settings to MCP servers, create a `.mcp-config.toml` file in your project:
 
@@ -114,29 +124,32 @@ env = { LOG_LEVEL = "debug" }
 - `env` — environment variables for the server
 - `${VAR}` references are replaced with values from your environment
 
-## How It Works
+## How it works
 
-The plugin hooks into mise's install lifecycle to bootstrap the `claude-env` binary:
+The mise plugin (`hooks/`, `metadata.lua`) does only two things:
 
-1. **List versions** — queries crates.io for available `claude-env` releases
-2. **Install** — runs `cargo install claude-env` to put the binary in PATH
-3. **Shell entry** — `claude-env install --idempotent --quiet` runs automatically when `claude-env.toml` exists in the project root, installing any missing or outdated tools silently
+1. **List/install** — Queries crates.io for `rytmyk-chord` versions and runs `cargo install rytmyk-chord --locked` when mise resolves the tool.
+2. **Shell entry** — Adds the binary to `PATH` and runs `chord install --idempotent --quiet` automatically when `chord.toml` exists in the project root.
 
-All Claude tool management (MCP servers, skills, plugins, CLI specs) is handled by `claude-env`, not by mise directly.
+All actual tool management — MCP server installs, plugin marketplace fetches, skills setup, lockfile maintenance — lives in the `chord` Rust binary (`chord/src/`).
 
-## Local Development
+## Local development
 
 ```bash
 # Link the plugin locally
-mise plugin link claude ./
+mise plugin link chord ./
 mise install
 
-# Declare tools in claude-env.toml, then install them
-claude-env install
+# Declare tools in chord.toml, then install them
+chord install
 
 # Inspect current state
-claude-env inspect
+chord inspect
 ```
+
+## Roadmap
+
+`chord` will grow into an agent-agnostic package manager. Today it targets Claude Code; planned support includes Codex, OpenCode, and aider.
 
 ## Contributing
 

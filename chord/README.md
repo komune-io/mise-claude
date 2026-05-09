@@ -1,16 +1,18 @@
-# claude-env
+# chord
 
-Declarative Claude Code environment manager. Declare your MCP servers, skills, plugins, and CLI tools in one file — `claude-env install` handles the rest.
+Declarative agent-tool environment manager. Declare your MCP servers, skills, plugins, and CLI tools in one file — `chord install` handles the rest.
 
 ## Install
 
 ```bash
-cargo install claude-env
+cargo install rytmyk-chord
 ```
+
+The cargo package is `rytmyk-chord`; the installed binary is `chord`.
 
 ## Quick Start
 
-Create `claude-env.toml` in your project root:
+Create `chord.toml` in your project root:
 
 ```toml
 [mcp]
@@ -29,27 +31,27 @@ get-shit-done-cc = "1.22.4"
 Then run:
 
 ```bash
-claude-env install
+chord install
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `claude-env install` | Install from lockfile (or resolve + create lockfile) |
-| `claude-env update` | Check for updates, show changelogs |
-| `claude-env update <tool>` | Update a single tool |
-| `claude-env diff <tool>` | Show changelog between versions |
-| `claude-env list` | Show installed tools and status |
-| `claude-env add <tool>` | Add a tool to config |
-| `claude-env remove <tool>` | Remove tool and clean up |
+| `chord install` | Install from lockfile (or resolve + create lockfile) |
+| `chord update` | Check for updates, show changelogs |
+| `chord update <tool>` | Update a single tool |
+| `chord diff <tool>` | Show changelog between versions |
+| `chord list` | Show installed tools and status |
+| `chord add <tool>` | Add a tool to config |
+| `chord remove <tool>` | Remove tool and clean up |
 
 ## How It Works
 
-1. Reads `claude-env.toml` for declared tools
-2. Compares against `claude-env.lock` to determine what needs installing
+1. Reads `chord.toml` for declared tools
+2. Compares against `chord.lock` to determine what needs installing
 3. Installs each tool sequentially (no concurrency issues)
 4. Writes config files (`.mcp.json`, `.claude/settings.json`)
-5. Updates `claude-env.lock` with resolved versions
+5. Updates `chord.lock` with resolved versions
 
-Packages are cached globally at `~/.claude-env/packages/`.
+Packages are cached globally at `~/.chord/packages/`.
