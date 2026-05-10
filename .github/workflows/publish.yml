@@ -13,9 +13,17 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
-      - name: Run tests
-        run: cargo test
+      - name: Run tests (locked)
+        run: cargo test --locked
+
+      - name: Lint
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Publish dry-run
+        run: cargo publish --dry-run --locked
 
       - name: Publish rytmyk-chord to crates.io
         env:
