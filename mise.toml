@@ -3,8 +3,59 @@
 #        mise install
 
 [tools]
+rust = "latest"
+
+# ── Cargo dev tasks (fast inner loop) ──
+
+[tasks.build]
+description = "Build in debug mode"
+run = "cargo build"
+
+[tasks."build:release"]
+description = "Build optimized release binary"
+run = "cargo build --release"
+
+[tasks.test]
+description = "Run cargo unit + integration tests"
+run = "cargo test"
+
+[tasks.run]
+description = "Run inspect (default)"
+run = "cargo run -- inspect"
+
+[tasks."run:tui"]
+description = "Run inspect TUI"
+run = "cargo run -- inspect --tui"
+
+[tasks."run:install"]
+description = "Run install"
+run = "cargo run -- install"
+
+[tasks.lint]
+description = "Check for warnings"
+run = "cargo clippy -- -D warnings"
+
+[tasks.fmt]
+description = "Format code"
+run = "cargo fmt"
+
+[tasks."fmt:check"]
+description = "Check formatting"
+run = "cargo fmt -- --check"
 
 [tasks.clean]
+description = "Remove build artifacts"
+run = "cargo clean"
+
+# ── End-to-end (slow, container) ──
+
+[tasks.e2e]
+description = "Run end-to-end integration tests in Docker"
+run = "docker compose -f e2e/compose.yml build && docker compose -f e2e/compose.yml run --rm test"
+
+# ── Sample sweeps ──
+
+[tasks."samples:clean"]
 description = "Run clean task in all sample modules"
 run = """
 for dir in $(find sample -name '.mise.toml' -exec dirname {} \\;); do
@@ -13,11 +64,7 @@ for dir in $(find sample -name '.mise.toml' -exec dirname {} \\;); do
 done
 """
 
-[tasks.e2e]
-description = "Run end-to-end integration tests in Docker"
-run = "docker compose -f e2e/compose.yml build && docker compose -f e2e/compose.yml run --rm test"
-
-[tasks.localtest]
+[tasks."samples:test"]
 description = "Install and test all sample modules"
 run = """
 for dir in $(find sample -name '.mise.toml' -exec dirname {} \\;); do

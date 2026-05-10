@@ -14,11 +14,11 @@ FAILURES=()
 # chord is not yet published to crates.io, so we build from the repo.
 
 echo -e "${YELLOW}Building chord...${NC}"
-if ! cargo build --manifest-path /app/chord/Cargo.toml --release --quiet 2>&1; then
+if ! cargo build --manifest-path /app/Cargo.toml --release --quiet 2>&1; then
   echo -e "${RED}Failed to build chord — cannot run integration tests${NC}"
   exit 1
 fi
-CHORD=/app/chord/target/release/chord
+CHORD=/app/target/release/chord
 echo -e "${GREEN}chord ready${NC}"
 echo ""
 

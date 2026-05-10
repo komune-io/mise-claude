@@ -15,9 +15,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run tests
-        run: cargo test --manifest-path chord/Cargo.toml
+        run: cargo test
 
       - name: Publish rytmyk-chord to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --manifest-path chord/Cargo.toml
+        run: cargo publish

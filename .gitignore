@@ -1,6 +1,6 @@
 .idea/
 .mcp.json
-chord/target/
+target/
 
 # Install artifacts in samples
 sample/**/.claude/settings.json
