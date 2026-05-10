@@ -4,22 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A [mise](https://mise.jdx.dev) backend plugin (Lua) that bootstraps the `chord` Rust CLI via `cargo install rytmyk-chord`. All agent-tool management — MCP servers, skills, plugins, CLI tools — is delegated to `chord`. The plugin itself does nothing more than ensure the binary is installed and triggered on shell entry.
+The `chord` Rust CLI — a declarative agent-tool environment manager — plus a small bundled [mise](https://mise.jdx.dev) backend plugin that bootstraps it. The repo root reads as a Rust crate (`Cargo.toml`, `src/`, `tests/`); `metadata.lua` and `hooks/` at the root are the mise plugin shim (mise's plugin discovery requires them at the git repo root).
 
-The cargo package is `rytmyk-chord` (org-prefixed because the bare `chord` crate is held by an unrelated dormant project). The binary, config file, and mise plugin all use the short name `chord` thanks to `[lib]` and `[[bin]]` overrides in `chord/Cargo.toml`.
+The cargo package is `rytmyk-chord` (org-prefixed because the bare `chord` crate is held by an unrelated dormant project). The binary, config file, and mise plugin all use the short name `chord` thanks to `[lib]` and `[[bin]]` overrides in `Cargo.toml`.
 
 ## Local Development
 
 ```bash
-mise plugin link chord ./
-mise install               # bootstraps chord via cargo install rytmyk-chord
-chord install              # installs tools declared in chord.toml
-chord inspect              # audit current state
+mise plugin link chord ./    # the plugin lives at the repo root
+mise install                 # bootstraps chord via cargo install rytmyk-chord
+chord install                # installs tools declared in chord.toml
+chord inspect                # audit current state
 ```
+
+Common mise tasks:
+
+- `mise run test` — `cargo test` (fast inner loop)
+- `mise run e2e` — full Docker-based end-to-end suite (slow)
+- `mise run lint` / `mise run fmt` — clippy and rustfmt
+- `mise run samples:test` — install and test every sample module locally
 
 ## Architecture
 
-The plugin implements three of mise's Lua backend hooks. All hooks live in `hooks/`. There is no shared `lib/` — each hook is self-contained, and the small semver helpers are intentionally duplicated across `backend_install.lua` and `backend_list_versions.lua` (both files note this in a comment).
+The mise plugin implements three of mise's Lua backend hooks. All hooks live in `hooks/`. There is no shared `lib/` — each hook is self-contained, and the small semver helpers are intentionally duplicated across `backend_install.lua` and `backend_list_versions.lua` (both files note this in a comment).
 
 - `hooks/backend_list_versions.lua` — Queries `https://crates.io/api/v1/crates/rytmyk-chord/versions` and returns non-yanked versions sorted ascending.
 - `hooks/backend_install.lua` — Resolves `latest` via the same crates.io endpoint, then runs `cargo install rytmyk-chord --version <v> --root <install_path> --locked`. Writes a `.installed` sentinel that mise uses to confirm the install succeeded.
@@ -29,14 +36,16 @@ The plugin implements three of mise's Lua backend hooks. All hooks live in `hook
 
 ## Code Conventions
 
-- Lua with LDoc-style annotations (`--- @param`, `--- @return`)
-- Format with [StyLua](https://github.com/JohnnyMorganz/StyLua) (config in `stylua.toml`)
-- All shell interpolation goes through `shell_quote()` (defined in each hook that needs it)
+- **Rust:** `cargo fmt` + `cargo clippy -- -D warnings`. Run via `mise run fmt` / `mise run lint`.
+- **Lua:** LDoc-style annotations (`--- @param`, `--- @return`); format with [StyLua](https://github.com/JohnnyMorganz/StyLua) (config in `stylua.toml`); all shell interpolation goes through `shell_quote()`.
 
 ## Project Layout
 
-- Root: the mise backend plugin (`hooks/`, `metadata.lua`, `mise.toml` for dev tasks, `e2e/` for the end-to-end test suite)
-- `chord/`: the Rust CLI as a subcrate (its own `Cargo.toml`, `mise.toml`, `README.md`, `src/`, `tests/`)
-- `sample/`: usage examples organized by tool category (`mcp/`, `skillssh/`, `spec/`, `plugin/`). Each sample has a `.mise.toml`, a `chord.toml`, and a `test.sh` exercising the install.
-- `e2e/run.sh`: end-to-end harness — builds chord, walks every sample, runs `chord install`, and asserts artifacts via each sample's `test.sh`. Run via `mise run e2e` (uses `e2e/Dockerfile` + `e2e/compose.yml`).
+- `Cargo.toml`, `Cargo.lock`, `src/`, `tests/`: the `chord` Rust crate. Cargo conventions — `src/main.rs` and `src/lib.rs` for the crate code; `tests/` (plural) for integration tests; auto-discovered by Cargo.
+- `metadata.lua`, `hooks/`: the mise backend plugin. Required at root by mise's plugin discovery.
+- `e2e/`: end-to-end test harness — `Dockerfile`, `compose.yml`, `run.sh` (the runner), `lib.sh` (assertion helpers). `mise run e2e` builds the container and walks every sample.
+- `sample/`: 14 usage examples organized by tool category (`mcp/`, `skillssh/`, `spec/`, `plugin/`). Each sample has a `.mise.toml`, a `chord.toml`, and a `test.sh` exercising the install.
+- `mise.toml`: dev tasks (cargo build/test/lint/fmt + e2e + sample sweeps).
 - `docs/superpowers/`: design specs and implementation plans (historical record, kept).
+
+For contributors arriving from JVM / Gradle backgrounds: `src/` ≈ `src/main/`, `tests/` ≈ `src/test/`, `e2e/` ≈ `src/e2e/`. Cargo's path conventions are non-negotiable, so we use Rust's native names.

@@ -131,7 +131,7 @@ The mise plugin (`hooks/`, `metadata.lua`) does only two things:
 1. **List/install** — Queries crates.io for `rytmyk-chord` versions and runs `cargo install rytmyk-chord --locked` when mise resolves the tool.
 2. **Shell entry** — Adds the binary to `PATH` and runs `chord install --idempotent --quiet` automatically when `chord.toml` exists in the project root.
 
-All actual tool management — MCP server installs, plugin marketplace fetches, skills setup, lockfile maintenance — lives in the `chord` Rust binary (`chord/src/`).
+All actual tool management — MCP server installs, plugin marketplace fetches, skills setup, lockfile maintenance — lives in the `chord` Rust binary (`src/`).
 
 ## Local development
 
