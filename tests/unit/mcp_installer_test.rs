@@ -2,7 +2,11 @@ use chord::installer::mcp::pick_first_binary;
 
 #[test]
 fn pick_first_binary_returns_lexically_first_name() {
-    let mut names = vec!["b-bin".to_string(), "a-bin".to_string(), "c-bin".to_string()];
+    let mut names = vec![
+        "b-bin".to_string(),
+        "a-bin".to_string(),
+        "c-bin".to_string(),
+    ];
     assert_eq!(pick_first_binary(&mut names), Some("a-bin".to_string()));
 }
 

@@ -76,7 +76,7 @@ fn detect_binary(bin_dir: &Path, package: &str, registry: &Registry) -> Result<S
 /// Public (not `pub(crate)`) so the external integration-test crate can
 /// import it; the deterministic-ordering behavior is unit-tested without
 /// a filesystem fixture.
-pub fn pick_first_binary(names: &mut Vec<String>) -> Option<String> {
+pub fn pick_first_binary(names: &mut [String]) -> Option<String> {
     names.sort();
     names.first().cloned()
 }
