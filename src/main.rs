@@ -317,7 +317,7 @@ fn run_install(verbose: bool, quiet: bool) {
 }
 
 fn packages_dir() -> PathBuf {
-    std::env::var("CLAUDE_ENV_HOME")
+    std::env::var("CHORD_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
             dirs::home_dir()

@@ -31,7 +31,7 @@ fn install_cli_tool_runs_post_install() {
     cmd.arg("install")
         .current_dir(project_dir.path())
         .env("PATH", &new_path)
-        .env("CLAUDE_ENV_HOME", packages_dir.path())
+        .env("CHORD_HOME", packages_dir.path())
         .env("CLAUDE_ENV_TEST_LOG", log_dir.path());
 
     cmd.assert().success();

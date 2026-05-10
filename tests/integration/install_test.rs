@@ -32,7 +32,7 @@ fn install_single_mcp_tool() {
     cmd.arg("install")
         .current_dir(project_dir.path())
         .env("PATH", &new_path)
-        .env("CLAUDE_ENV_HOME", packages_dir.path())
+        .env("CHORD_HOME", packages_dir.path())
         .env("CLAUDE_ENV_TEST_LOG", log_dir.path());
 
     cmd.assert().success();
@@ -98,7 +98,7 @@ fn install_idempotent_second_run_skips() {
         .arg("install")
         .current_dir(project_dir.path())
         .env("PATH", &new_path)
-        .env("CLAUDE_ENV_HOME", packages_dir.path())
+        .env("CHORD_HOME", packages_dir.path())
         .env("CLAUDE_ENV_TEST_LOG", log_dir_1.path())
         .assert()
         .success();
@@ -109,7 +109,7 @@ fn install_idempotent_second_run_skips() {
         .arg("install")
         .current_dir(project_dir.path())
         .env("PATH", &new_path)
-        .env("CLAUDE_ENV_HOME", packages_dir.path())
+        .env("CHORD_HOME", packages_dir.path())
         .env("CLAUDE_ENV_TEST_LOG", log_dir_2.path())
         .assert()
         .success();

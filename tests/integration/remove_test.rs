@@ -54,7 +54,7 @@ fn remove_mcp_tool() {
     cmd.arg("remove")
         .arg("context7")
         .current_dir(project_dir.path())
-        .env("CLAUDE_ENV_HOME", packages_dir.path());
+        .env("CHORD_HOME", packages_dir.path());
 
     cmd.assert().success();
 
@@ -115,7 +115,7 @@ fn remove_nonexistent_tool_exits_with_error() {
     cmd.arg("remove")
         .arg("nonexistent-tool")
         .current_dir(project_dir.path())
-        .env("CLAUDE_ENV_HOME", packages_dir.path());
+        .env("CHORD_HOME", packages_dir.path());
 
     cmd.assert().failure();
 }

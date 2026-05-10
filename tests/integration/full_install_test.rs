@@ -37,7 +37,7 @@ fn full_install_all_tool_types() {
         .arg("install")
         .current_dir(project_dir.path())
         .env("PATH", &new_path)
-        .env("CLAUDE_ENV_HOME", packages_dir.path())
+        .env("CHORD_HOME", packages_dir.path())
         .env("CLAUDE_ENV_TEST_LOG", log_dir.path())
         .output()
         .unwrap();
@@ -185,7 +185,7 @@ exit 0
         .arg("install")
         .current_dir(project_dir.path())
         .env("PATH", &new_path)
-        .env("CLAUDE_ENV_HOME", packages_dir.path())
+        .env("CHORD_HOME", packages_dir.path())
         .env("CLAUDE_ENV_TEST_LOG", log_dir.path())
         .output()
         .unwrap();

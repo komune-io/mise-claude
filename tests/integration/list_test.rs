@@ -30,7 +30,7 @@ fn list_shows_installed_tools() {
     let mut cmd = Command::cargo_bin("chord").unwrap();
     cmd.arg("list")
         .current_dir(project_dir.path())
-        .env("CLAUDE_ENV_HOME", packages_dir.path());
+        .env("CHORD_HOME", packages_dir.path());
 
     let output = cmd.assert().success();
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
@@ -57,7 +57,7 @@ fn list_empty_config_shows_header_only() {
     let mut cmd = Command::cargo_bin("chord").unwrap();
     cmd.arg("list")
         .current_dir(project_dir.path())
-        .env("CLAUDE_ENV_HOME", packages_dir.path());
+        .env("CHORD_HOME", packages_dir.path());
 
     let output = cmd.assert().success();
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
@@ -82,7 +82,7 @@ fn list_shows_question_mark_for_unlocked_tools() {
     let mut cmd = Command::cargo_bin("chord").unwrap();
     cmd.arg("list")
         .current_dir(project_dir.path())
-        .env("CLAUDE_ENV_HOME", packages_dir.path());
+        .env("CHORD_HOME", packages_dir.path());
 
     let output = cmd.assert().success();
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
