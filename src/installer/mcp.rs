@@ -51,16 +51,32 @@ fn detect_binary(bin_dir: &Path, package: &str, registry: &Registry) -> Result<S
     }
 
     let entries = std::fs::read_dir(bin_dir).map_err(|e| {
-        InstallError::Command("detect_binary".to_string(), format!("cannot read {}: {}", bin_dir.display(), e))
+        InstallError::Command(
+            "detect_binary".to_string(),
+            format!("cannot read {}: {}", bin_dir.display(), e),
+        )
     })?;
 
-    for entry in entries.flatten() {
-        let name = entry.file_name();
-        let name_str = name.to_string_lossy();
-        if !name_str.starts_with('.') {
-            return Ok(name_str.into_owned());
-        }
-    }
+    let mut names: Vec<String> = entries
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| !n.starts_with('.'))
+        .collect();
 
-    Err(InstallError::Command("detect_binary".to_string(), format!("no binary found in {}", bin_dir.display())))
+    pick_first_binary(&mut names).ok_or_else(|| {
+        InstallError::Command(
+            "detect_binary".to_string(),
+            format!("no binary found in {}", bin_dir.display()),
+        )
+    })
+}
+
+/// Sort the candidate binary names lexically and return the first.
+///
+/// Public (not `pub(crate)`) so the external integration-test crate can
+/// import it; the deterministic-ordering behavior is unit-tested without
+/// a filesystem fixture.
+pub fn pick_first_binary(names: &mut Vec<String>) -> Option<String> {
+    names.sort();
+    names.first().cloned()
 }

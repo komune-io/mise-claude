@@ -30,3 +30,6 @@ mod reporter_test;
 
 #[path = "unit/migrate_test.rs"]
 mod migrate_test;
+
+#[path = "unit/mcp_installer_test.rs"]
+mod mcp_installer_test;
