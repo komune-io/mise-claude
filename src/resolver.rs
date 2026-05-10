@@ -61,11 +61,20 @@ pub fn resolve(
         for (name, requested_version) in *map {
             let package = registry.resolve_alias(name).to_string();
             let locked = lockfile.get(section, name);
+            let installed = is_installed(section, name);
+            let is_wildcard = requested_version == "latest" || requested_version == "*";
 
             let action = match locked {
                 None => Action::Install,
+                Some(_) if is_wildcard => {
+                    if installed {
+                        Action::Skip
+                    } else {
+                        Action::Install
+                    }
+                }
                 Some(entry) if entry.version != *requested_version => Action::Upgrade,
-                Some(_) if !is_installed(section, name) => Action::Install,
+                Some(_) if !installed => Action::Install,
                 Some(_) => Action::Skip,
             };
 

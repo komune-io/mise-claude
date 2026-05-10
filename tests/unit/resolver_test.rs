@@ -136,3 +136,117 @@ fn unknown_name_uses_name_as_package() {
 
     assert_eq!(plan.actions[0].package, "some-unknown-tool");
 }
+
+#[test]
+fn latest_with_concrete_locked_version_and_installed_skips() {
+    let config = Config::parse(
+        r#"
+        [mcp]
+        context7 = "latest"
+        "#,
+    )
+    .unwrap();
+
+    let mut lockfile = Lockfile::new();
+    lockfile.set(
+        "mcp",
+        "context7",
+        LockedTool {
+            package: None,
+            version: "2.1.4".to_string(),
+            integrity: None,
+            resolved_at: None,
+        },
+    );
+
+    let plan = resolve(&config, &lockfile, &|_section, _name| true);
+
+    assert_eq!(plan.actions.len(), 1);
+    assert_eq!(
+        plan.actions[0].action,
+        Action::Skip,
+        "latest + concrete lockfile + installed should Skip, not Upgrade"
+    );
+}
+
+#[test]
+fn latest_with_concrete_locked_version_but_not_installed_installs() {
+    let config = Config::parse(
+        r#"
+        [mcp]
+        context7 = "latest"
+        "#,
+    )
+    .unwrap();
+
+    let mut lockfile = Lockfile::new();
+    lockfile.set(
+        "mcp",
+        "context7",
+        LockedTool {
+            package: None,
+            version: "2.1.4".to_string(),
+            integrity: None,
+            resolved_at: None,
+        },
+    );
+
+    let plan = resolve(&config, &lockfile, &|_section, _name| false);
+
+    assert_eq!(plan.actions[0].action, Action::Install);
+}
+
+#[test]
+fn wildcard_star_behaves_like_latest() {
+    let config = Config::parse(
+        r#"
+        [mcp]
+        context7 = "*"
+        "#,
+    )
+    .unwrap();
+
+    let mut lockfile = Lockfile::new();
+    lockfile.set(
+        "mcp",
+        "context7",
+        LockedTool {
+            package: None,
+            version: "2.1.4".to_string(),
+            integrity: None,
+            resolved_at: None,
+        },
+    );
+
+    let plan = resolve(&config, &lockfile, &|_section, _name| true);
+
+    assert_eq!(plan.actions[0].action, Action::Skip);
+}
+
+#[test]
+fn concrete_version_mismatch_still_upgrades() {
+    // Regression guard: the new wildcard branch must not affect concrete pins.
+    let config = Config::parse(
+        r#"
+        [mcp]
+        context7 = "3.0.0"
+        "#,
+    )
+    .unwrap();
+
+    let mut lockfile = Lockfile::new();
+    lockfile.set(
+        "mcp",
+        "context7",
+        LockedTool {
+            package: None,
+            version: "2.1.4".to_string(),
+            integrity: None,
+            resolved_at: None,
+        },
+    );
+
+    let plan = resolve(&config, &lockfile, &|_section, _name| true);
+
+    assert_eq!(plan.actions[0].action, Action::Upgrade);
+}
