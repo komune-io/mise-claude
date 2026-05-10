@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Declarative agent-tool environment manager"
 license = "MIT"
-repository = "https://github.com/rytmyk/chord"
+repository = "https://github.com/komune-io/mise-claude"
 keywords = ["agent", "claude", "mcp", "ai", "tooling"]
 categories = ["command-line-utilities", "development-tools"]
 

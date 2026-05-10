@@ -9,7 +9,7 @@ Declarative agent-tool environment manager. Declare your MCP servers, skills, pl
 Via mise (recommended):
 
 ```bash
-mise plugin install chord https://github.com/rytmyk/chord
+mise plugin install chord https://github.com/komune-io/mise-claude
 ```
 
 Then, in your project:
