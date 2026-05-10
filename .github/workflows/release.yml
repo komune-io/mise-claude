@@ -23,10 +23,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
+
+      # gh release create --target <sha> creates the tag and the release
+      # atomically. If creation fails, no tag is pushed, so a retry is safe.
       - name: Create tag and release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git tag "v${{ inputs.version }}"
-          git push origin "v${{ inputs.version }}"
-          gh release create "v${{ inputs.version }}" --generate-notes
+          gh release create "v${{ inputs.version }}" \
+            --target "$GITHUB_SHA" \
+            --generate-notes
