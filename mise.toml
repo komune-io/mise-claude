@@ -51,7 +51,7 @@ run = "cargo clean"
 
 [tasks.e2e]
 description = "Run end-to-end integration tests in Docker"
-run = "docker compose -f e2e/compose.yml build && docker compose -f e2e/compose.yml run --rm test"
+run = "docker compose -f e2e/compose.yml build && docker compose -f e2e/compose.yml run --rm e2e"
 
 # ── Sample sweeps ──
 
