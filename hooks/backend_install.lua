@@ -32,7 +32,7 @@ local function fetch_latest_version()
   local json = require("json")
   local resp, err = http.get({
     url = "https://crates.io/api/v1/crates/rytmyk-chord/versions",
-    headers = { ["User-Agent"] = "rytmyk-chord/2.0" },
+    headers = { ["User-Agent"] = "rytmyk-chord (mise-plugin)" },
   })
   if err then error("Failed to fetch rytmyk-chord versions: " .. err) end
   local data = json.decode(resp.body)

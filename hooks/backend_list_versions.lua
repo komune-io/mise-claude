@@ -28,7 +28,7 @@ function PLUGIN:BackendListVersions(_ctx)
 
   local resp, err = http.get({
     url = "https://crates.io/api/v1/crates/rytmyk-chord/versions",
-    headers = { ["User-Agent"] = "rytmyk-chord/2.0" },
+    headers = { ["User-Agent"] = "rytmyk-chord (mise-plugin)" },
   })
   if err then error("Failed to fetch versions from crates.io: " .. err) end
 
