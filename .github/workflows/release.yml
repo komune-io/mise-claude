@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Run integration tests
-        run: docker compose -f docker-compose.test.yml run --rm test
+        run: docker compose -f e2e/compose.yml run --rm test
 
   release:
     needs: test

@@ -1,10 +1,10 @@
 services:
   test:
     build:
-      context: .
-      dockerfile: Dockerfile.test
+      context: ..
+      dockerfile: e2e/Dockerfile
     volumes:
-      - .:/app
+      - ..:/app
     environment:
       - MISE_YES=1
       - MISE_EXPERIMENTAL=1

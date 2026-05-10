@@ -35,8 +35,8 @@ The plugin implements three of mise's Lua backend hooks. All hooks live in `hook
 
 ## Project Layout
 
-- Root: the mise backend plugin (`hooks/`, `metadata.lua`, `mise.toml` for dev tasks, `Dockerfile.test` + `docker-compose.test.yml` for the test runner)
+- Root: the mise backend plugin (`hooks/`, `metadata.lua`, `mise.toml` for dev tasks, `e2e/` for the end-to-end test suite)
 - `chord/`: the Rust CLI as a subcrate (its own `Cargo.toml`, `mise.toml`, `README.md`, `src/`, `tests/`)
 - `sample/`: usage examples organized by tool category (`mcp/`, `skillssh/`, `spec/`, `plugin/`). Each sample has a `.mise.toml`, a `chord.toml`, and a `test.sh` exercising the install.
-- `test/integration.sh`: end-to-end harness — builds chord, walks every sample, runs `chord install`, and asserts artifacts via each sample's `test.sh`.
+- `e2e/run.sh`: end-to-end harness — builds chord, walks every sample, runs `chord install`, and asserts artifacts via each sample's `test.sh`. Run via `mise run e2e` (uses `e2e/Dockerfile` + `e2e/compose.yml`).
 - `docs/superpowers/`: design specs and implementation plans (historical record, kept).

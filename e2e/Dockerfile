@@ -10,4 +10,4 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no
 ENV PATH="/root/.cargo/bin:$PATH"
 
 WORKDIR /app
-ENTRYPOINT ["bash", "test/integration.sh"]
+ENTRYPOINT ["bash", "e2e/run.sh"]

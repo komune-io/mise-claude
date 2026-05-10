@@ -63,7 +63,7 @@ for sample_dir in $SAMPLES; do
   fi
 
   # Copy test script and assertion helpers
-  cp /app/test/lib.sh "$tmpdir/lib.sh"
+  cp /app/e2e/lib.sh "$tmpdir/lib.sh"
   if [ -f "$sample_dir/test.sh" ]; then
     # Rewrite source path to use local lib.sh copy in tmpdir
     sed 's|^SCRIPT_DIR=.*|# (rewritten for integration test)|;s|^source .*lib\.sh.*|source lib.sh|' \

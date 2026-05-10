@@ -13,9 +13,9 @@ for dir in $(find sample -name '.mise.toml' -exec dirname {} \\;); do
 done
 """
 
-[tasks.test]
-description = "Run integration tests in Docker"
-run = "docker compose -f docker-compose.test.yml build && docker compose -f docker-compose.test.yml run --rm test"
+[tasks.e2e]
+description = "Run end-to-end integration tests in Docker"
+run = "docker compose -f e2e/compose.yml build && docker compose -f e2e/compose.yml run --rm test"
 
 [tasks.localtest]
 description = "Install and test all sample modules"
