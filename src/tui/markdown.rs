@@ -60,6 +60,21 @@ impl Renderer {
             Event::End(TagEnd::Emphasis) => {
                 self.style_stack.pop();
             }
+            Event::Start(Tag::Heading { level, .. }) => {
+                let color = match level {
+                    pulldown_cmark::HeadingLevel::H1 => Color::Cyan,
+                    pulldown_cmark::HeadingLevel::H2 => Color::Magenta,
+                    pulldown_cmark::HeadingLevel::H3 => Color::Yellow,
+                    _ => Color::White,
+                };
+                let style = Style::default().fg(color).add_modifier(Modifier::BOLD);
+                self.style_stack.push(style);
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                self.style_stack.pop();
+                self.flush_line();
+                self.lines.push(Line::from(""));
+            }
             Event::Text(t) => self.push_span(t.into_string()),
             Event::Code(t) => {
                 let style = self.current_style().fg(Color::Yellow);
@@ -136,5 +151,44 @@ mod tests {
             .find(|s| s.content == "foo()")
             .expect("code span");
         assert_eq!(code.style.fg, Some(Color::Yellow));
+    }
+
+    #[test]
+    fn render_h1_is_cyan_bold() {
+        let lines = render("# Title");
+        assert_eq!(lines.len(), 1);
+        let span = &lines[0].spans[0];
+        assert_eq!(span.content, "Title");
+        assert_eq!(span.style.fg, Some(Color::Cyan));
+        assert!(span.style.add_modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn render_h2_is_magenta_bold() {
+        let lines = render("## Section");
+        let span = &lines[0].spans[0];
+        assert_eq!(span.style.fg, Some(Color::Magenta));
+        assert!(span.style.add_modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn render_h3_is_yellow_bold() {
+        let lines = render("### Sub");
+        let span = &lines[0].spans[0];
+        assert_eq!(span.style.fg, Some(Color::Yellow));
+        assert!(span.style.add_modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn render_h4_h5_h6_are_white_bold() {
+        for src in ["#### a", "##### b", "###### c"] {
+            let lines = render(src);
+            let span = &lines[0].spans[0];
+            assert_eq!(span.style.fg, Some(Color::White), "src={src}");
+            assert!(
+                span.style.add_modifier.contains(Modifier::BOLD),
+                "src={src}"
+            );
+        }
     }
 }
