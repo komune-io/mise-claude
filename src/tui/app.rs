@@ -181,6 +181,53 @@ impl App {
         self.rebuild_flat();
         self.selected = 0;
     }
+
+    /// Reload the markdown preview based on the current selection.
+    ///
+    /// Hides the preview when the selected node has no readable file. Resets
+    /// scroll and force-returns focus to the tree whenever preview becomes
+    /// unavailable, so the user is never stranded in preview focus.
+    pub fn update_preview(&mut self) {
+        self.markdown_content = None;
+        self.markdown_scroll = 0;
+
+        let Some(node) = self.selected_node() else {
+            self.focus = Focus::Tree;
+            return;
+        };
+
+        let Some(path) = node.path.clone() else {
+            self.focus = Focus::Tree;
+            return;
+        };
+
+        if path.starts_with("plugin ") {
+            self.focus = Focus::Tree;
+            return;
+        }
+
+        let expanded = expand_tilde(&path, self.home_dir.as_deref());
+        match std::fs::read_to_string(&expanded) {
+            Ok(content) => {
+                self.markdown_content = Some(content);
+            }
+            Err(e) => {
+                self.focus = Focus::Tree;
+                self.set_status(format!("Preview unavailable: {}", e));
+            }
+        }
+    }
+}
+
+/// Expand a leading "~/" segment using the supplied home directory.
+/// Leaves the path unchanged if it does not start with "~/" or if no home is set.
+pub fn expand_tilde(path: &str, home: Option<&std::path::Path>) -> String {
+    if let Some(rest) = path.strip_prefix("~/") {
+        if let Some(h) = home {
+            return h.join(rest).to_string_lossy().to_string();
+        }
+    }
+    path.to_string()
 }
 
 fn flatten_node(
@@ -248,5 +295,90 @@ fn filter_node(node: &mut TreeNode, query: &str) -> bool {
     } else {
         node.hidden = true;
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tui::tree::{NodeKind, TreeNode};
+    use std::io::Write;
+
+    fn leaf_with_path(name: &str, path: Option<String>) -> TreeNode {
+        TreeNode {
+            name: name.to_string(),
+            kind: NodeKind::Skill,
+            enabled: true,
+            scope: None,
+            path,
+            plugin_id: None,
+            children: Vec::new(),
+            expanded: false,
+            hidden: false,
+        }
+    }
+
+    fn make_app_with(nodes: Vec<TreeNode>) -> App {
+        App::new(nodes, None)
+    }
+
+    #[test]
+    fn update_preview_clears_for_node_without_path() {
+        let mut app = make_app_with(vec![leaf_with_path("orphan", None)]);
+        app.markdown_content = Some("stale".to_string());
+        app.focus = Focus::Preview;
+        app.update_preview();
+        assert!(app.markdown_content.is_none());
+        assert_eq!(app.focus, Focus::Tree);
+    }
+
+    #[test]
+    fn update_preview_clears_for_plugin_pseudo_path() {
+        let mut app = make_app_with(vec![leaf_with_path(
+            "plug",
+            Some("plugin foo".to_string()),
+        )]);
+        app.markdown_content = Some("stale".to_string());
+        app.focus = Focus::Preview;
+        app.update_preview();
+        assert!(app.markdown_content.is_none());
+        assert_eq!(app.focus, Focus::Tree);
+    }
+
+    #[test]
+    fn update_preview_loads_existing_file() {
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        writeln!(file, "# Hello").unwrap();
+        let path = file.path().to_string_lossy().to_string();
+
+        let mut app = make_app_with(vec![leaf_with_path("skill", Some(path))]);
+        app.update_preview();
+        let content = app.markdown_content.as_deref().unwrap_or("");
+        assert!(content.contains("# Hello"));
+        assert_eq!(app.markdown_scroll, 0);
+    }
+
+    #[test]
+    fn update_preview_clears_and_resets_focus_on_read_error() {
+        let mut app = make_app_with(vec![leaf_with_path(
+            "missing",
+            Some("/nonexistent/path/file.md".to_string()),
+        )]);
+        app.markdown_content = Some("stale".to_string());
+        app.focus = Focus::Preview;
+        app.markdown_scroll = 5;
+        app.update_preview();
+        assert!(app.markdown_content.is_none());
+        assert_eq!(app.focus, Focus::Tree);
+        assert_eq!(app.markdown_scroll, 0);
+        assert!(app.status_message.is_some());
+    }
+
+    #[test]
+    fn expand_tilde_uses_home_dir() {
+        let home = std::path::PathBuf::from("/home/user");
+        assert_eq!(expand_tilde("~/file.md", Some(&home)), "/home/user/file.md");
+        assert_eq!(expand_tilde("/abs/path", Some(&home)), "/abs/path");
+        assert_eq!(expand_tilde("~/file.md", None), "~/file.md");
     }
 }
