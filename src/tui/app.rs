@@ -342,10 +342,7 @@ mod tests {
 
     #[test]
     fn update_preview_clears_for_plugin_pseudo_path() {
-        let mut app = make_app_with(vec![leaf_with_path(
-            "plug",
-            Some("plugin foo".to_string()),
-        )]);
+        let mut app = make_app_with(vec![leaf_with_path("plug", Some("plugin foo".to_string()))]);
         app.markdown_content = Some("stale".to_string());
         app.focus = Focus::Preview;
         app.update_preview();
