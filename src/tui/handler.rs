@@ -198,8 +198,7 @@ fn handle_markdown(app: &mut App, key: KeyEvent) -> io::Result<()> {
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => {
             app.mode = Mode::Normal;
-            app.markdown_content = None;
-            app.markdown_scroll = 0;
+            app.update_preview();
         }
         KeyCode::Up | KeyCode::Char('k') => {
             app.markdown_scroll = app.markdown_scroll.saturating_sub(1);
@@ -349,5 +348,34 @@ mod tests {
             .as_deref()
             .unwrap_or("")
             .contains("changed"));
+    }
+
+    #[test]
+    fn closing_markdown_overlay_restores_inline_preview() {
+        let (_f, p) = tmp_path("# inline content");
+        let mut app = App::new(vec![leaf("a", Some(p))], None);
+        let home = PathBuf::from("/");
+
+        // Confirm inline preview loaded by App::new.
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("inline content"));
+
+        // Open fullscreen overlay via 'v'.
+        handle_key(&mut app, key(KeyCode::Char('v')), &home).unwrap();
+        assert_eq!(app.mode, crate::tui::app::Mode::ViewMarkdown);
+
+        // Close overlay via Esc.
+        handle_key(&mut app, key(KeyCode::Esc), &home).unwrap();
+        assert_eq!(app.mode, crate::tui::app::Mode::Normal);
+
+        // Inline preview must still be loaded (not wiped to None).
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("inline content"));
     }
 }
