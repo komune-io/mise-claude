@@ -11,6 +11,28 @@ pub fn handle_key(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<(
         Mode::Normal => handle_normal(app, key, home_dir),
         Mode::Search => handle_search(app, key),
         Mode::ViewMarkdown => handle_markdown(app, key),
+        Mode::ConfirmDisable => handle_confirm_disable(app, key, home_dir),
+    }
+}
+
+/// Apply a plugin enable/disable, sync the tree, and write a status message.
+fn execute_toggle(app: &mut App, home_dir: &Path, plugin_id: &str, currently_enabled: bool) {
+    match actions::toggle_plugin(home_dir, plugin_id, currently_enabled) {
+        Ok(()) => {
+            if let Some(node_mut) = app.selected_node_mut() {
+                node_mut.enabled = !currently_enabled;
+            }
+            app.rebuild_flat();
+            let action = if currently_enabled {
+                "disabled"
+            } else {
+                "enabled"
+            };
+            app.set_status(format!("Plugin '{}' {}", plugin_id, action));
+        }
+        Err(e) => {
+            app.set_status(format!("Error toggling plugin: {}", e));
+        }
     }
 }
 
@@ -38,24 +60,16 @@ fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()
             app.apply_search_filter();
         }
 
-        // Toggle plugin
+        // Toggle plugin. Disabling asks for confirmation (Mode::ConfirmDisable);
+        // enabling is cheap and fires inline.
         KeyCode::Char('e') => {
             if let Some(node) = app.selected_node() {
                 if let Some(plugin_id) = node.plugin_id.clone() {
-                    let currently_enabled = node.enabled;
-                    match actions::toggle_plugin(home_dir, &plugin_id, currently_enabled) {
-                        Ok(()) => {
-                            // Update tree state
-                            if let Some(node_mut) = app.selected_node_mut() {
-                                node_mut.enabled = !currently_enabled;
-                            }
-                            app.rebuild_flat();
-                            let action = if currently_enabled { "disabled" } else { "enabled" };
-                            app.set_status(format!("Plugin '{}' {}", plugin_id, action));
-                        }
-                        Err(e) => {
-                            app.set_status(format!("Error toggling plugin: {}", e));
-                        }
+                    if node.enabled {
+                        app.pending_disable = Some(plugin_id);
+                        app.mode = Mode::ConfirmDisable;
+                    } else {
+                        execute_toggle(app, home_dir, &plugin_id, false);
                     }
                 } else {
                     app.set_status("No plugin selected".to_string());
@@ -129,6 +143,24 @@ fn handle_search(app: &mut App, key: KeyEvent) -> io::Result<()> {
         KeyCode::Char(c) => {
             app.search_query.push(c);
             app.apply_search_filter();
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn handle_confirm_disable(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
+    match key.code {
+        KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
+            if let Some(plugin_id) = app.pending_disable.take() {
+                execute_toggle(app, home_dir, &plugin_id, true);
+            }
+            app.mode = Mode::Normal;
+        }
+        KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+            app.pending_disable = None;
+            app.mode = Mode::Normal;
+            app.set_status("Disable cancelled".to_string());
         }
         _ => {}
     }

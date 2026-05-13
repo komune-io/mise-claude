@@ -5,6 +5,7 @@ pub enum Mode {
     Normal,
     Search,
     ViewMarkdown,
+    ConfirmDisable,
 }
 
 #[derive(Debug, Clone)]
@@ -27,6 +28,8 @@ pub struct App {
     pub status_message: Option<(String, std::time::Instant)>,
     pub should_quit: bool,
     pub show_enabled_only: bool,
+    /// Plugin awaiting disable confirmation in `Mode::ConfirmDisable`.
+    pub pending_disable: Option<String>,
 }
 
 impl App {
@@ -43,6 +46,7 @@ impl App {
             status_message: None,
             should_quit: false,
             show_enabled_only: false,
+            pending_disable: None,
         };
         app.rebuild_flat();
         app
@@ -138,7 +142,11 @@ impl App {
         self.show_enabled_only = !self.show_enabled_only;
         self.rebuild_flat();
         self.selected = 0;
-        let label = if self.show_enabled_only { "enabled only" } else { "all" };
+        let label = if self.show_enabled_only {
+            "enabled only"
+        } else {
+            "all"
+        };
         self.set_status(format!("Filter: {}", label));
     }
 
@@ -179,7 +187,9 @@ fn flatten_node(
         return;
     }
     let is_expandable = if enabled_only {
-        node.children.iter().any(|c| c.enabled || c.kind == NodeKind::SectionHeader)
+        node.children
+            .iter()
+            .any(|c| c.enabled || c.kind == NodeKind::SectionHeader)
     } else {
         !node.children.is_empty()
     };

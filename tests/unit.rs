@@ -33,3 +33,6 @@ mod migrate_test;
 
 #[path = "unit/mcp_installer_test.rs"]
 mod mcp_installer_test;
+
+#[path = "unit/tui_handler_test.rs"]
+mod tui_handler_test;

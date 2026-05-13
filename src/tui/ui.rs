@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap};
 
 use crate::tui::app::{App, Mode};
 use crate::tui::tree::NodeKind;
@@ -8,6 +8,10 @@ pub fn render(frame: &mut Frame, app: &App) {
     match app.mode {
         Mode::ViewMarkdown => {
             render_markdown_overlay(frame, app);
+        }
+        Mode::ConfirmDisable => {
+            render_main(frame, app);
+            render_confirm_disable_popup(frame, app);
         }
         _ => {
             render_main(frame, app);
@@ -53,7 +57,11 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(title)
-        .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD));
+        .title_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        );
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
@@ -72,14 +80,22 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
 
             // Arrow indicator
             let arrow = if entry.is_expandable {
-                if entry.expanded { "▼ " } else { "▶ " }
+                if entry.expanded {
+                    "▼ "
+                } else {
+                    "▶ "
+                }
             } else {
                 "  "
             };
 
             // Plugin symbol
             let symbol = if node.kind == NodeKind::Plugin {
-                if node.enabled { "● " } else { "○ " }
+                if node.enabled {
+                    "● "
+                } else {
+                    "○ "
+                }
             } else {
                 ""
             };
@@ -111,9 +127,15 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
 
             // Build spans with symbol coloring for plugins
             let spans = if node.kind == NodeKind::Plugin && !symbol.is_empty() {
-                let symbol_color = if node.enabled { Color::Green } else { Color::DarkGray };
+                let symbol_color = if node.enabled {
+                    Color::Green
+                } else {
+                    Color::DarkGray
+                };
                 let symbol_style = if i == app.selected {
-                    Style::default().fg(symbol_color).add_modifier(Modifier::REVERSED)
+                    Style::default()
+                        .fg(symbol_color)
+                        .add_modifier(Modifier::REVERSED)
                 } else {
                     Style::default().fg(symbol_color)
                 };
@@ -212,10 +234,7 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
     // Plugin ID
     if let Some(plugin_id) = &node.plugin_id {
         lines.push(Line::from(vec![
-            Span::styled(
-                "Plugin: ",
-                Style::default().add_modifier(Modifier::BOLD),
-            ),
+            Span::styled("Plugin: ", Style::default().add_modifier(Modifier::BOLD)),
             Span::raw(plugin_id.clone()),
         ]));
     }
@@ -223,10 +242,7 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
     // Child count for plugin/section nodes
     if !node.children.is_empty() {
         lines.push(Line::from(vec![
-            Span::styled(
-                "Items:  ",
-                Style::default().add_modifier(Modifier::BOLD),
-            ),
+            Span::styled("Items:  ", Style::default().add_modifier(Modifier::BOLD)),
             Span::raw(node.children.len().to_string()),
         ]));
     }
@@ -235,9 +251,16 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
     lines.push(Line::from(""));
 
     // Keybinding hints
-    let filter_label = if app.show_enabled_only { "all" } else { "enabled" };
+    let filter_label = if app.show_enabled_only {
+        "all"
+    } else {
+        "enabled"
+    };
     lines.push(Line::from(Span::styled(
-        format!("[e] toggle  [v] view  [i] {}  [/] search  [q] quit", filter_label),
+        format!(
+            "[e] toggle  [v] view  [i] {}  [/] search  [q] quit",
+            filter_label
+        ),
         Style::default().fg(Color::DarkGray),
     )));
 
@@ -257,8 +280,15 @@ fn render_status(frame: &mut Frame, app: &App, area: Rect) {
                 msg.clone()
             } else {
                 {
-                    let filter = if app.show_enabled_only { " [enabled only]" } else { "" };
-                    format!("chord inspect{} — [q] quit [/] search [i] toggle filter", filter)
+                    let filter = if app.show_enabled_only {
+                        " [enabled only]"
+                    } else {
+                        ""
+                    };
+                    format!(
+                        "chord inspect{} — [q] quit [/] search [i] toggle filter",
+                        filter
+                    )
                 }
             }
         }
@@ -277,6 +307,75 @@ fn render_status(frame: &mut Frame, app: &App, area: Rect) {
 
     let para = Paragraph::new(content).style(style);
     frame.render_widget(para, area);
+}
+
+fn render_confirm_disable_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(60, 28, frame.area());
+
+    // Wipe the cells underneath so the main view doesn't bleed through.
+    frame.render_widget(Clear, area);
+
+    let plugin_id = app.pending_disable.as_deref().unwrap_or("(unknown)");
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Confirm disable ")
+        .title_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
+        .border_style(Style::default().fg(Color::Yellow));
+
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let lines = vec![
+        Line::from(""),
+        Line::from("Disable plugin?").alignment(Alignment::Center),
+        Line::from(""),
+        Line::from(Span::styled(
+            plugin_id.to_string(),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ))
+        .alignment(Alignment::Center),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(
+                "[Y]es / Enter",
+                Style::default()
+                    .fg(Color::Red)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("     "),
+            Span::styled("[N]o / Esc", Style::default().fg(Color::Green)),
+        ])
+        .alignment(Alignment::Center),
+    ];
+
+    let para = Paragraph::new(lines).wrap(Wrap { trim: false });
+    frame.render_widget(para, inner);
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let vertical = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(vertical[1])[1]
 }
 
 fn render_markdown_overlay(frame: &mut Frame, app: &App) {
