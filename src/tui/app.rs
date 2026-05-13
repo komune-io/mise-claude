@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::tui::tree::TreeNode;
 
 #[derive(Debug, PartialEq)]
@@ -6,6 +8,12 @@ pub enum Mode {
     Search,
     ViewMarkdown,
     ConfirmDisable,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Focus {
+    Tree,
+    Preview,
 }
 
 #[derive(Debug, Clone)]
@@ -30,10 +38,12 @@ pub struct App {
     pub show_enabled_only: bool,
     /// Plugin awaiting disable confirmation in `Mode::ConfirmDisable`.
     pub pending_disable: Option<String>,
+    pub focus: Focus,
+    pub home_dir: Option<PathBuf>,
 }
 
 impl App {
-    pub fn new(tree: Vec<TreeNode>) -> Self {
+    pub fn new(tree: Vec<TreeNode>, home_dir: Option<PathBuf>) -> Self {
         let mut app = Self {
             tree,
             flat: Vec::new(),
@@ -47,6 +57,8 @@ impl App {
             should_quit: false,
             show_enabled_only: false,
             pending_disable: None,
+            focus: Focus::Tree,
+            home_dir,
         };
         app.rebuild_flat();
         app
