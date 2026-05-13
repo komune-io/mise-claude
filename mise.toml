@@ -48,8 +48,25 @@ description = "Check formatting"
 run = "cargo fmt -- --check"
 
 [tasks.clean]
-description = "Remove build artifacts"
-run = "cargo clean"
+description = "Remove cargo build artifacts and all test-generated files across samples"
+run = """
+# Wipe known generated artifacts inside each sample dir. Tracked files
+# (.mise.toml, chord.toml, test.sh, README.md, .test-skip) are not in the list.
+for sample_dir in $(find sample -name '.mise.toml' -exec dirname {} \\;); do
+  echo "Cleaning $sample_dir..."
+  (cd "$sample_dir" && rm -rf \\
+    .mcp.json \\
+    chord.lock \\
+    skills-lock.json \\
+    node_modules \\
+    _bmad-output \\
+    docs \\
+    openspec \\
+    .agents \\
+    .claude)
+done
+cargo clean
+"""
 
 # ── End-to-end (slow, container) ──
 
