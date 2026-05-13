@@ -19,7 +19,7 @@ fn install_plugin() {
     // Write chord.toml with a plugin entry.
     fs::write(
         project_dir.path().join("chord.toml"),
-        "[plugins]\n\"anthropics/claude-code/code-review@claude-code-plugins\" = \"latest\"\n",
+        "[plugins]\n\"anthropics/claude-plugins-official/code-review@claude-plugins-official\" = \"latest\"\n",
     )
     .unwrap();
 
@@ -37,8 +37,7 @@ fn install_plugin() {
     cmd.assert().success();
 
     // Assert claude was called with the correct arguments.
-    let claude_log =
-        fs::read_to_string(log_dir.path().join("claude_calls.log")).unwrap();
+    let claude_log = fs::read_to_string(log_dir.path().join("claude_calls.log")).unwrap();
 
     let lines: Vec<&str> = claude_log.lines().collect();
 
@@ -48,14 +47,14 @@ fn install_plugin() {
     );
 
     assert!(
-        lines[0].contains("plugin marketplace add anthropics/claude-code"),
-        "expected 'plugin marketplace add anthropics/claude-code' in first call, got: {}",
+        lines[0].contains("plugin marketplace add anthropics/claude-plugins-official"),
+        "expected 'plugin marketplace add anthropics/claude-plugins-official' in first call, got: {}",
         lines[0]
     );
 
     assert!(
-        lines[1].contains("plugin install code-review@claude-code-plugins"),
-        "expected 'plugin install code-review@claude-code-plugins' in second call, got: {}",
+        lines[1].contains("plugin install code-review@claude-plugins-official"),
+        "expected 'plugin install code-review@claude-plugins-official' in second call, got: {}",
         lines[1]
     );
     assert!(

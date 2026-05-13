@@ -1,7 +1,7 @@
-use std::collections::HashSet;
 use chord::config::Config;
 use chord::inspect::reconciler::reconcile;
 use chord::inspect::{Category, DiscoveredItem, Management, Scope};
+use std::collections::HashSet;
 
 fn make_item(name: &str, scope: Scope) -> DiscoveredItem {
     DiscoveredItem {
@@ -18,11 +18,7 @@ fn no_plugins() -> HashSet<String> {
 }
 
 fn config_with_mcp(key: &str) -> Config {
-    Config::parse(&format!(
-        "[mcp]\n\"{}\" = \"latest\"\n",
-        key
-    ))
-    .unwrap()
+    Config::parse(&format!("[mcp]\n\"{}\" = \"latest\"\n", key)).unwrap()
 }
 
 // ----- MCP tests -----
@@ -65,7 +61,10 @@ fn drift_declared_but_not_discovered() {
 
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].name, "shadcn");
-    assert!(entries[0].drift, "Expected drift=true for unmatched config entry");
+    assert!(
+        entries[0].drift,
+        "Expected drift=true for unmatched config entry"
+    );
     assert!(entries[0].scope.is_none());
     assert!(entries[0].path.is_none());
 }
@@ -84,10 +83,16 @@ fn override_detected_same_name_both_scopes() {
 
     assert_eq!(entries.len(), 2);
 
-    let project_entry = entries.iter().find(|e| e.scope == Some(Scope::Project)).unwrap();
+    let project_entry = entries
+        .iter()
+        .find(|e| e.scope == Some(Scope::Project))
+        .unwrap();
     assert!(project_entry.overridden_by.is_none());
 
-    let global_entry = entries.iter().find(|e| e.scope == Some(Scope::Global)).unwrap();
+    let global_entry = entries
+        .iter()
+        .find(|e| e.scope == Some(Scope::Global))
+        .unwrap();
     assert_eq!(
         global_entry.overridden_by.as_deref(),
         Some("project"),
@@ -101,11 +106,11 @@ fn override_detected_same_name_both_scopes() {
 fn plugin_reconciliation() {
     // Config key is the full path; discovered uses only the short form.
     let config = Config::parse(
-        "[plugins]\n\"anthropics/claude-code/code-review@claude-code-plugins\" = \"latest\"\n",
+        "[plugins]\n\"anthropics/claude-plugins-official/code-review@claude-plugins-official\" = \"latest\"\n",
     )
     .unwrap();
-    // Short form = last '/' segment = "code-review@claude-code-plugins"
-    let discovered = vec![make_item("code-review@claude-code-plugins", Scope::Project)];
+    // Short form = last '/' segment = "code-review@claude-plugins-official"
+    let discovered = vec![make_item("code-review@claude-plugins-official", Scope::Project)];
 
     let entries = reconcile(Category::Plugins, &discovered, &config, &no_plugins());
 
@@ -119,10 +124,9 @@ fn plugin_reconciliation() {
 #[test]
 fn skills_reconciliation() {
     // Config key is full "owner/repo/skill"; discovered has only the leaf "skill".
-    let config = Config::parse(
-        "[skills]\n\"vercel-labs/next-skills/next-best-practices\" = \"latest\"\n",
-    )
-    .unwrap();
+    let config =
+        Config::parse("[skills]\n\"vercel-labs/next-skills/next-best-practices\" = \"latest\"\n")
+            .unwrap();
     let discovered = vec![make_item("next-best-practices", Scope::Project)];
 
     let entries = reconcile(Category::Skills, &discovered, &config, &no_plugins());

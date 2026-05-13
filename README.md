@@ -106,7 +106,7 @@ Native Claude Code plugins from GitHub-based marketplaces.
 ```toml
 # chord.toml
 [plugins]
-"anthropics/claude-code/commit-commands@claude-code-plugins" = "latest"
+"anthropics/claude-plugins-official/commit-commands@claude-plugins-official" = "latest"
 "upstash/context7/context7-plugin@context7-marketplace" = "latest"
 ```
 

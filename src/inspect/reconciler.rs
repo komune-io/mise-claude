@@ -18,19 +18,18 @@ fn match_names_for(category: &Category, key: &str, registry: &Registry) -> Vec<S
             let resolved = registry.resolve_alias(key);
             let mut names = vec![key.to_string(), resolved.to_string()];
             // e.g. "@upstash/context7-mcp" → bare "context7-mcp"
-            if let Some(bare) = resolved.strip_prefix('@').and_then(|s| s.split_once('/').map(|(_, b)| b)) {
+            if let Some(bare) = resolved
+                .strip_prefix('@')
+                .and_then(|s| s.split_once('/').map(|(_, b)| b))
+            {
                 names.push(bare.to_string());
             }
             names
         }
         Category::Plugins => {
-            // key like "anthropics/claude-code/code-review@claude-code-plugins"
+            // key like "anthropics/claude-plugins-official/code-review@claude-plugins-official"
             // short form: last segment before the final '/' is "<plugin>@<marketplace>"
-            let short = key
-                .rsplit('/')
-                .next()
-                .unwrap_or(key)
-                .to_string();
+            let short = key.rsplit('/').next().unwrap_or(key).to_string();
             let mut names = vec![short];
             if names[0] != key {
                 names.push(key.to_string());
@@ -39,11 +38,7 @@ fn match_names_for(category: &Category, key: &str, registry: &Registry) -> Vec<S
         }
         Category::Skills => {
             // key like "vercel-labs/next-skills/next-best-practices"
-            let leaf = key
-                .rsplit('/')
-                .next()
-                .unwrap_or(key)
-                .to_string();
+            let leaf = key.rsplit('/').next().unwrap_or(key).to_string();
             let mut names = vec![leaf];
             if names[0] != key {
                 names.push(key.to_string());
@@ -65,9 +60,9 @@ fn match_names_for(category: &Category, key: &str, registry: &Registry) -> Vec<S
 /// (in settings: "name@settings-marketplace"). Match on plugin name only.
 fn is_plugin_enabled(from_plugin: &str, enabled_plugins: &HashSet<String>) -> bool {
     let cache_name = from_plugin.split('@').next().unwrap_or(from_plugin);
-    enabled_plugins.iter().any(|ep| {
-        ep.split('@').next().unwrap_or(ep) == cache_name
-    })
+    enabled_plugins
+        .iter()
+        .any(|ep| ep.split('@').next().unwrap_or(ep) == cache_name)
 }
 
 pub fn reconcile(
@@ -91,7 +86,9 @@ pub fn reconcile(
             return discovered
                 .iter()
                 .map(|item| {
-                    let enabled = item.from_plugin.as_ref()
+                    let enabled = item
+                        .from_plugin
+                        .as_ref()
                         .map(|p| is_plugin_enabled(p, enabled_plugins))
                         .unwrap_or(true);
                     AuditEntry {
@@ -138,7 +135,9 @@ pub fn reconcile(
             Management::Manual
         };
 
-        let enabled = item.from_plugin.as_ref()
+        let enabled = item
+            .from_plugin
+            .as_ref()
             .map(|p| is_plugin_enabled(p, enabled_plugins))
             .unwrap_or(true);
         entries.push(AuditEntry {

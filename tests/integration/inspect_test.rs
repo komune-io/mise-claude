@@ -7,7 +7,7 @@ use tempfile::TempDir;
 /// Project dir contains:
 /// - `chord.toml`          with [mcp] context7 + [plugins] code-review entry
 /// - `.mcp.json`                with two servers: context7-mcp (matches config) + manual-mcp (manual)
-/// - `.claude/settings.json`    with enabledPlugins containing code-review@claude-code-plugins
+/// - `.claude/settings.json`    with enabledPlugins containing code-review@claude-plugins-official
 /// - `.claude/skills/my-skill/SKILL.md`
 /// - `.claude/commands/review.md`
 fn setup_project() -> (TempDir, TempDir) {
@@ -17,7 +17,7 @@ fn setup_project() -> (TempDir, TempDir) {
     // chord.toml: declare one MCP tool and one plugin
     fs::write(
         project_dir.path().join("chord.toml"),
-        "[mcp]\ncontext7 = \"2.1.4\"\n\n[plugins]\n\"anthropics/claude-code/code-review@claude-code-plugins\" = \"latest\"\n",
+        "[mcp]\ncontext7 = \"2.1.4\"\n\n[plugins]\n\"anthropics/claude-plugins-official/code-review@claude-plugins-official\" = \"latest\"\n",
     )
     .unwrap();
 
@@ -47,7 +47,7 @@ fn setup_project() -> (TempDir, TempDir) {
     fs::create_dir_all(&settings_dir).unwrap();
     let settings_json = serde_json::json!({
         "enabledPlugins": {
-            "code-review@claude-code-plugins": true
+            "code-review@claude-plugins-official": true
         }
     });
     fs::write(
@@ -82,25 +82,52 @@ fn inspect_shows_all_categories() {
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
 
     // MCP Servers section
-    assert!(stdout.contains("MCP Servers"), "stdout should contain 'MCP Servers', got:\n{stdout}");
-    assert!(stdout.contains("context7-mcp"), "stdout should contain 'context7-mcp', got:\n{stdout}");
-    assert!(stdout.contains("manual-mcp"), "stdout should contain 'manual-mcp', got:\n{stdout}");
-    assert!(stdout.contains("manual"), "stdout should contain 'manual', got:\n{stdout}");
+    assert!(
+        stdout.contains("MCP Servers"),
+        "stdout should contain 'MCP Servers', got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("context7-mcp"),
+        "stdout should contain 'context7-mcp', got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("manual-mcp"),
+        "stdout should contain 'manual-mcp', got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("manual"),
+        "stdout should contain 'manual', got:\n{stdout}"
+    );
 
     // Plugins section
-    assert!(stdout.contains("Plugins"), "stdout should contain 'Plugins', got:\n{stdout}");
     assert!(
-        stdout.contains("code-review@claude-code-plugins"),
-        "stdout should contain 'code-review@claude-code-plugins', got:\n{stdout}"
+        stdout.contains("Plugins"),
+        "stdout should contain 'Plugins', got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("code-review@claude-plugins-official"),
+        "stdout should contain 'code-review@claude-plugins-official', got:\n{stdout}"
     );
 
     // Skills section
-    assert!(stdout.contains("Skills"), "stdout should contain 'Skills', got:\n{stdout}");
-    assert!(stdout.contains("my-skill"), "stdout should contain 'my-skill', got:\n{stdout}");
+    assert!(
+        stdout.contains("Skills"),
+        "stdout should contain 'Skills', got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("my-skill"),
+        "stdout should contain 'my-skill', got:\n{stdout}"
+    );
 
     // Commands section
-    assert!(stdout.contains("Commands"), "stdout should contain 'Commands', got:\n{stdout}");
-    assert!(stdout.contains("review"), "stdout should contain 'review', got:\n{stdout}");
+    assert!(
+        stdout.contains("Commands"),
+        "stdout should contain 'Commands', got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("review"),
+        "stdout should contain 'review', got:\n{stdout}"
+    );
 }
 
 #[test]
@@ -117,9 +144,18 @@ fn inspect_section_filter() {
     let output = cmd.assert().success();
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
 
-    assert!(stdout.contains("MCP Servers"), "stdout should contain 'MCP Servers', got:\n{stdout}");
-    assert!(!stdout.contains("Plugins"), "stdout should NOT contain 'Plugins', got:\n{stdout}");
-    assert!(!stdout.contains("Skills"), "stdout should NOT contain 'Skills', got:\n{stdout}");
+    assert!(
+        stdout.contains("MCP Servers"),
+        "stdout should contain 'MCP Servers', got:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("Plugins"),
+        "stdout should NOT contain 'Plugins', got:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("Skills"),
+        "stdout should NOT contain 'Skills', got:\n{stdout}"
+    );
 }
 
 #[test]
@@ -139,9 +175,18 @@ fn inspect_json_output() {
         serde_json::from_str(&stdout).expect("stdout should be valid JSON");
 
     // Top-level keys are arrays
-    assert!(json["mcp"].is_array(), "json[\"mcp\"] should be an array, got:\n{stdout}");
-    assert!(json["plugins"].is_array(), "json[\"plugins\"] should be an array, got:\n{stdout}");
-    assert!(json["skills"].is_array(), "json[\"skills\"] should be an array, got:\n{stdout}");
+    assert!(
+        json["mcp"].is_array(),
+        "json[\"mcp\"] should be an array, got:\n{stdout}"
+    );
+    assert!(
+        json["plugins"].is_array(),
+        "json[\"plugins\"] should be an array, got:\n{stdout}"
+    );
+    assert!(
+        json["skills"].is_array(),
+        "json[\"skills\"] should be an array, got:\n{stdout}"
+    );
 
     // context7-mcp should appear as managed
     let mcp_arr = json["mcp"].as_array().unwrap();
@@ -193,6 +238,12 @@ fn inspect_drift_shown_for_missing_tool() {
     let output = cmd.assert().success();
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
 
-    assert!(stdout.contains("shadcn"), "stdout should contain 'shadcn', got:\n{stdout}");
-    assert!(stdout.contains("missing") || stdout.contains("not installed"), "stdout should contain drift indicator, got:\n{stdout}");
+    assert!(
+        stdout.contains("shadcn"),
+        "stdout should contain 'shadcn', got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("missing") || stdout.contains("not installed"),
+        "stdout should contain drift indicator, got:\n{stdout}"
+    );
 }

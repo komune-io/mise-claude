@@ -5,7 +5,7 @@ context7 = "2.1.4"
 "vercel-labs/next-skills/next-best-practices" = "latest"
 
 [plugins]
-"anthropics/claude-code/code-review@claude-code-plugins" = "latest"
+"anthropics/claude-plugins-official/code-review@claude-plugins-official" = "latest"
 
 [cli]
 get-shit-done-cc = "1.22.4"

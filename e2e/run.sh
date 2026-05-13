@@ -34,7 +34,7 @@ echo -e "${YELLOW}Running integration tests...${NC}"
 echo ""
 
 for sample_dir in $SAMPLES; do
-  # Derive a readable name from the path (e.g. "mcp", "spec/gsd", "plugin/anthropics/claude-code")
+  # Derive a readable name from the path (e.g. "mcp", "spec/gsd", "plugin/anthropics/claude-plugins-official")
   name="${sample_dir#/app/sample/}"
 
   # Skip samples marked with .test-skip (e.g. speculative examples with non-existent plugins)
