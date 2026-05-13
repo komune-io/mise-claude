@@ -15,6 +15,10 @@ run = "cargo build"
 description = "Build optimized release binary"
 run = "cargo build --release"
 
+[tasks."install:local"]
+description = "Build and install chord to ~/.cargo/bin (overrides any crates.io copy)"
+run = "cargo install --path . --locked --force"
+
 [tasks.test]
 description = "Run cargo unit + integration tests"
 run = "cargo test"
