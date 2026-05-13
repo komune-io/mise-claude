@@ -54,14 +54,20 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
         " chord ".to_string()
     };
 
+    let border_color = if app.focus == crate::tui::app::Focus::Tree {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
     let block = Block::default()
         .borders(Borders::ALL)
         .title(title)
         .title_style(
             Style::default()
-                .fg(Color::Cyan)
+                .fg(border_color)
                 .add_modifier(Modifier::BOLD),
-        );
+        )
+        .border_style(Style::default().fg(border_color));
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
@@ -429,7 +435,8 @@ fn render_markdown_overlay(frame: &mut Frame, app: &App) {
     frame.render_widget(block, area);
 
     let content = app.markdown_content.as_deref().unwrap_or("");
-    let para = Paragraph::new(content)
+    let rendered = crate::tui::markdown::render(content);
+    let para = Paragraph::new(rendered)
         .wrap(Wrap { trim: false })
         .scroll((app.markdown_scroll, 0));
     frame.render_widget(para, inner);
