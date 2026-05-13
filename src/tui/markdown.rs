@@ -22,6 +22,9 @@ struct Renderer {
     lines: Vec<Line<'static>>,
     current: Vec<Span<'static>>,
     style_stack: Vec<Style>,
+    list_stack: Vec<Option<u64>>, // Some(n) for ordered (next index), None for unordered
+    in_code_block: bool,
+    pending_link_url: Option<String>,
 }
 
 impl Renderer {
@@ -75,12 +78,72 @@ impl Renderer {
                 self.flush_line();
                 self.lines.push(Line::from(""));
             }
-            Event::Text(t) => self.push_span(t.into_string()),
+            Event::Text(t) => {
+                if self.in_code_block {
+                    let text = t.into_string();
+                    for (i, line) in text.split('\n').enumerate() {
+                        if i > 0 {
+                            self.flush_line();
+                        }
+                        self.current.push(Span::styled(
+                            line.to_string(),
+                            Style::default().fg(Color::Gray),
+                        ));
+                    }
+                } else {
+                    self.push_span(t.into_string());
+                }
+            }
             Event::Code(t) => {
                 let style = self.current_style().fg(Color::Yellow);
                 self.current.push(Span::styled(t.into_string(), style));
             }
             Event::SoftBreak | Event::HardBreak => self.flush_line(),
+            Event::Start(Tag::List(first)) => {
+                self.list_stack.push(first);
+            }
+            Event::End(TagEnd::List(_)) => {
+                self.list_stack.pop();
+            }
+            Event::Start(Tag::Item) => {
+                let prefix = match self.list_stack.last_mut() {
+                    Some(Some(n)) => {
+                        let p = format!("{}. ", n);
+                        *n += 1;
+                        p
+                    }
+                    _ => "• ".to_string(),
+                };
+                self.current.push(Span::raw(prefix));
+            }
+            Event::End(TagEnd::Item) => {
+                self.flush_line();
+            }
+            Event::Start(Tag::CodeBlock(_)) => {
+                self.in_code_block = true;
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                self.in_code_block = false;
+                self.flush_line();
+            }
+            Event::Start(Tag::Link { dest_url, .. }) => {
+                let style = Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::UNDERLINED);
+                self.style_stack.push(style);
+                self.pending_link_url = Some(dest_url.into_string());
+            }
+            Event::End(TagEnd::Link) => {
+                self.style_stack.pop();
+                if let Some(url) = self.pending_link_url.take() {
+                    self.current.push(Span::styled(
+                        format!(" ({})", url),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::UNDERLINED),
+                    ));
+                }
+            }
             _ => {}
         }
     }
@@ -190,5 +253,58 @@ mod tests {
                 "src={src}"
             );
         }
+    }
+
+    #[test]
+    fn render_unordered_list_item_starts_with_bullet() {
+        let lines = render("- item one\n- item two\n");
+        assert_eq!(lines.len(), 2);
+        assert!(span_texts(&lines[0])[0].starts_with("• "));
+        assert!(span_texts(&lines[1])[0].starts_with("• "));
+    }
+
+    #[test]
+    fn render_ordered_list_item_starts_with_number() {
+        let lines = render("1. one\n2. two\n");
+        assert_eq!(lines.len(), 2);
+        assert!(span_texts(&lines[0])[0].starts_with("1. "));
+        assert!(span_texts(&lines[1])[0].starts_with("2. "));
+    }
+
+    #[test]
+    fn render_fenced_code_block_emits_one_line_per_source_line() {
+        let lines = render("```\nlet x = 1;\nlet y = 2;\n```\n");
+        // Two source lines → two rendered lines.
+        let code_lines: Vec<&Line> = lines
+            .iter()
+            .filter(|l| l.spans.iter().any(|s| s.content.contains("let ")))
+            .collect();
+        assert_eq!(code_lines.len(), 2);
+        for line in &code_lines {
+            let span = &line.spans[0];
+            assert_eq!(span.style.fg, Some(Color::Gray));
+        }
+    }
+
+    #[test]
+    fn render_link_emits_underlined_cyan_with_url() {
+        let lines = render("see [docs](https://example.com)");
+        let text = span_texts(&lines[0]).join("");
+        assert!(text.contains("docs"));
+        assert!(text.contains("https://example.com"));
+        let link_span = lines[0]
+            .spans
+            .iter()
+            .find(|s| s.content.contains("docs"))
+            .expect("link span");
+        assert_eq!(link_span.style.fg, Some(Color::Cyan));
+        assert!(link_span.style.add_modifier.contains(Modifier::UNDERLINED));
+    }
+
+    #[test]
+    fn render_does_not_panic_on_table_or_html() {
+        // Tables and raw HTML are dropped; renderer must not panic.
+        let _ = render("| a | b |\n|---|---|\n| 1 | 2 |\n");
+        let _ = render("<div>raw</div>");
     }
 }
