@@ -23,6 +23,7 @@ fn execute_toggle(app: &mut App, home_dir: &Path, plugin_id: &str, currently_ena
                 node_mut.enabled = !currently_enabled;
             }
             app.rebuild_flat();
+            app.update_preview();
             let action = if currently_enabled {
                 "disabled"
             } else {
@@ -317,5 +318,36 @@ mod tests {
         let home = PathBuf::from("/");
         handle_key(&mut app, key(KeyCode::Esc), &home).unwrap();
         assert!(app.should_quit);
+    }
+
+    #[test]
+    fn execute_toggle_refreshes_preview() {
+        // After a toggle, the tree is rebuilt — the selected node may now point
+        // to a different file (e.g., a previously-hidden plugin becomes visible).
+        // This is a smoke test that update_preview is called after execute_toggle,
+        // mirroring the same contract that move_*/expand/* satisfy.
+        let (_f, p) = tmp_path("# initial");
+        let mut node = leaf("a", Some(p.clone()));
+        node.plugin_id = Some("a".to_string());
+        let mut app = App::new(vec![node], None);
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("initial"));
+
+        // Overwrite the file mid-session.
+        std::fs::write(&p, "# changed").unwrap();
+
+        // Use a real tempdir for HOME so execute_toggle can write settings.json.
+        let home_tmp = tempfile::tempdir().unwrap();
+        let home = home_tmp.path().to_path_buf();
+        execute_toggle(&mut app, &home, "a", false);
+
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("changed"));
     }
 }
