@@ -1,6 +1,7 @@
 pub mod actions;
 pub mod app;
 pub mod handler;
+pub(crate) mod markdown;
 pub mod tree;
 pub mod ui;
 
@@ -40,7 +41,7 @@ pub fn run_tui(project_root: &Path, home_dir: &Path, config: &Config) -> io::Res
         entries: report_entries,
     };
     let tree_nodes = build_tree(&report);
-    let mut app = App::new(tree_nodes);
+    let mut app = App::new(tree_nodes, Some(home_dir.to_path_buf()));
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();

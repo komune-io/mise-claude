@@ -23,6 +23,7 @@ fn execute_toggle(app: &mut App, home_dir: &Path, plugin_id: &str, currently_ena
                 node_mut.enabled = !currently_enabled;
             }
             app.rebuild_flat();
+            app.update_preview();
             let action = if currently_enabled {
                 "disabled"
             } else {
@@ -37,8 +38,50 @@ fn execute_toggle(app: &mut App, home_dir: &Path, plugin_id: &str, currently_ena
 }
 
 fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
+    use crate::tui::app::Focus;
+
+    // Focus-routed keys.
+    match (app.focus, key.code) {
+        (Focus::Preview, KeyCode::Char('j') | KeyCode::Down) => {
+            app.markdown_scroll = app.markdown_scroll.saturating_add(1);
+            return Ok(());
+        }
+        (Focus::Preview, KeyCode::Char('k') | KeyCode::Up) => {
+            app.markdown_scroll = app.markdown_scroll.saturating_sub(1);
+            return Ok(());
+        }
+        (Focus::Preview, KeyCode::PageDown) => {
+            app.markdown_scroll = app.markdown_scroll.saturating_add(20);
+            return Ok(());
+        }
+        (Focus::Preview, KeyCode::PageUp) => {
+            app.markdown_scroll = app.markdown_scroll.saturating_sub(20);
+            return Ok(());
+        }
+        (Focus::Preview, KeyCode::Char('h') | KeyCode::Left) => return Ok(()),
+        (Focus::Preview, KeyCode::Char('l') | KeyCode::Right) => return Ok(()),
+        (Focus::Preview, KeyCode::Enter) => return Ok(()),
+        (Focus::Preview, KeyCode::Esc) => {
+            app.focus = Focus::Tree;
+            return Ok(());
+        }
+        (Focus::Tree, KeyCode::Tab) => {
+            if app.markdown_content.is_some() {
+                app.focus = Focus::Preview;
+            } else {
+                app.set_status("No preview available".to_string());
+            }
+            return Ok(());
+        }
+        (Focus::Preview, KeyCode::Tab) => {
+            app.focus = Focus::Tree;
+            return Ok(());
+        }
+        _ => {}
+    }
+
+    // Tree-focus default routing (and focus-agnostic keys).
     match key.code {
-        // Quit
         KeyCode::Char('q') | KeyCode::Esc => {
             app.should_quit = true;
         }
@@ -46,22 +89,18 @@ fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()
             app.should_quit = true;
         }
 
-        // Navigation
         KeyCode::Up | KeyCode::Char('k') => app.move_up(),
         KeyCode::Down | KeyCode::Char('j') => app.move_down(),
         KeyCode::Left | KeyCode::Char('h') => app.collapse(),
         KeyCode::Right | KeyCode::Char('l') => app.expand(),
         KeyCode::Enter => app.toggle_expand(),
 
-        // Search mode
         KeyCode::Char('/') => {
             app.mode = Mode::Search;
             app.search_query.clear();
             app.apply_search_filter();
         }
 
-        // Toggle plugin. Disabling asks for confirmation (Mode::ConfirmDisable);
-        // enabling is cheap and fires inline.
         KeyCode::Char('e') => {
             if let Some(node) = app.selected_node() {
                 if let Some(plugin_id) = node.plugin_id.clone() {
@@ -77,12 +116,10 @@ fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()
             }
         }
 
-        // Toggle enabled/all filter
         KeyCode::Char('i') => {
             app.toggle_enabled_filter();
         }
 
-        // View markdown
         KeyCode::Char('v') => {
             if let Some(node) = app.selected_node() {
                 let path_opt = node.path.clone();
@@ -94,17 +131,7 @@ fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()
                         app.set_status(format!("Cannot read: '{}' is not a file path", p));
                     }
                     Some(ref p) => {
-                        // Expand ~/
-                        let expanded = if p.starts_with("~/") {
-                            let rest = &p[2..];
-                            match dirs::home_dir() {
-                                Some(h) => h.join(rest).to_string_lossy().to_string(),
-                                None => p.clone(),
-                            }
-                        } else {
-                            p.clone()
-                        };
-
+                        let expanded = crate::tui::app::expand_tilde(p, app.home_dir.as_deref());
                         match std::fs::read_to_string(&expanded) {
                             Ok(content) => {
                                 app.markdown_content = Some(content);
@@ -171,8 +198,7 @@ fn handle_markdown(app: &mut App, key: KeyEvent) -> io::Result<()> {
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => {
             app.mode = Mode::Normal;
-            app.markdown_content = None;
-            app.markdown_scroll = 0;
+            app.update_preview();
         }
         KeyCode::Up | KeyCode::Char('k') => {
             app.markdown_scroll = app.markdown_scroll.saturating_sub(1);
@@ -189,4 +215,167 @@ fn handle_markdown(app: &mut App, key: KeyEvent) -> io::Result<()> {
         _ => {}
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tui::app::Focus;
+    use crate::tui::tree::{NodeKind, TreeNode};
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use std::io::Write;
+    use std::path::PathBuf;
+
+    fn leaf(name: &str, path: Option<String>) -> TreeNode {
+        TreeNode {
+            name: name.to_string(),
+            kind: NodeKind::Skill,
+            enabled: true,
+            scope: None,
+            path,
+            plugin_id: None,
+            children: Vec::new(),
+            expanded: false,
+            hidden: false,
+        }
+    }
+
+    fn key(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    fn tmp_path(contents: &str) -> (tempfile::NamedTempFile, String) {
+        let mut f = tempfile::NamedTempFile::new().unwrap();
+        write!(f, "{}", contents).unwrap();
+        let p = f.path().to_string_lossy().to_string();
+        (f, p)
+    }
+
+    #[test]
+    fn tab_with_preview_switches_focus_to_preview() {
+        let (_f, p) = tmp_path("# x");
+        let mut app = App::new(vec![leaf("a", Some(p))], None);
+        let home = PathBuf::from("/");
+        assert_eq!(app.focus, Focus::Tree);
+        handle_key(&mut app, key(KeyCode::Tab), &home).unwrap();
+        assert_eq!(app.focus, Focus::Preview);
+    }
+
+    #[test]
+    fn tab_without_preview_is_noop() {
+        let mut app = App::new(vec![leaf("a", None)], None);
+        let home = PathBuf::from("/");
+        handle_key(&mut app, key(KeyCode::Tab), &home).unwrap();
+        assert_eq!(app.focus, Focus::Tree);
+    }
+
+    #[test]
+    fn j_in_preview_focus_scrolls_markdown() {
+        let (_f, p) = tmp_path("# x");
+        let mut app = App::new(vec![leaf("a", Some(p))], None);
+        let home = PathBuf::from("/");
+        handle_key(&mut app, key(KeyCode::Tab), &home).unwrap();
+        let before = app.markdown_scroll;
+        handle_key(&mut app, key(KeyCode::Char('j')), &home).unwrap();
+        assert_eq!(app.markdown_scroll, before + 1);
+    }
+
+    #[test]
+    fn k_in_preview_saturates_at_zero() {
+        let (_f, p) = tmp_path("# x");
+        let mut app = App::new(vec![leaf("a", Some(p))], None);
+        let home = PathBuf::from("/");
+        handle_key(&mut app, key(KeyCode::Tab), &home).unwrap();
+        handle_key(&mut app, key(KeyCode::Char('k')), &home).unwrap();
+        assert_eq!(app.markdown_scroll, 0);
+    }
+
+    #[test]
+    fn pagedown_in_preview_pages() {
+        let (_f, p) = tmp_path("# x");
+        let mut app = App::new(vec![leaf("a", Some(p))], None);
+        let home = PathBuf::from("/");
+        handle_key(&mut app, key(KeyCode::Tab), &home).unwrap();
+        handle_key(&mut app, key(KeyCode::PageDown), &home).unwrap();
+        assert_eq!(app.markdown_scroll, 20);
+    }
+
+    #[test]
+    fn esc_in_preview_returns_focus_to_tree() {
+        let (_f, p) = tmp_path("# x");
+        let mut app = App::new(vec![leaf("a", Some(p))], None);
+        let home = PathBuf::from("/");
+        handle_key(&mut app, key(KeyCode::Tab), &home).unwrap();
+        handle_key(&mut app, key(KeyCode::Esc), &home).unwrap();
+        assert_eq!(app.focus, Focus::Tree);
+        assert!(!app.should_quit);
+    }
+
+    #[test]
+    fn esc_in_tree_quits() {
+        let mut app = App::new(vec![leaf("a", None)], None);
+        let home = PathBuf::from("/");
+        handle_key(&mut app, key(KeyCode::Esc), &home).unwrap();
+        assert!(app.should_quit);
+    }
+
+    #[test]
+    fn execute_toggle_refreshes_preview() {
+        // After a toggle, the tree is rebuilt — the selected node may now point
+        // to a different file (e.g., a previously-hidden plugin becomes visible).
+        // This is a smoke test that update_preview is called after execute_toggle,
+        // mirroring the same contract that move_*/expand/* satisfy.
+        let (_f, p) = tmp_path("# initial");
+        let mut node = leaf("a", Some(p.clone()));
+        node.plugin_id = Some("a".to_string());
+        let mut app = App::new(vec![node], None);
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("initial"));
+
+        // Overwrite the file mid-session.
+        std::fs::write(&p, "# changed").unwrap();
+
+        // Use a real tempdir for HOME so execute_toggle can write settings.json.
+        let home_tmp = tempfile::tempdir().unwrap();
+        let home = home_tmp.path().to_path_buf();
+        execute_toggle(&mut app, &home, "a", false);
+
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("changed"));
+    }
+
+    #[test]
+    fn closing_markdown_overlay_restores_inline_preview() {
+        let (_f, p) = tmp_path("# inline content");
+        let mut app = App::new(vec![leaf("a", Some(p))], None);
+        let home = PathBuf::from("/");
+
+        // Confirm inline preview loaded by App::new.
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("inline content"));
+
+        // Open fullscreen overlay via 'v'.
+        handle_key(&mut app, key(KeyCode::Char('v')), &home).unwrap();
+        assert_eq!(app.mode, crate::tui::app::Mode::ViewMarkdown);
+
+        // Close overlay via Esc.
+        handle_key(&mut app, key(KeyCode::Esc), &home).unwrap();
+        assert_eq!(app.mode, crate::tui::app::Mode::Normal);
+
+        // Inline preview must still be loaded (not wiped to None).
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("inline content"));
+    }
 }

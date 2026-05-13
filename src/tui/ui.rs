@@ -54,14 +54,20 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
         " chord ".to_string()
     };
 
+    let border_color = if app.focus == crate::tui::app::Focus::Tree {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
     let block = Block::default()
         .borders(Borders::ALL)
         .title(title)
         .title_style(
             Style::default()
-                .fg(Color::Cyan)
+                .fg(border_color)
                 .add_modifier(Modifier::BOLD),
-        );
+        )
+        .border_style(Style::default().fg(border_color));
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
@@ -173,9 +179,51 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
         return;
     };
 
+    let metadata = build_metadata_lines(app, node);
+    let preview_present = app.markdown_content.is_some();
+
+    if !preview_present {
+        let para = Paragraph::new(metadata)
+            .wrap(Wrap { trim: false })
+            .scroll((app.detail_scroll, 0));
+        frame.render_widget(para, inner);
+        return;
+    }
+
+    let meta_height = metadata.len() as u16 + 1;
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(meta_height), Constraint::Min(0)])
+        .split(inner);
+
+    let meta_para = Paragraph::new(metadata).wrap(Wrap { trim: false });
+    frame.render_widget(meta_para, chunks[0]);
+
+    let preview_border_color = if app.focus == crate::tui::app::Focus::Preview {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
+    let preview_block = Block::default()
+        .borders(Borders::TOP)
+        .title(" Preview ")
+        .title_style(Style::default().fg(preview_border_color))
+        .border_style(Style::default().fg(preview_border_color));
+
+    let preview_inner = preview_block.inner(chunks[1]);
+    frame.render_widget(preview_block, chunks[1]);
+
+    let content = app.markdown_content.as_deref().unwrap_or("");
+    let rendered = crate::tui::markdown::render(content);
+    let preview_para = Paragraph::new(rendered)
+        .wrap(Wrap { trim: false })
+        .scroll((app.markdown_scroll, 0));
+    frame.render_widget(preview_para, preview_inner);
+}
+
+fn build_metadata_lines(app: &App, node: &crate::tui::tree::TreeNode) -> Vec<Line<'static>> {
     let mut lines: Vec<Line> = Vec::new();
 
-    // Name
     lines.push(Line::from(vec![
         Span::styled("Name:   ", Style::default().add_modifier(Modifier::BOLD)),
         Span::styled(
@@ -186,22 +234,20 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
         ),
     ]));
 
-    // Type
     let kind_str = match node.kind {
-        NodeKind::SectionHeader => "Section",
-        NodeKind::Plugin => "Plugin",
-        NodeKind::Skill => "Skill",
-        NodeKind::Command => "Command",
-        NodeKind::Agent => "Agent",
-        NodeKind::McpServer => "MCP Server",
-        NodeKind::Hook => "Hook",
+        crate::tui::tree::NodeKind::SectionHeader => "Section",
+        crate::tui::tree::NodeKind::Plugin => "Plugin",
+        crate::tui::tree::NodeKind::Skill => "Skill",
+        crate::tui::tree::NodeKind::Command => "Command",
+        crate::tui::tree::NodeKind::Agent => "Agent",
+        crate::tui::tree::NodeKind::McpServer => "MCP Server",
+        crate::tui::tree::NodeKind::Hook => "Hook",
     };
     lines.push(Line::from(vec![
         Span::styled("Type:   ", Style::default().add_modifier(Modifier::BOLD)),
         Span::raw(kind_str),
     ]));
 
-    // Scope
     let scope_str = match &node.scope {
         Some(crate::inspect::Scope::Project) => "Project",
         Some(crate::inspect::Scope::Global) => "Global",
@@ -212,7 +258,6 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
         Span::raw(scope_str),
     ]));
 
-    // Status
     let (status_str, status_color) = if node.enabled {
         ("Enabled", Color::Green)
     } else {
@@ -223,7 +268,6 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
         Span::styled(status_str, Style::default().fg(status_color)),
     ]));
 
-    // Path
     if let Some(path) = &node.path {
         lines.push(Line::from(vec![
             Span::styled("Path:   ", Style::default().add_modifier(Modifier::BOLD)),
@@ -231,7 +275,6 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
         ]));
     }
 
-    // Plugin ID
     if let Some(plugin_id) = &node.plugin_id {
         lines.push(Line::from(vec![
             Span::styled("Plugin: ", Style::default().add_modifier(Modifier::BOLD)),
@@ -239,7 +282,6 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
         ]));
     }
 
-    // Child count for plugin/section nodes
     if !node.children.is_empty() {
         lines.push(Line::from(vec![
             Span::styled("Items:  ", Style::default().add_modifier(Modifier::BOLD)),
@@ -247,27 +289,32 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
         ]));
     }
 
-    // Spacer
     lines.push(Line::from(""));
+    lines.push(keybind_hint_line(app));
 
-    // Keybinding hints
+    lines
+}
+
+fn keybind_hint_line(app: &App) -> Line<'static> {
     let filter_label = if app.show_enabled_only {
         "all"
     } else {
         "enabled"
     };
-    lines.push(Line::from(Span::styled(
-        format!(
+    let text = match (app.focus, app.markdown_content.is_some()) {
+        (crate::tui::app::Focus::Preview, _) => {
+            "[Tab/Esc] back  [j/k] scroll  [PgUp/PgDn] page  [v] fullscreen  [q] quit".to_string()
+        }
+        (crate::tui::app::Focus::Tree, true) => format!(
+            "[Tab] preview  [e] toggle  [v] full  [i] {}  [/] search  [q] quit",
+            filter_label
+        ),
+        (crate::tui::app::Focus::Tree, false) => format!(
             "[e] toggle  [v] view  [i] {}  [/] search  [q] quit",
             filter_label
         ),
-        Style::default().fg(Color::DarkGray),
-    )));
-
-    let para = Paragraph::new(lines)
-        .wrap(Wrap { trim: false })
-        .scroll((app.detail_scroll, 0));
-    frame.render_widget(para, inner);
+    };
+    Line::from(Span::styled(text, Style::default().fg(Color::DarkGray)))
 }
 
 fn render_status(frame: &mut Frame, app: &App, area: Rect) {
@@ -388,7 +435,8 @@ fn render_markdown_overlay(frame: &mut Frame, app: &App) {
     frame.render_widget(block, area);
 
     let content = app.markdown_content.as_deref().unwrap_or("");
-    let para = Paragraph::new(content)
+    let rendered = crate::tui::markdown::render(content);
+    let para = Paragraph::new(rendered)
         .wrap(Wrap { trim: false })
         .scroll((app.markdown_scroll, 0));
     frame.render_widget(para, inner);

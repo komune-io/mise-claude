@@ -9,7 +9,7 @@ use tempfile::TempDir;
 fn app_with_plugin(plugin_id: &str, enabled: bool) -> App {
     let mut plugin = TreeNode::plugin(plugin_id, enabled, None, None);
     plugin.expanded = false;
-    App::new(vec![plugin])
+    App::new(vec![plugin], None)
 }
 
 /// Write a `~/.claude/settings.json` containing the given enabled plugin
