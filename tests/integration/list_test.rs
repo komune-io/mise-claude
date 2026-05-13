@@ -36,16 +36,34 @@ fn list_shows_installed_tools() {
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
 
     // Both tool names should appear.
-    assert!(stdout.contains("context7"), "stdout should contain context7, got: {stdout}");
-    assert!(stdout.contains("memory"), "stdout should contain memory, got: {stdout}");
+    assert!(
+        stdout.contains("context7"),
+        "stdout should contain context7, got: {stdout}"
+    );
+    assert!(
+        stdout.contains("memory"),
+        "stdout should contain memory, got: {stdout}"
+    );
 
     // Versions from lockfile.
-    assert!(stdout.contains("2.1.4"), "stdout should contain 2.1.4, got: {stdout}");
-    assert!(stdout.contains("1.0.0"), "stdout should contain 1.0.0, got: {stdout}");
+    assert!(
+        stdout.contains("2.1.4"),
+        "stdout should contain 2.1.4, got: {stdout}"
+    );
+    assert!(
+        stdout.contains("1.0.0"),
+        "stdout should contain 1.0.0, got: {stdout}"
+    );
 
     // context7 is installed, memory is not.
-    assert!(stdout.contains("✓ installed"), "stdout should show installed status, got: {stdout}");
-    assert!(stdout.contains("✗ missing"), "stdout should show missing status, got: {stdout}");
+    assert!(
+        stdout.contains("✓ installed"),
+        "stdout should show installed status, got: {stdout}"
+    );
+    assert!(
+        stdout.contains("✗ missing"),
+        "stdout should show missing status, got: {stdout}"
+    );
 }
 
 #[test]
@@ -62,9 +80,18 @@ fn list_empty_config_shows_header_only() {
     let output = cmd.assert().success();
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
 
-    assert!(stdout.contains("TOOL"), "stdout should contain header, got: {stdout}");
-    assert!(stdout.contains("VERSION"), "stdout should contain header, got: {stdout}");
-    assert!(stdout.contains("STATUS"), "stdout should contain header, got: {stdout}");
+    assert!(
+        stdout.contains("TOOL"),
+        "stdout should contain header, got: {stdout}"
+    );
+    assert!(
+        stdout.contains("VERSION"),
+        "stdout should contain header, got: {stdout}"
+    );
+    assert!(
+        stdout.contains("STATUS"),
+        "stdout should contain header, got: {stdout}"
+    );
 }
 
 #[test]
@@ -87,6 +114,12 @@ fn list_shows_question_mark_for_unlocked_tools() {
     let output = cmd.assert().success();
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
 
-    assert!(stdout.contains("context7"), "stdout should contain tool name, got: {stdout}");
-    assert!(stdout.contains('?'), "stdout should show '?' for unlocked tool, got: {stdout}");
+    assert!(
+        stdout.contains("context7"),
+        "stdout should contain tool name, got: {stdout}"
+    );
+    assert!(
+        stdout.contains('?'),
+        "stdout should show '?' for unlocked tool, got: {stdout}"
+    );
 }

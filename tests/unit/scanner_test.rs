@@ -270,7 +270,11 @@ fn scan_agents_flat_only() {
 fn scan_agents_global() {
     let (proj, home) = make_dirs();
     write_file(
-        &home.path().join(".claude").join("agents").join("global-agent.md"),
+        &home
+            .path()
+            .join(".claude")
+            .join("agents")
+            .join("global-agent.md"),
         "# Global Agent",
     );
 

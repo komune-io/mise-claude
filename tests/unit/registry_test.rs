@@ -14,16 +14,25 @@ fn resolve_known_alias() {
 #[test]
 fn unknown_alias_passes_through() {
     let reg = Registry::default();
-    assert_eq!(reg.resolve_alias("@someorg/custom-mcp"), "@someorg/custom-mcp");
+    assert_eq!(
+        reg.resolve_alias("@someorg/custom-mcp"),
+        "@someorg/custom-mcp"
+    );
     assert_eq!(reg.resolve_alias("my-tool"), "my-tool");
 }
 
 #[test]
 fn get_override_for_known_tool() {
     let reg = Registry::default();
-    let ov = reg.get_override("shadcn").expect("shadcn should have an override");
+    let ov = reg
+        .get_override("shadcn")
+        .expect("shadcn should have an override");
     assert_eq!(ov.bin_name.as_deref(), Some("shadcn"));
-    assert!(ov.post_install.as_deref().unwrap().contains("shadcn mcp init"));
+    assert!(ov
+        .post_install
+        .as_deref()
+        .unwrap()
+        .contains("shadcn mcp init"));
     assert!(ov.extra_deps.contains(&"tinyexec@1.0.2".to_string()));
 }
 

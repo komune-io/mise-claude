@@ -1,7 +1,5 @@
-use clap::Parser;
 use chord::cli::{Cli, Command};
 use chord::config::Config;
-use chord::migrate;
 use chord::installer::cli_tool::CliToolInstaller;
 use chord::installer::mcp::McpInstaller;
 use chord::installer::plugin::PluginInstaller;
@@ -9,8 +7,10 @@ use chord::installer::skill::SkillInstaller;
 use chord::installer::{InstallContext, Installer};
 use chord::lockfile::{LockedTool, Lockfile};
 use chord::mcp_config;
+use chord::migrate;
 use chord::output::Reporter;
 use chord::resolver::{self, Action, ToolType};
+use clap::Parser;
 use std::path::PathBuf;
 use std::process;
 
@@ -56,7 +56,11 @@ fn main() {
                         .map(|l| l.version.as_str())
                         .unwrap_or("?");
                     let installed = packages_dir.join(name).join("node_modules").exists();
-                    let status = if installed { "✓ installed" } else { "✗ missing" };
+                    let status = if installed {
+                        "✓ installed"
+                    } else {
+                        "✗ missing"
+                    };
                     println!("  {:<25} {:<12} {}", name, locked_ver, status);
                 }
             }
@@ -226,10 +230,7 @@ fn run_install(verbose: bool, quiet: bool) {
 
     // 4. Resolve plan.
     let is_installed = |section: &str, name: &str| -> bool {
-        packages_dir
-            .join(name)
-            .join("node_modules")
-            .exists()
+        packages_dir.join(name).join("node_modules").exists()
             && lockfile.get(section, name).is_some()
     };
 
@@ -247,7 +248,11 @@ fn run_install(verbose: bool, quiet: bool) {
     let skill_installer = SkillInstaller;
     let plugin_installer = PluginInstaller;
 
-    let mut reporter = if quiet { Reporter::new_quiet() } else { Reporter::new() };
+    let mut reporter = if quiet {
+        Reporter::new_quiet()
+    } else {
+        Reporter::new()
+    };
 
     // 5. Execute each action.
     for action in &plan.actions {

@@ -345,9 +345,7 @@ fn render_confirm_disable_popup(frame: &mut Frame, app: &App) {
         Line::from(vec![
             Span::styled(
                 "[Y]es / Enter",
-                Style::default()
-                    .fg(Color::Red)
-                    .add_modifier(Modifier::BOLD),
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
             ),
             Span::raw("     "),
             Span::styled("[N]o / Esc", Style::default().fg(Color::Green)),

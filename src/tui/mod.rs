@@ -16,7 +16,7 @@ use crossterm::terminal::{
 use ratatui::prelude::*;
 
 use crate::config::Config;
-use crate::inspect::{scanner, reconciler, AuditReport, Category};
+use crate::inspect::{reconciler, scanner, AuditReport, Category};
 use app::App;
 use tree::build_tree;
 
@@ -32,10 +32,13 @@ pub fn run_tui(project_root: &Path, home_dir: &Path, config: &Config) -> io::Res
             Category::Agents => scanner::scan_agents(project_root, home_dir),
             Category::Hooks => scanner::scan_hooks(project_root, home_dir),
         };
-        let entries = reconciler::reconcile(category.clone(), &discovered, config, &enabled_plugins);
+        let entries =
+            reconciler::reconcile(category.clone(), &discovered, config, &enabled_plugins);
         report_entries.push((category, entries));
     }
-    let report = AuditReport { entries: report_entries };
+    let report = AuditReport {
+        entries: report_entries,
+    };
     let tree_nodes = build_tree(&report);
     let mut app = App::new(tree_nodes);
 

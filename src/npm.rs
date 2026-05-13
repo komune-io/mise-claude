@@ -113,16 +113,8 @@ pub fn is_prerelease(version: &str) -> bool {
 /// Non-numeric components are treated as 0.
 pub fn parse_semver_parts(v: &str) -> (u64, u64, u64) {
     let mut parts = v.splitn(3, '.');
-    let major = parts
-        .next()
-        .unwrap_or("0")
-        .parse::<u64>()
-        .unwrap_or(0);
-    let minor = parts
-        .next()
-        .unwrap_or("0")
-        .parse::<u64>()
-        .unwrap_or(0);
+    let major = parts.next().unwrap_or("0").parse::<u64>().unwrap_or(0);
+    let minor = parts.next().unwrap_or("0").parse::<u64>().unwrap_or(0);
     // patch may have pre-release suffix; take numeric prefix only
     let patch_raw = parts.next().unwrap_or("0");
     let patch = patch_raw

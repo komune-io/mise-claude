@@ -16,9 +16,7 @@ impl SkillInstaller {
         if parts.len() != 3 {
             return Err(InstallError::Command(
                 "parse_skill_path".to_string(),
-                format!(
-                    "expected 'owner/repo/skill-name', got: '{name}'"
-                ),
+                format!("expected 'owner/repo/skill-name', got: '{name}'"),
             ));
         }
         // owner_repo spans from start to just before the last '/'

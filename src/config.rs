@@ -108,8 +108,14 @@ mod tests {
         assert_eq!(cfg.cli.len(), 1);
         assert_eq!(cfg.mcp.get("context7").map(String::as_str), Some("latest"));
         assert_eq!(cfg.mcp.get("memory").map(String::as_str), Some("^1.0"));
-        assert_eq!(cfg.skills.get("my-skill").map(String::as_str), Some("latest"));
-        assert_eq!(cfg.plugins.get("my-plugin").map(String::as_str), Some("^2.3"));
+        assert_eq!(
+            cfg.skills.get("my-skill").map(String::as_str),
+            Some("latest")
+        );
+        assert_eq!(
+            cfg.plugins.get("my-plugin").map(String::as_str),
+            Some("^2.3")
+        );
         assert_eq!(cfg.cli.get("some-tool").map(String::as_str), Some("1.2.3"));
     }
 

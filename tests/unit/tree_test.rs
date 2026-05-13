@@ -1,12 +1,7 @@
 use chord::inspect::{AuditEntry, AuditReport, Category, Management, Scope};
 use chord::tui::tree::{build_tree, NodeKind};
 
-fn make_entry(
-    name: &str,
-    scope: Option<Scope>,
-    enabled: bool,
-    path: Option<&str>,
-) -> AuditEntry {
+fn make_entry(name: &str, scope: Option<Scope>, enabled: bool, path: Option<&str>) -> AuditEntry {
     AuditEntry {
         name: name.to_string(),
         version: None,
@@ -69,8 +64,7 @@ fn build_tree_groups_by_plugin() {
 
     // No standalone Skills section
     assert!(
-        tree.iter()
-            .all(|n| n.name != "Skills"),
+        tree.iter().all(|n| n.name != "Skills"),
         "standalone Skills section should not exist"
     );
 }

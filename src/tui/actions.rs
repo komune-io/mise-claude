@@ -1,6 +1,6 @@
+use serde_json::{json, Value};
 use std::io;
 use std::path::Path;
-use serde_json::{json, Value};
 
 /// Toggle a plugin's enabled state in ~/.claude/settings.json.
 /// If currently_enabled is true, removes the key. Otherwise adds it.
@@ -9,8 +9,7 @@ pub fn toggle_plugin(home_dir: &Path, plugin_id: &str, currently_enabled: bool) 
 
     let mut settings: Value = if settings_path.exists() {
         let content = std::fs::read_to_string(&settings_path)?;
-        serde_json::from_str(&content)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+        serde_json::from_str(&content).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
     } else {
         json!({})
     };

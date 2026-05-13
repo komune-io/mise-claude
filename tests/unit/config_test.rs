@@ -1,7 +1,7 @@
 use chord::config::Config;
 use chord::error::ConfigError;
-use tempfile::NamedTempFile;
 use std::io::Write;
+use tempfile::NamedTempFile;
 
 // ---------------------------------------------------------------------------
 // Parsing from string
@@ -123,8 +123,7 @@ context7 = "latest"
 
 #[test]
 fn from_file_returns_io_error_for_missing_file() {
-    let err = Config::from_file(std::path::Path::new("/nonexistent/path/chord.toml"))
-        .unwrap_err();
+    let err = Config::from_file(std::path::Path::new("/nonexistent/path/chord.toml")).unwrap_err();
     assert!(
         matches!(err, ConfigError::Io(_)),
         "expected ConfigError::Io, got {err:?}"

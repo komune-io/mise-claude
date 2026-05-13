@@ -1,5 +1,5 @@
 use chord::config::Config;
-use chord::lockfile::{Lockfile, LockedTool};
+use chord::lockfile::{LockedTool, Lockfile};
 use chord::resolver::{resolve, Action};
 
 #[test]

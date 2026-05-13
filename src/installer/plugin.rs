@@ -34,9 +34,7 @@ impl PluginInstaller {
         if parts.len() != 3 {
             return Err(InstallError::Command(
                 "parse_plugin_path".to_string(),
-                format!(
-                    "expected 'owner/repo/plugin@marketplace', got: '{name}'"
-                ),
+                format!("expected 'owner/repo/plugin@marketplace', got: '{name}'"),
             ));
         }
 

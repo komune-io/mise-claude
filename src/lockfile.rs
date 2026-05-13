@@ -51,8 +51,7 @@ impl Lockfile {
 
     /// Returns `true` if no entries have been stored yet.
     pub fn is_empty(&self) -> bool {
-        self.sections.is_empty()
-            || self.sections.values().all(|s| s.is_empty())
+        self.sections.is_empty() || self.sections.values().all(|s| s.is_empty())
     }
 
     /// Parse a lockfile from a TOML string.

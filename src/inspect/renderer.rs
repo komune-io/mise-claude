@@ -12,7 +12,8 @@ const RESET: &str = "\x1b[0m";
 pub fn render_terminal(report: &AuditReport) {
     let mut first = true;
     for (category, entries) in &report.entries {
-        let visible: Vec<_> = entries.iter()
+        let visible: Vec<_> = entries
+            .iter()
             .filter(|e| e.enabled || e.management == Management::Managed || e.drift)
             .collect();
         if visible.is_empty() {
@@ -148,5 +149,9 @@ pub fn render_json(report: &AuditReport) {
     }
 
     let output = serde_json::Value::Object(map);
-    println!("{}", serde_json::to_string_pretty(&output).unwrap_or_else(|e| format!("{{\"error\": \"{}\"}}", e)));
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&output)
+            .unwrap_or_else(|e| format!("{{\"error\": \"{}\"}}", e))
+    );
 }

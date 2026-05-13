@@ -43,7 +43,11 @@ impl Installer for McpInstaller {
     }
 }
 
-fn detect_binary(bin_dir: &Path, package: &str, registry: &Registry) -> Result<String, InstallError> {
+fn detect_binary(
+    bin_dir: &Path,
+    package: &str,
+    registry: &Registry,
+) -> Result<String, InstallError> {
     if let Some(ov) = registry.get_override(package) {
         if let Some(ref name) = ov.bin_name {
             return Ok(name.clone());

@@ -17,9 +17,7 @@ fn read_mcp_json(project_root: &Path) -> std::io::Result<Value> {
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
             Ok(value)
         }
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            Ok(json!({ "mcpServers": {} }))
-        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(json!({ "mcpServers": {} })),
         Err(e) => Err(e),
     }
 }
@@ -107,7 +105,8 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let root = dir.path();
 
-        let added = ensure_server(root, "my-server", &make_entry("npx", &["-y", "my-pkg"])).unwrap();
+        let added =
+            ensure_server(root, "my-server", &make_entry("npx", &["-y", "my-pkg"])).unwrap();
         assert!(added, "expected true when adding to empty file");
 
         let content = std::fs::read_to_string(root.join(".mcp.json")).unwrap();
@@ -126,7 +125,10 @@ mod tests {
 
         ensure_server(root, "server-a", &make_entry("cmd-a", &["arg1"])).unwrap();
         let added = ensure_server(root, "server-b", &make_entry("cmd-b", &["arg2"])).unwrap();
-        assert!(added, "expected true when adding a new server to existing file");
+        assert!(
+            added,
+            "expected true when adding a new server to existing file"
+        );
 
         let content = std::fs::read_to_string(root.join(".mcp.json")).unwrap();
         let value: Value = serde_json::from_str(&content).unwrap();

@@ -1,6 +1,6 @@
-use tempfile::TempDir;
-use std::fs;
 use chord::tui::actions;
+use std::fs;
+use tempfile::TempDir;
 
 #[test]
 fn toggle_plugin_disables() {
@@ -10,13 +10,16 @@ fn toggle_plugin_disables() {
     fs::write(
         claude_dir.join("settings.json"),
         r#"{"enabledPlugins":{"superpowers@claude-plugins-official":true,"caveman@caveman":true}}"#,
-    ).unwrap();
+    )
+    .unwrap();
 
     actions::toggle_plugin(home.path(), "superpowers@claude-plugins-official", true).unwrap();
 
     let content = fs::read_to_string(claude_dir.join("settings.json")).unwrap();
     let json: serde_json::Value = serde_json::from_str(&content).unwrap();
-    assert!(json["enabledPlugins"].get("superpowers@claude-plugins-official").is_none());
+    assert!(json["enabledPlugins"]
+        .get("superpowers@claude-plugins-official")
+        .is_none());
     assert!(json["enabledPlugins"]["caveman@caveman"].as_bool().unwrap());
 }
 
@@ -28,13 +31,18 @@ fn toggle_plugin_enables() {
     fs::write(
         claude_dir.join("settings.json"),
         r#"{"enabledPlugins":{"caveman@caveman":true}}"#,
-    ).unwrap();
+    )
+    .unwrap();
 
     actions::toggle_plugin(home.path(), "superpowers@claude-plugins-official", false).unwrap();
 
     let content = fs::read_to_string(claude_dir.join("settings.json")).unwrap();
     let json: serde_json::Value = serde_json::from_str(&content).unwrap();
-    assert!(json["enabledPlugins"]["superpowers@claude-plugins-official"].as_bool().unwrap());
+    assert!(
+        json["enabledPlugins"]["superpowers@claude-plugins-official"]
+            .as_bool()
+            .unwrap()
+    );
     assert!(json["enabledPlugins"]["caveman@caveman"].as_bool().unwrap());
 }
 
@@ -48,5 +56,7 @@ fn toggle_plugin_creates_settings_if_missing() {
 
     let content = fs::read_to_string(claude_dir.join("settings.json")).unwrap();
     let json: serde_json::Value = serde_json::from_str(&content).unwrap();
-    assert!(json["enabledPlugins"]["new-plugin@marketplace"].as_bool().unwrap());
+    assert!(json["enabledPlugins"]["new-plugin@marketplace"]
+        .as_bool()
+        .unwrap());
 }

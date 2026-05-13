@@ -9,11 +9,11 @@ use crate::config::Config;
 /// no `claude:` entries.
 pub fn migrate(project_dir: &Path) -> Result<Config, Box<dyn std::error::Error>> {
     let path = project_dir.join(".mise.toml");
-    let content = std::fs::read_to_string(&path)
-        .map_err(|e| format!("failed to read .mise.toml: {e}"))?;
+    let content =
+        std::fs::read_to_string(&path).map_err(|e| format!("failed to read .mise.toml: {e}"))?;
 
-    let raw: toml::Value = toml::from_str(&content)
-        .map_err(|e| format!("failed to parse .mise.toml: {e}"))?;
+    let raw: toml::Value =
+        toml::from_str(&content).map_err(|e| format!("failed to parse .mise.toml: {e}"))?;
 
     let tools = raw
         .get("tools")

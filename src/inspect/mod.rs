@@ -120,11 +120,14 @@ pub fn run_inspect(
             Category::Agents => scanner::scan_agents(project_root, home_dir),
             Category::Hooks => scanner::scan_hooks(project_root, home_dir),
         };
-        let entries = reconciler::reconcile(category.clone(), &discovered, config, &enabled_plugins);
+        let entries =
+            reconciler::reconcile(category.clone(), &discovered, config, &enabled_plugins);
         report_entries.push((category, entries));
     }
 
-    let report = AuditReport { entries: report_entries };
+    let report = AuditReport {
+        entries: report_entries,
+    };
     if json_output {
         renderer::render_json(&report);
     } else {

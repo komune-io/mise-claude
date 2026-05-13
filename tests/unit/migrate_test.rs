@@ -11,7 +11,10 @@ fn migrate_mcp_tool() {
     )
     .unwrap();
     let config = migrate(dir.path()).unwrap();
-    assert_eq!(config.mcp.get("context7").map(String::as_str), Some("2.1.4"));
+    assert_eq!(
+        config.mcp.get("context7").map(String::as_str),
+        Some("2.1.4")
+    );
     assert!(config.skills.is_empty());
     assert!(config.plugins.is_empty());
     assert!(config.cli.is_empty());
@@ -27,7 +30,10 @@ fn migrate_skills_sh_tool() {
     .unwrap();
     let config = migrate(dir.path()).unwrap();
     assert_eq!(
-        config.skills.get("vercel-labs/next-skills/next-best-practices").map(String::as_str),
+        config
+            .skills
+            .get("vercel-labs/next-skills/next-best-practices")
+            .map(String::as_str),
         Some("latest"),
     );
 }
@@ -42,7 +48,10 @@ fn migrate_plugin_tool() {
     .unwrap();
     let config = migrate(dir.path()).unwrap();
     assert_eq!(
-        config.plugins.get("upstash/context7/context7-plugin@context7-marketplace").map(String::as_str),
+        config
+            .plugins
+            .get("upstash/context7/context7-plugin@context7-marketplace")
+            .map(String::as_str),
         Some("latest"),
     );
 }
@@ -81,7 +90,10 @@ fn migrate_ignores_non_claude_tools() {
     .unwrap();
     let config = migrate(dir.path()).unwrap();
     assert_eq!(config.mcp.len(), 1);
-    assert_eq!(config.mcp.get("context7").map(String::as_str), Some("2.1.4"));
+    assert_eq!(
+        config.mcp.get("context7").map(String::as_str),
+        Some("2.1.4")
+    );
 }
 
 #[test]

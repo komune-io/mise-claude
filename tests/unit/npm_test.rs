@@ -42,10 +42,7 @@ fn latest_stable_version() {
 
 #[test]
 fn integrity_for_version() {
-    let data = registry_json_with_versions(&[
-        ("1.0.0", Some("sha512-abc123")),
-        ("1.1.0", None),
-    ]);
+    let data = registry_json_with_versions(&[("1.0.0", Some("sha512-abc123")), ("1.1.0", None)]);
 
     let meta = PackageMetadata::from_json(data).expect("should parse");
 

@@ -60,7 +60,10 @@ fn full_install_all_tool_types() {
 
     // Assert .mcp.json was created (MCP tool).
     let mcp_path = project_dir.path().join(".mcp.json");
-    assert!(mcp_path.exists(), ".mcp.json should exist after full install");
+    assert!(
+        mcp_path.exists(),
+        ".mcp.json should exist after full install"
+    );
 
     // Assert npx was called with 'skills add' (skill tool).
     let npx_log = fs::read_to_string(log_dir.path().join("npx_calls.log")).unwrap();
@@ -174,11 +177,7 @@ exit 0
     }
 
     let original_path = std::env::var("PATH").unwrap_or_default();
-    let new_path = format!(
-        "{}:{}",
-        custom_shims_dir.path().display(),
-        original_path
-    );
+    let new_path = format!("{}:{}", custom_shims_dir.path().display(), original_path);
 
     let output = Command::cargo_bin("chord")
         .unwrap()

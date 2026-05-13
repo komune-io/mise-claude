@@ -100,7 +100,12 @@ fn scan_md_dirs(
 
 /// Scan `dir` recursively for `*.md` files. Each file yields one item.
 /// The item name is the file stem; source is the path to the file.
-fn scan_md_files_recursive(dir: &Path, scope: Scope, prefix: &str, items: &mut Vec<DiscoveredItem>) {
+fn scan_md_files_recursive(
+    dir: &Path,
+    scope: Scope,
+    prefix: &str,
+    items: &mut Vec<DiscoveredItem>,
+) {
     scan_md_files_in_dir(dir, dir, scope, prefix, items, true);
 }
 
@@ -218,7 +223,13 @@ fn scan_plugin_cache(
             let mut plugin_items = Vec::new();
             match mode {
                 ScanMode::SkillMarker => {
-                    scan_md_dirs(&target_dir, Scope::Global, "", "SKILL.md", &mut plugin_items);
+                    scan_md_dirs(
+                        &target_dir,
+                        Scope::Global,
+                        "",
+                        "SKILL.md",
+                        &mut plugin_items,
+                    );
                 }
                 ScanMode::Recursive => {
                     scan_md_files_recursive(&target_dir, Scope::Global, "", &mut plugin_items);
@@ -269,21 +280,36 @@ pub fn scan_mcp(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> {
     let project_mcp = project_root.join(".mcp.json");
     if let Some(json) = read_json(&project_mcp) {
         let source = project_mcp.to_string_lossy().into_owned();
-        items.extend(extract_json_keys(&json, "mcpServers", Scope::Project, &source));
+        items.extend(extract_json_keys(
+            &json,
+            "mcpServers",
+            Scope::Project,
+            &source,
+        ));
     }
 
     // User scope: ~/.claude.json (Claude Code's user-level MCP config)
     let user_claude_json = home_dir.join(".claude.json");
     if let Some(json) = read_json(&user_claude_json) {
         let source = user_claude_json.to_string_lossy().into_owned();
-        items.extend(extract_json_keys(&json, "mcpServers", Scope::Global, &source));
+        items.extend(extract_json_keys(
+            &json,
+            "mcpServers",
+            Scope::Global,
+            &source,
+        ));
     }
 
     // Global scope: ~/.claude/settings.json
     let global_settings = home_dir.join(".claude").join("settings.json");
     if let Some(json) = read_json(&global_settings) {
         let source = global_settings.to_string_lossy().into_owned();
-        items.extend(extract_json_keys(&json, "mcpServers", Scope::Global, &source));
+        items.extend(extract_json_keys(
+            &json,
+            "mcpServers",
+            Scope::Global,
+            &source,
+        ));
     }
 
     items
@@ -297,14 +323,24 @@ pub fn scan_plugins(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem>
     let project_settings = project_root.join(".claude").join("settings.json");
     if let Some(json) = read_json(&project_settings) {
         let source = project_settings.to_string_lossy().into_owned();
-        items.extend(extract_json_keys(&json, "enabledPlugins", Scope::Project, &source));
+        items.extend(extract_json_keys(
+            &json,
+            "enabledPlugins",
+            Scope::Project,
+            &source,
+        ));
     }
 
     // Global scope: ~/.claude/settings.json
     let global_settings = home_dir.join(".claude").join("settings.json");
     if let Some(json) = read_json(&global_settings) {
         let source = global_settings.to_string_lossy().into_owned();
-        items.extend(extract_json_keys(&json, "enabledPlugins", Scope::Global, &source));
+        items.extend(extract_json_keys(
+            &json,
+            "enabledPlugins",
+            Scope::Global,
+            &source,
+        ));
     }
 
     items
@@ -315,10 +351,22 @@ pub fn scan_skills(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> 
     let mut items = Vec::new();
 
     let project_skills_dir = project_root.join(".claude").join("skills");
-    scan_md_dirs(&project_skills_dir, Scope::Project, "", "SKILL.md", &mut items);
+    scan_md_dirs(
+        &project_skills_dir,
+        Scope::Project,
+        "",
+        "SKILL.md",
+        &mut items,
+    );
 
     let global_skills_dir = home_dir.join(".claude").join("skills");
-    scan_md_dirs(&global_skills_dir, Scope::Global, "", "SKILL.md", &mut items);
+    scan_md_dirs(
+        &global_skills_dir,
+        Scope::Global,
+        "",
+        "SKILL.md",
+        &mut items,
+    );
 
     // Plugin cache: ~/.claude/plugins/cache/<mp>/<plugin>/<ver>/skills/
     scan_plugin_cache(home_dir, "skills", ScanMode::SkillMarker, &mut items);
@@ -366,8 +414,14 @@ pub fn scan_hooks(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> {
     let mut items = Vec::new();
 
     for (settings_path, scope) in [
-        (project_root.join(".claude").join("settings.json"), Scope::Project),
-        (home_dir.join(".claude").join("settings.json"), Scope::Global),
+        (
+            project_root.join(".claude").join("settings.json"),
+            Scope::Project,
+        ),
+        (
+            home_dir.join(".claude").join("settings.json"),
+            Scope::Global,
+        ),
     ] {
         if let Some(json) = read_json(&settings_path) {
             let source = settings_path.to_string_lossy().into_owned();
@@ -412,10 +466,7 @@ fn extract_hooks(json: &Value, scope: Scope, source: &str, items: &mut Vec<Disco
                     .get("type")
                     .and_then(|t| t.as_str())
                     .unwrap_or("command");
-                let command = hook
-                    .get("command")
-                    .and_then(|c| c.as_str())
-                    .unwrap_or("?");
+                let command = hook.get("command").and_then(|c| c.as_str()).unwrap_or("?");
 
                 let cmd_short = command
                     .split('/')
@@ -451,10 +502,7 @@ fn derive_hook_plugin(command: &str) -> String {
         .trim();
 
     // Strip common suffixes and flags
-    let name = basename
-        .split_whitespace()
-        .next()
-        .unwrap_or(basename);
+    let name = basename.split_whitespace().next().unwrap_or(basename);
 
     // Known patterns
     if name.contains("OpenIsland") {

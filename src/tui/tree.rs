@@ -58,12 +58,7 @@ impl TreeNode {
     }
 
     /// Create a plugin node.
-    pub fn plugin(
-        name: &str,
-        enabled: bool,
-        scope: Option<Scope>,
-        path: Option<String>,
-    ) -> Self {
+    pub fn plugin(name: &str, enabled: bool, scope: Option<Scope>, path: Option<String>) -> Self {
         TreeNode {
             name: name.to_string(),
             kind: NodeKind::Plugin,
@@ -127,8 +122,7 @@ fn organize_plugin_children(plugin: &mut TreeNode) {
 
 /// If `path` starts with "plugin ", return the remainder (the plugin id).
 fn extract_plugin_from_path(path: Option<&str>) -> Option<String> {
-    path?.strip_prefix("plugin ")
-        .map(|rest| rest.to_string())
+    path?.strip_prefix("plugin ").map(|rest| rest.to_string())
 }
 
 /// Build the TUI tree from an AuditReport.
@@ -191,7 +185,8 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
                     Some(plugin_id.clone())
                 } else {
                     let cache_name = plugin_id.split('@').next().unwrap_or(&plugin_id);
-                    plugins.keys()
+                    plugins
+                        .keys()
                         .find(|k| k.split('@').next().unwrap_or(k) == cache_name)
                         .cloned()
                 };
@@ -203,7 +198,12 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
                 }
                 // No matching plugin node yet — create one from cache info
                 let node = plugins.entry(plugin_id.clone()).or_insert_with(|| {
-                    TreeNode::plugin(&plugin_id, entry.enabled, entry.scope.clone(), Some(format!("plugin {}", plugin_id)))
+                    TreeNode::plugin(
+                        &plugin_id,
+                        entry.enabled,
+                        entry.scope.clone(),
+                        Some(format!("plugin {}", plugin_id)),
+                    )
                 });
                 node.children.push(leaf);
                 continue;
@@ -251,14 +251,21 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
                 continue;
             }
             for entry in entries {
-                let (plugin_name, event_label) = entry.from_plugin.as_deref()
+                let (plugin_name, event_label) = entry
+                    .from_plugin
+                    .as_deref()
                     .and_then(|fp| fp.strip_prefix("hook:"))
                     .and_then(|rest| rest.split_once('/'))
                     .map(|(p, e)| (p.to_string(), e.to_string()))
                     .unwrap_or_else(|| ("unknown".to_string(), "unknown".to_string()));
 
                 let leaf = TreeNode::leaf(&entry.name, NodeKind::Hook, entry);
-                by_plugin.entry(plugin_name).or_default().entry(event_label).or_default().push(leaf);
+                by_plugin
+                    .entry(plugin_name)
+                    .or_default()
+                    .entry(event_label)
+                    .or_default()
+                    .push(leaf);
                 total += 1;
             }
         }
@@ -268,7 +275,8 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
 
             for (plugin_name, events) in by_plugin {
                 let plugin_hook_count: usize = events.values().map(|v| v.len()).sum();
-                let mut plugin_node = TreeNode::section(&format!("{} ({})", plugin_name, plugin_hook_count));
+                let mut plugin_node =
+                    TreeNode::section(&format!("{} ({})", plugin_name, plugin_hook_count));
                 plugin_node.expanded = false;
 
                 for (event_name, commands) in events {
@@ -278,7 +286,8 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
                         leaf.name = format!("{} → {}", event_name, leaf.name);
                         plugin_node.children.push(leaf);
                     } else {
-                        let mut event_node = TreeNode::section(&format!("{} ({})", event_name, commands.len()));
+                        let mut event_node =
+                            TreeNode::section(&format!("{} ({})", event_name, commands.len()));
                         event_node.expanded = false;
                         event_node.children = commands;
                         plugin_node.children.push(event_node);

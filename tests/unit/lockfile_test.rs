@@ -31,7 +31,9 @@ my-skill = { version = "latest", package = "skills.sh/owner/repo/my-skill" }
     assert!(mem.resolved_at.is_none());
 
     // skills section
-    let skill = lock.get("skills", "my-skill").expect("my-skill should exist");
+    let skill = lock
+        .get("skills", "my-skill")
+        .expect("my-skill should exist");
     assert_eq!(skill.version, "latest");
     assert_eq!(
         skill.package.as_deref(),
@@ -76,13 +78,17 @@ fn serialize_lockfile_roundtrip() {
     // Reparse and verify
     let lock2 = Lockfile::parse(&serialized).unwrap();
 
-    let ctx7 = lock2.get("mcp", "context7").expect("context7 should survive roundtrip");
+    let ctx7 = lock2
+        .get("mcp", "context7")
+        .expect("context7 should survive roundtrip");
     assert_eq!(ctx7.version, "1.2.3");
     assert_eq!(ctx7.package.as_deref(), Some("@upstash/context7-mcp"));
     assert_eq!(ctx7.integrity.as_deref(), Some("sha512-xyz"));
     assert_eq!(ctx7.resolved_at.as_deref(), Some("2026-04-20T12:00:00Z"));
 
-    let skill = lock2.get("skills", "my-skill").expect("my-skill should survive roundtrip");
+    let skill = lock2
+        .get("skills", "my-skill")
+        .expect("my-skill should survive roundtrip");
     assert_eq!(skill.version, "latest");
     assert!(skill.package.is_none());
     assert!(skill.integrity.is_none());
@@ -112,6 +118,7 @@ fn empty_lockfile_serializes_with_header_comment() {
 #[test]
 fn lockfile_from_missing_file_returns_empty() {
     let path = std::path::Path::new("/nonexistent/path/chord.lock");
-    let lock = Lockfile::from_file(path).expect("missing file should return empty lockfile, not error");
+    let lock =
+        Lockfile::from_file(path).expect("missing file should return empty lockfile, not error");
     assert!(lock.is_empty());
 }

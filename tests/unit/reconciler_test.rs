@@ -110,7 +110,10 @@ fn plugin_reconciliation() {
     )
     .unwrap();
     // Short form = last '/' segment = "code-review@claude-plugins-official"
-    let discovered = vec![make_item("code-review@claude-plugins-official", Scope::Project)];
+    let discovered = vec![make_item(
+        "code-review@claude-plugins-official",
+        Scope::Project,
+    )];
 
     let entries = reconcile(Category::Plugins, &discovered, &config, &no_plugins());
 

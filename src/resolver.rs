@@ -50,7 +50,11 @@ pub fn resolve(
 
     // (section_name, tool_type, map_of_entries)
     // ToolType does not implement Copy so we use a closure to construct each variant.
-    let sections: &[(&str, fn() -> ToolType, &std::collections::BTreeMap<String, String>)] = &[
+    let sections: &[(
+        &str,
+        fn() -> ToolType,
+        &std::collections::BTreeMap<String, String>,
+    )] = &[
         ("mcp", || ToolType::Mcp, &config.mcp),
         ("cli", || ToolType::Cli, &config.cli),
         ("skills", || ToolType::Skill, &config.skills),

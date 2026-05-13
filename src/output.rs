@@ -7,11 +7,21 @@ pub struct Reporter {
 
 impl Reporter {
     pub fn new() -> Self {
-        Self { installed: 0, skipped: 0, failed: 0, quiet: false }
+        Self {
+            installed: 0,
+            skipped: 0,
+            failed: 0,
+            quiet: false,
+        }
     }
 
     pub fn new_quiet() -> Self {
-        Self { installed: 0, skipped: 0, failed: 0, quiet: true }
+        Self {
+            installed: 0,
+            skipped: 0,
+            failed: 0,
+            quiet: true,
+        }
     }
 
     pub fn success(&mut self, name: &str, version: &str, detail: &str) {
@@ -47,7 +57,11 @@ impl Reporter {
     }
 
     pub fn exit_code(&self) -> i32 {
-        if self.failed > 0 { 1 } else { 0 }
+        if self.failed > 0 {
+            1
+        } else {
+            0
+        }
     }
 }
 
