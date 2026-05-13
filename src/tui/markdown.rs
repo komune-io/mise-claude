@@ -70,6 +70,9 @@ impl Renderer {
         }
     }
 
+    /// Finalize the document, dropping the trailing blank line sentinel.
+    /// Every block-ending event (Paragraph, etc.) pushes a `Line::from("")` spacer,
+    /// so the document always ends with one trailing blank — `spans.is_empty()` reliably matches it.
     fn finish(mut self) -> Vec<Line<'static>> {
         if !self.current.is_empty() {
             self.flush_line();

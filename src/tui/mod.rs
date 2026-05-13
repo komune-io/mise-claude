@@ -1,7 +1,7 @@
 pub mod actions;
 pub mod app;
 pub mod handler;
-pub mod markdown;
+pub(crate) mod markdown;
 pub mod tree;
 pub mod ui;
 
