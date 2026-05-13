@@ -1,6 +1,8 @@
-# Dev config for local testing
-# Usage: mise plugin link chord ./
-#        mise install
+# Dev config for local testing.
+# Usage:
+#   mise plugin link chord ./   # register the bundled mise plugin
+#   mise install                # builtin: install tools from [tools] (rust)
+#   mise run install            # task below: cargo-install chord locally
 
 [tools]
 rust = "latest"
@@ -15,8 +17,8 @@ run = "cargo build"
 description = "Build optimized release binary"
 run = "cargo build --release"
 
-[tasks."install:local"]
-description = "Build and install chord to ~/.cargo/bin (overrides any crates.io copy)"
+[tasks.install]
+description = "cargo-install chord to ~/.cargo/bin from local source (use 'mise run install'; 'mise install' is the builtin tool installer)"
 run = "cargo install --path . --locked --force"
 
 [tasks.test]
@@ -32,7 +34,7 @@ description = "Run inspect TUI"
 run = "cargo run -- inspect --tui"
 
 [tasks."run:install"]
-description = "Run install"
+description = "cargo run -- install (debug build, in-place; see 'install' task for release install)"
 run = "cargo run -- install"
 
 [tasks.lint]
@@ -90,6 +92,8 @@ description = "Install and test all sample modules"
 run = """
 for dir in $(find sample -name '.mise.toml' -exec dirname {} \\;); do
   echo "Testing $dir..."
+  # `mise install` here is the builtin (provisions [tools] in the sample's
+  # .mise.toml), not the `install` task defined above.
   (cd "$dir" && mise run clean && mise install && mise run test || true)
 done
 """
