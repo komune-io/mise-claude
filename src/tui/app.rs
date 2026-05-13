@@ -61,6 +61,7 @@ impl App {
             home_dir,
         };
         app.rebuild_flat();
+        app.update_preview();
         app
     }
 
@@ -105,6 +106,7 @@ impl App {
             self.selected -= 1;
         }
         self.detail_scroll = 0;
+        self.update_preview();
     }
 
     pub fn move_down(&mut self) {
@@ -112,6 +114,7 @@ impl App {
             self.selected += 1;
         }
         self.detail_scroll = 0;
+        self.update_preview();
     }
 
     pub fn toggle_expand(&mut self) {
@@ -124,6 +127,7 @@ impl App {
                 node.expanded = !node.expanded;
             }
             self.rebuild_flat();
+            self.update_preview();
         }
     }
 
@@ -137,6 +141,7 @@ impl App {
                 node.expanded = true;
             }
             self.rebuild_flat();
+            self.update_preview();
         }
     }
 
@@ -147,6 +152,7 @@ impl App {
                 node.expanded = false;
             }
             self.rebuild_flat();
+            self.update_preview();
         }
     }
 
@@ -160,6 +166,7 @@ impl App {
             "all"
         };
         self.set_status(format!("Filter: {}", label));
+        self.update_preview();
     }
 
     pub fn set_status(&mut self, msg: String) {
@@ -180,6 +187,7 @@ impl App {
         }
         self.rebuild_flat();
         self.selected = 0;
+        self.update_preview();
     }
 
     /// Reload the markdown preview based on the current selection.
@@ -380,5 +388,58 @@ mod tests {
         assert_eq!(expand_tilde("~/file.md", Some(&home)), "/home/user/file.md");
         assert_eq!(expand_tilde("/abs/path", Some(&home)), "/abs/path");
         assert_eq!(expand_tilde("~/file.md", None), "~/file.md");
+    }
+
+    #[test]
+    fn move_down_calls_update_preview() {
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        writeln!(file, "second").unwrap();
+        let path = file.path().to_string_lossy().to_string();
+
+        let mut app = make_app_with(vec![
+            leaf_with_path("first", None),
+            leaf_with_path("second", Some(path.clone())),
+        ]);
+        assert!(app.markdown_content.is_none());
+        app.move_down();
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("second"));
+    }
+
+    #[test]
+    fn move_up_calls_update_preview() {
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        writeln!(file, "first").unwrap();
+        let path = file.path().to_string_lossy().to_string();
+
+        let mut app = make_app_with(vec![
+            leaf_with_path("first", Some(path)),
+            leaf_with_path("second", None),
+        ]);
+        app.move_down();
+        assert!(app.markdown_content.is_none());
+        app.move_up();
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("first"));
+    }
+
+    #[test]
+    fn new_calls_update_preview_for_initial_selection() {
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        writeln!(file, "initial").unwrap();
+        let path = file.path().to_string_lossy().to_string();
+
+        let app = make_app_with(vec![leaf_with_path("initial", Some(path))]);
+        assert!(app
+            .markdown_content
+            .as_deref()
+            .unwrap_or("")
+            .contains("initial"));
     }
 }
