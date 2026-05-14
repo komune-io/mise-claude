@@ -36,3 +36,6 @@ mod mcp_installer_test;
 
 #[path = "unit/tui_handler_test.rs"]
 mod tui_handler_test;
+
+#[path = "unit/operations_add_test.rs"]
+mod operations_add_test;
