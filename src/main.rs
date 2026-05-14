@@ -73,7 +73,31 @@ fn main() {
             }
         }
         Command::Add { tool } => {
-            println!("not yet implemented: add {tool}");
+            let project_root = PathBuf::from(".");
+            let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+            let packages_dir = chord::operations::install::default_packages_dir();
+            let ctx = chord::operations::OpContext {
+                project_root: &project_root,
+                home_dir: &home_dir,
+                packages_dir: &packages_dir,
+                verbose: cli.verbose,
+            };
+
+            let spec = match chord::operations::add::AddSpec::parse(&tool) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    process::exit(2);
+                }
+            };
+
+            match chord::operations::add::add(&spec, &ctx) {
+                Ok(outcome) => process::exit(outcome.exit_code()),
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    process::exit(2);
+                }
+            }
         }
         Command::Remove { tool } => {
             let project_root = PathBuf::from(".");
