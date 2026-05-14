@@ -15,17 +15,26 @@ fn make_entry(name: &str, scope: Option<Scope>, enabled: bool, path: Option<&str
     }
 }
 
+fn make_plugin_child(name: &str, plugin_id: &str, path: Option<&str>) -> AuditEntry {
+    AuditEntry {
+        name: name.to_string(),
+        version: None,
+        scope: Some(Scope::Global),
+        management: Management::Managed,
+        path: path.map(|p| p.to_string()),
+        drift: false,
+        overridden_by: None,
+        enabled: true,
+        from_plugin: Some(plugin_id.to_string()),
+    }
+}
+
 // ── build_tree_groups_by_plugin ───────────────────────────────────────────────
 
 #[test]
 fn build_tree_groups_by_plugin() {
     let plugin_entry = make_entry("my-plugin", Some(Scope::Project), true, None);
-    let skill_entry = make_entry(
-        "my-skill",
-        Some(Scope::Project),
-        true,
-        Some("plugin my-plugin"),
-    );
+    let skill_entry = make_plugin_child("my-skill", "my-plugin", Some("/path/to/my-skill.md"));
 
     let report = AuditReport {
         entries: vec![
@@ -61,6 +70,14 @@ fn build_tree_groups_by_plugin() {
         .find(|n| n.name == "my-skill")
         .expect("skill should be under Skills sub-header");
     assert_eq!(skill_node.kind, NodeKind::Skill);
+
+    // Regression: plugin-cache items must keep their real markdown file path,
+    // not be overwritten with a "plugin <id>" sentinel.
+    assert_eq!(
+        skill_node.path.as_deref(),
+        Some("/path/to/my-skill.md"),
+        "skill node should keep its real markdown file path"
+    );
 
     // No standalone Skills section
     assert!(

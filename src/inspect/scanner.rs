@@ -217,9 +217,6 @@ fn scan_plugin_cache(
                 continue;
             }
 
-            // Use plugin identifier as source (for grouping in renderer)
-            let source = format!("plugin {}@{}", plugin_name, mp_name);
-
             let mut plugin_items = Vec::new();
             match mode {
                 ScanMode::SkillMarker => {
@@ -239,10 +236,11 @@ fn scan_plugin_cache(
                 }
             }
 
-            // Tag items with plugin origin for grouping and enabled detection
+            // Tag items with plugin origin. `source_path` keeps the real
+            // markdown file path so the TUI can read it; `from_plugin` carries
+            // the "name@marketplace" identifier used for grouping/routing.
             let plugin_id = format!("{}@{}", plugin_name, mp_name);
             for item in &mut plugin_items {
-                item.source_path = source.clone();
                 item.from_plugin = Some(plugin_id.clone());
             }
             items.extend(plugin_items);
