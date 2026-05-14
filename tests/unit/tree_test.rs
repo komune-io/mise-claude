@@ -164,3 +164,29 @@ fn build_tree_mcp_section() {
         .unwrap();
     assert!(!fs.enabled);
 }
+
+#[test]
+fn drift_entry_propagates_to_tree_node() {
+    let entry = AuditEntry {
+        name: "context7".to_string(),
+        version: None,
+        scope: None,
+        management: Management::Managed,
+        path: None,
+        drift: true,
+        overridden_by: None,
+        enabled: false,
+        from_plugin: None,
+    };
+    let report = AuditReport {
+        entries: vec![(Category::Mcp, vec![entry])],
+    };
+    let tree = build_tree(&report);
+
+    // MCP Servers section is index 1.
+    let mcp_section = &tree[1];
+    assert_eq!(mcp_section.children.len(), 1);
+    let drift_node = &mcp_section.children[0];
+    assert!(drift_node.drift, "drift flag should propagate");
+    assert!(drift_node.managed, "managed flag should propagate");
+}

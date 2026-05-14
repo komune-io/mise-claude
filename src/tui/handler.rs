@@ -250,6 +250,8 @@ mod tests {
             children: Vec::new(),
             expanded: false,
             hidden: false,
+            drift: false,
+            managed: false,
         }
     }
 
