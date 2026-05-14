@@ -1,15 +1,8 @@
 use chord::cli::{Cli, Command};
 use chord::config::Config;
-use chord::installer::cli_tool::CliToolInstaller;
-use chord::installer::mcp::McpInstaller;
-use chord::installer::plugin::PluginInstaller;
-use chord::installer::skill::SkillInstaller;
-use chord::installer::{InstallContext, Installer};
-use chord::lockfile::{LockedTool, Lockfile};
+use chord::lockfile::Lockfile;
 use chord::mcp_config;
 use chord::migrate;
-use chord::output::Reporter;
-use chord::resolver::{self, Action, ToolType};
 use clap::Parser;
 use std::path::PathBuf;
 use std::process;
@@ -23,7 +16,22 @@ fn main() {
 
     match cli.command {
         Command::Install { quiet, idempotent } => {
-            run_install(cli.verbose, quiet || idempotent);
+            let project_root = PathBuf::from(".");
+            let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+            let packages_dir = chord::operations::install::default_packages_dir();
+            let ctx = chord::operations::OpContext {
+                project_root: &project_root,
+                home_dir: &home_dir,
+                packages_dir: &packages_dir,
+                verbose: cli.verbose,
+            };
+            match chord::operations::install::install_all(&ctx, quiet || idempotent) {
+                Ok(outcome) => process::exit(outcome.exit_code()),
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    process::exit(2);
+                }
+            }
         }
         Command::Update { tool } => {
             let target = tool.as_deref().unwrap_or("all");
@@ -39,7 +47,7 @@ fn main() {
             let config = Config::from_file(&config_path).unwrap_or_default();
             let lockfile = Lockfile::from_file(&lock_path).unwrap_or_default();
 
-            let packages_dir = packages_dir();
+            let packages_dir = chord::operations::install::default_packages_dir();
 
             println!("  {:<25} {:<12} {}", "TOOL", "VERSION", "STATUS");
             println!("  {}", "─".repeat(50));
@@ -185,7 +193,7 @@ fn run_remove(tool: &str, _verbose: bool) {
     }
 
     // 5. Remove package directory.
-    let pkg_dir = packages_dir().join(tool);
+    let pkg_dir = chord::operations::install::default_packages_dir().join(tool);
     match std::fs::remove_dir_all(&pkg_dir) {
         Ok(()) => {}
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
@@ -203,140 +211,4 @@ fn run_remove(tool: &str, _verbose: bool) {
 
     // 7. Report.
     println!("removed {tool} (from [{section}])");
-}
-
-fn run_install(verbose: bool, quiet: bool) {
-    // 1. Read chord.toml from current dir.
-    let config_path = PathBuf::from("chord.toml");
-    let config = match Config::from_file(&config_path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("error: failed to read chord.toml: {e}");
-            process::exit(2);
-        }
-    };
-
-    let packages_dir = packages_dir();
-
-    // 3. Read lockfile (empty if missing).
-    let lock_path = PathBuf::from("chord.lock");
-    let mut lockfile = match Lockfile::from_file(&lock_path) {
-        Ok(lf) => lf,
-        Err(e) => {
-            eprintln!("error: failed to read chord.lock: {e}");
-            process::exit(2);
-        }
-    };
-
-    // 4. Resolve plan.
-    let is_installed = |section: &str, name: &str| -> bool {
-        packages_dir.join(name).join("node_modules").exists()
-            && lockfile.get(section, name).is_some()
-    };
-
-    let plan = resolver::resolve(&config, &lockfile, &is_installed);
-
-    let project_root = PathBuf::from(".");
-    let ctx = InstallContext {
-        project_root: &project_root,
-        packages_dir: &packages_dir,
-        verbose,
-    };
-
-    let mcp_installer = McpInstaller::default();
-    let cli_installer = CliToolInstaller::default();
-    let skill_installer = SkillInstaller;
-    let plugin_installer = PluginInstaller;
-
-    let mut reporter = if quiet {
-        Reporter::new_quiet()
-    } else {
-        Reporter::new()
-    };
-
-    // 5. Execute each action.
-    for action in &plan.actions {
-        match &action.action {
-            Action::Skip => {
-                reporter.skip(&action.name, &action.version);
-            }
-            Action::Install | Action::Upgrade => {
-                let detail = match &action.action {
-                    Action::Install => "installed",
-                    Action::Upgrade => "upgraded",
-                    _ => unreachable!(),
-                };
-
-                let install_result = match action.tool_type {
-                    ToolType::Mcp => mcp_installer.install(action, &ctx),
-                    ToolType::Cli => cli_installer.install(action, &ctx),
-                    ToolType::Skill => skill_installer.install(action, &ctx),
-                    ToolType::Plugin => plugin_installer.install(action, &ctx),
-                };
-
-                match install_result {
-                    Ok(result) => {
-                        reporter.success(&action.name, &action.version, detail);
-
-                        // Determine the section for the lockfile.
-                        let section = section_name(&action.tool_type);
-                        let locked_tool = if action.tool_type == ToolType::Skill
-                            || action.tool_type == ToolType::Plugin
-                        {
-                            LockedTool {
-                                package: None,
-                                version: action.version.clone(),
-                                integrity: None,
-                                resolved_at: Some(
-                                    chrono::Utc::now().format("%Y-%m-%d").to_string(),
-                                ),
-                            }
-                        } else {
-                            LockedTool {
-                                package: Some(action.package.clone()),
-                                version: action.version.clone(),
-                                integrity: result.integrity,
-                                resolved_at: None,
-                            }
-                        };
-                        lockfile.set(section, &action.name, locked_tool);
-                    }
-                    Err(e) => {
-                        reporter.failure(&action.name, &action.version, &e.to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    // 6. Write updated lockfile.
-    if reporter.installed > 0 {
-        if let Err(e) = lockfile.write_to_file(&lock_path) {
-            eprintln!("error: failed to write lockfile: {e}");
-        }
-    }
-
-    // 7. Print summary and exit.
-    reporter.summary();
-    process::exit(reporter.exit_code());
-}
-
-fn packages_dir() -> PathBuf {
-    std::env::var("CHORD_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            dirs::home_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join(".chord")
-                .join("packages")
-        })
-}
-
-fn section_name(tool_type: &ToolType) -> &'static str {
-    match tool_type {
-        ToolType::Mcp => "mcp",
-        ToolType::Cli => "cli",
-        ToolType::Skill => "skills",
-        ToolType::Plugin => "plugins",
-    }
 }
