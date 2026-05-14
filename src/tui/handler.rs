@@ -3,7 +3,6 @@ use std::path::Path;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::tui::actions;
 use crate::tui::app::{App, Mode};
 
 pub fn handle_key(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
@@ -17,7 +16,17 @@ pub fn handle_key(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<(
 
 /// Apply a plugin enable/disable, sync the tree, and write a status message.
 fn execute_toggle(app: &mut App, home_dir: &Path, plugin_id: &str, currently_enabled: bool) {
-    match actions::toggle_plugin(home_dir, plugin_id, currently_enabled) {
+    use crate::inspect::Scope;
+    use crate::operations::{scope, OpContext};
+
+    let ctx = OpContext {
+        project_root: Path::new("."),
+        home_dir,
+        packages_dir: Path::new("."), // unused for scope ops
+        verbose: false,
+    };
+
+    match scope::set_plugin_enabled(plugin_id, Scope::Global, !currently_enabled, &ctx) {
         Ok(()) => {
             if let Some(node_mut) = app.selected_node_mut() {
                 node_mut.enabled = !currently_enabled;
