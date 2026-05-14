@@ -46,12 +46,16 @@ pub fn set_plugin_enabled(
         .entry("enabledPlugins")
         .or_insert_with(|| json!({}));
 
-    if let Some(obj) = plugins.as_object_mut() {
-        if enabled {
-            obj.insert(plugin_id.to_string(), json!(true));
-        } else {
-            obj.remove(plugin_id);
-        }
+    let obj = plugins.as_object_mut().ok_or_else(|| {
+        OperationError::Settings(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "enabledPlugins is not an object",
+        ))
+    })?;
+    if enabled {
+        obj.insert(plugin_id.to_string(), json!(true));
+    } else {
+        obj.remove(plugin_id);
     }
 
     if let Some(parent) = settings_path.parent() {

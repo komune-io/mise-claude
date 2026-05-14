@@ -19,10 +19,14 @@ fn execute_toggle(app: &mut App, home_dir: &Path, plugin_id: &str, currently_ena
     use crate::inspect::Scope;
     use crate::operations::{scope, OpContext};
 
+    // SAFETY: project_root and packages_dir are unused for Scope::Global,
+    // which is the only scope this handler currently writes to. Task 16
+    // replaces execute_toggle with the scope picker and threads project_root
+    // through properly.
     let ctx = OpContext {
         project_root: Path::new("."),
         home_dir,
-        packages_dir: Path::new("."), // unused for scope ops
+        packages_dir: Path::new("."),
         verbose: false,
     };
 
