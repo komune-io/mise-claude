@@ -106,9 +106,13 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
                 ""
             };
 
-            let label = format!("{}{}{}{}", indent, arrow, symbol, node.name);
+            let drift_marker = if node.drift { "⚠ " } else { "" };
 
-            let base_style = if node.kind == NodeKind::SectionHeader {
+            let label = format!("{}{}{}{}{}", indent, arrow, symbol, drift_marker, node.name);
+
+            let base_style = if node.drift {
+                Style::default().fg(Color::Red)
+            } else if node.kind == NodeKind::SectionHeader {
                 Style::default()
                     .fg(Color::Cyan)
                     .add_modifier(Modifier::BOLD)
@@ -269,6 +273,16 @@ fn build_metadata_lines(node: &crate::tui::tree::TreeNode) -> Vec<Line<'static>>
         Span::styled("Status: ", Style::default().add_modifier(Modifier::BOLD)),
         Span::styled(status_str, Style::default().fg(status_color)),
     ]));
+
+    if node.drift {
+        lines.push(Line::from(vec![
+            Span::styled("        ", Style::default()),
+            Span::styled(
+                "⚠ drift (declared, not installed)",
+                Style::default().fg(Color::Red),
+            ),
+        ]));
+    }
 
     if let Some(path) = &node.path {
         lines.push(Line::from(vec![

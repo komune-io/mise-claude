@@ -166,6 +166,55 @@ fn build_tree_mcp_section() {
 }
 
 #[test]
+fn drift_node_visible_under_enabled_only_filter() {
+    use chord::tui::app::App;
+    use chord::tui::tree::{NodeKind, TreeNode};
+
+    let drift_leaf = TreeNode {
+        name: "context7".to_string(),
+        kind: NodeKind::McpServer,
+        enabled: false, // drift entries are not "enabled"
+        scope: None,
+        path: None,
+        plugin_id: None,
+        children: Vec::new(),
+        expanded: false,
+        hidden: false,
+        drift: true,
+        managed: true,
+    };
+
+    let mut section = TreeNode::section("MCP Servers (1)");
+    section.children.push(drift_leaf.clone());
+
+    let mut section_clean = TreeNode::section("Other (1)");
+    let mut disabled_leaf = drift_leaf.clone();
+    disabled_leaf.drift = false;
+    disabled_leaf.name = "memory".to_string();
+    section_clean.children.push(disabled_leaf);
+
+    let app = App::new(vec![section, section_clean], None);
+
+    // App::new defaults `show_enabled_only = true`. The drift node should
+    // still appear; the non-drift disabled node should not.
+    let names: Vec<String> = app
+        .flat
+        .iter()
+        .filter_map(|e| app.resolve_node(&e.node_index).map(|n| n.name.clone()))
+        .collect();
+    assert!(
+        names.iter().any(|n| n == "context7"),
+        "drift node missing from view; got: {:?}",
+        names
+    );
+    assert!(
+        !names.iter().any(|n| n == "memory"),
+        "non-drift disabled leaked in; got: {:?}",
+        names
+    );
+}
+
+#[test]
 fn drift_entry_propagates_to_tree_node() {
     let entry = AuditEntry {
         name: "context7".to_string(),

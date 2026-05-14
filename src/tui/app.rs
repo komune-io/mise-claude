@@ -253,13 +253,13 @@ fn flatten_node(
     if node.hidden {
         return;
     }
-    if enabled_only && !node.enabled && node.kind != NodeKind::SectionHeader {
+    if enabled_only && !node.enabled && node.kind != NodeKind::SectionHeader && !node.drift {
         return;
     }
     let is_expandable = if enabled_only {
         node.children
             .iter()
-            .any(|c| c.enabled || c.kind == NodeKind::SectionHeader)
+            .any(|c| c.enabled || c.kind == NodeKind::SectionHeader || c.drift)
     } else {
         !node.children.is_empty()
     };
