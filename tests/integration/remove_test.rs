@@ -100,6 +100,36 @@ fn remove_mcp_tool() {
 }
 
 #[test]
+fn remove_restores_chord_toml_when_mcp_json_write_fails() {
+    use chord::operations::{remove, OpContext, OperationError};
+
+    let project = TempDir::new().unwrap();
+    let packages = TempDir::new().unwrap();
+    let home = TempDir::new().unwrap();
+
+    let original_toml = "[mcp]\ncontext7 = \"latest\"\n";
+    fs::write(project.path().join("chord.toml"), original_toml).unwrap();
+
+    // Make .mcp.json a directory (not a file) so writing it fails.
+    // Easiest reproducible failure mode without OS-specific permissions.
+    fs::create_dir_all(project.path().join(".mcp.json")).unwrap();
+
+    let ctx = OpContext {
+        project_root: project.path(),
+        home_dir: home.path(),
+        packages_dir: packages.path(),
+        verbose: false,
+    };
+
+    let err = remove::remove("context7", &ctx).unwrap_err();
+    assert!(matches!(err, OperationError::McpConfig(_)));
+
+    // chord.toml restored to its pre-attempt state.
+    let restored = fs::read_to_string(project.path().join("chord.toml")).unwrap();
+    assert_eq!(restored, original_toml);
+}
+
+#[test]
 fn remove_nonexistent_tool_exits_with_error() {
     let project_dir = TempDir::new().unwrap();
     let packages_dir = TempDir::new().unwrap();

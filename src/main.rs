@@ -1,7 +1,6 @@
 use chord::cli::{Cli, Command};
 use chord::config::Config;
 use chord::lockfile::Lockfile;
-use chord::mcp_config;
 use chord::migrate;
 use clap::Parser;
 use std::path::PathBuf;
@@ -77,7 +76,24 @@ fn main() {
             println!("not yet implemented: add {tool}");
         }
         Command::Remove { tool } => {
-            run_remove(&tool, cli.verbose);
+            let project_root = PathBuf::from(".");
+            let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+            let packages_dir = chord::operations::install::default_packages_dir();
+            let ctx = chord::operations::OpContext {
+                project_root: &project_root,
+                home_dir: &home_dir,
+                packages_dir: &packages_dir,
+                verbose: cli.verbose,
+            };
+            match chord::operations::remove::remove(&tool, &ctx) {
+                Ok(outcome) => {
+                    println!("removed {tool} (from [{}])", outcome.section);
+                }
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    process::exit(2);
+                }
+            }
         }
         Command::Migrate => {
             let project_dir = PathBuf::from(".");
@@ -127,88 +143,4 @@ fn main() {
             }
         }
     }
-}
-
-fn run_remove(tool: &str, _verbose: bool) {
-    // 1. Read chord.toml.
-    let config_path = PathBuf::from("chord.toml");
-    let mut config = match Config::from_file(&config_path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("error: failed to read chord.toml: {e}");
-            process::exit(2);
-        }
-    };
-
-    // 2. Find which section the tool belongs to.
-    let section = if config.mcp.contains_key(tool) {
-        "mcp"
-    } else if config.cli.contains_key(tool) {
-        "cli"
-    } else if config.skills.contains_key(tool) {
-        "skills"
-    } else if config.plugins.contains_key(tool) {
-        "plugins"
-    } else {
-        eprintln!("error: tool '{tool}' not found in chord.toml");
-        process::exit(2);
-    };
-
-    // 3. Remove from in-memory config and rewrite TOML.
-    match section {
-        "mcp" => {
-            config.mcp.remove(tool);
-        }
-        "cli" => {
-            config.cli.remove(tool);
-        }
-        "skills" => {
-            config.skills.remove(tool);
-        }
-        "plugins" => {
-            config.plugins.remove(tool);
-        }
-        _ => unreachable!(),
-    }
-
-    let toml_content = match toml::to_string_pretty(&config) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("error: failed to serialize chord.toml: {e}");
-            process::exit(2);
-        }
-    };
-    if let Err(e) = std::fs::write(&config_path, &toml_content) {
-        eprintln!("error: failed to write chord.toml: {e}");
-        process::exit(2);
-    }
-
-    // 4. If MCP tool, remove from .mcp.json.
-    if section == "mcp" {
-        let project_root = PathBuf::from(".");
-        if let Err(e) = mcp_config::remove_server(&project_root, tool) {
-            eprintln!("error: failed to update .mcp.json: {e}");
-            process::exit(2);
-        }
-    }
-
-    // 5. Remove package directory.
-    let pkg_dir = chord::operations::install::default_packages_dir().join(tool);
-    match std::fs::remove_dir_all(&pkg_dir) {
-        Ok(()) => {}
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-        Err(e) => eprintln!("warning: failed to remove package directory: {e}"),
-    }
-
-    // 6. Remove from lockfile and rewrite.
-    let lock_path = PathBuf::from("chord.lock");
-    let mut lockfile = Lockfile::from_file(&lock_path).unwrap_or_default();
-    lockfile.remove(section, tool);
-    if let Err(e) = lockfile.write_to_file(&lock_path) {
-        eprintln!("error: failed to write lockfile: {e}");
-        process::exit(2);
-    }
-
-    // 7. Report.
-    println!("removed {tool} (from [{section}])");
 }
