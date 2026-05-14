@@ -123,41 +123,24 @@ fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()
         KeyCode::Char('v') => {
             if let Some(node) = app.selected_node() {
                 let path_opt = node.path.clone();
-                let resolved = match path_opt.as_deref() {
+                match path_opt {
                     None => {
                         app.set_status("No path for selected item".to_string());
-                        None
                     }
-                    Some(p) => {
-                        if let Some(plugin_id) = p.strip_prefix("plugin ") {
-                            match crate::tui::app::resolve_plugin_readme(
-                                plugin_id,
-                                app.home_dir.as_deref(),
-                            ) {
-                                Some(readme) => Some(readme.to_string_lossy().into_owned()),
-                                None => {
-                                    app.set_status(format!(
-                                        "No README found for plugin '{}'",
-                                        plugin_id
-                                    ));
-                                    None
-                                }
+                    Some(ref p) if p.starts_with("plugin ") => {
+                        app.set_status(format!("Cannot read: '{}' is not a file path", p));
+                    }
+                    Some(ref p) => {
+                        let expanded = crate::tui::app::expand_tilde(p, app.home_dir.as_deref());
+                        match std::fs::read_to_string(&expanded) {
+                            Ok(content) => {
+                                app.markdown_content = Some(content);
+                                app.markdown_scroll = 0;
+                                app.mode = Mode::ViewMarkdown;
                             }
-                        } else {
-                            Some(crate::tui::app::expand_tilde(p, app.home_dir.as_deref()))
-                        }
-                    }
-                };
-
-                if let Some(expanded) = resolved {
-                    match std::fs::read_to_string(&expanded) {
-                        Ok(content) => {
-                            app.markdown_content = Some(content);
-                            app.markdown_scroll = 0;
-                            app.mode = Mode::ViewMarkdown;
-                        }
-                        Err(e) => {
-                            app.set_status(format!("Cannot read '{}': {}", expanded, e));
+                            Err(e) => {
+                                app.set_status(format!("Cannot read '{}': {}", expanded, e));
+                            }
                         }
                     }
                 }
@@ -394,48 +377,5 @@ mod tests {
             .as_deref()
             .unwrap_or("")
             .contains("inline content"));
-    }
-
-    #[test]
-    fn v_on_plugin_with_readme_opens_overlay() {
-        let home = tempfile::tempdir().unwrap();
-        let version_dir = home
-            .path()
-            .join(".claude")
-            .join("plugins")
-            .join("cache")
-            .join("mp")
-            .join("foo")
-            .join("v1");
-        std::fs::create_dir_all(&version_dir).unwrap();
-        std::fs::write(version_dir.join("README.md"), "# foo plugin").unwrap();
-
-        let node = leaf("foo", Some("plugin foo@mp".to_string()));
-        let mut app = App::new(vec![node], Some(home.path().to_path_buf()));
-
-        handle_key(&mut app, key(KeyCode::Char('v')), home.path()).unwrap();
-
-        assert_eq!(app.mode, crate::tui::app::Mode::ViewMarkdown);
-        assert!(app
-            .markdown_content
-            .as_deref()
-            .unwrap_or("")
-            .contains("# foo plugin"));
-    }
-
-    #[test]
-    fn v_on_plugin_without_readme_sets_status() {
-        let home = tempfile::tempdir().unwrap();
-        let node = leaf("foo", Some("plugin foo@mp".to_string()));
-        let mut app = App::new(vec![node], Some(home.path().to_path_buf()));
-
-        handle_key(&mut app, key(KeyCode::Char('v')), home.path()).unwrap();
-
-        assert_eq!(app.mode, crate::tui::app::Mode::Normal);
-        assert!(app
-            .status_message
-            .as_ref()
-            .map(|(s, _)| s.contains("No README"))
-            .unwrap_or(false));
     }
 }

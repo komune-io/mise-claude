@@ -258,7 +258,7 @@ enum ScanMode {
 
 /// Pick the latest version directory inside a plugin dir.
 /// Sorts entries and takes the last (works for semver and hash-based names).
-pub(crate) fn latest_version_dir(plugin_dir: &Path) -> Option<std::path::PathBuf> {
+fn latest_version_dir(plugin_dir: &Path) -> Option<std::path::PathBuf> {
     let mut versions: Vec<_> = fs::read_dir(plugin_dir)
         .ok()?
         .flatten()
