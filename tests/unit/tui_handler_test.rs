@@ -54,6 +54,9 @@ fn pressing_e_on_disabled_plugin_enables_immediately_without_prompt() {
     )
     .unwrap();
     let mut app = app_with_plugin("demo@market", false);
+    // Default filter hides disabled plugins; surface this one so 'e' has a
+    // selection to act on.
+    app.toggle_enabled_filter();
 
     handle_key(&mut app, key(KeyCode::Char('e')), home.path()).unwrap();
 

@@ -55,7 +55,10 @@ impl App {
             markdown_scroll: 0,
             status_message: None,
             should_quit: false,
-            show_enabled_only: false,
+            // Default to enabled-only so users see what's actually active in
+            // their environment; `i` toggles to show everything including
+            // cached-but-disabled plugins.
+            show_enabled_only: true,
             pending_disable: None,
             focus: Focus::Tree,
             home_dir,
