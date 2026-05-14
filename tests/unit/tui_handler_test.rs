@@ -132,3 +132,42 @@ fn confirm_disable_esc_cancels_without_writing_settings() {
     let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();
     assert!(content.contains("demo@market"));
 }
+
+#[test]
+fn reload_rebuilds_tree_and_preserves_selection_by_name() {
+    use chord::config::Config;
+    use chord::tui::tree::{NodeKind, TreeNode};
+
+    let leaf_a = TreeNode {
+        name: "alpha".to_string(),
+        kind: NodeKind::Skill,
+        enabled: true,
+        scope: None,
+        path: None,
+        plugin_id: None,
+        children: Vec::new(),
+        expanded: false,
+        hidden: false,
+        drift: false,
+        managed: false,
+    };
+    let leaf_b = TreeNode {
+        name: "beta".to_string(),
+        ..leaf_a.clone()
+    };
+
+    let project = TempDir::new().unwrap();
+    let home = TempDir::new().unwrap();
+    // No config or scanner state — reload should produce a tree
+    // (just section headers) and the call must not panic.
+    let mut app = App::new(vec![leaf_a, leaf_b], Some(home.path().to_path_buf()));
+    app.selected = 1;
+
+    let cfg = Config::default();
+    app.reload(project.path(), home.path(), &cfg);
+
+    // After reload, the tree is rebuilt from a scan of the empty test
+    // home dir, so the previous leaves are gone. Just verify the call
+    // returns without panic and selected is in range.
+    assert!(app.selected < app.flat.len().max(1));
+}

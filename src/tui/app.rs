@@ -193,6 +193,68 @@ impl App {
         self.update_preview();
     }
 
+    /// Re-scan the project + home environment and rebuild the tree.
+    ///
+    /// Best-effort selection preservation: if a node with the same name+kind as
+    /// the previous selection exists in the new flat list, select it. Otherwise
+    /// fall back to index 0. `show_enabled_only` and `focus` are preserved.
+    /// `mode` is forced to `Mode::Normal`.
+    pub fn reload(
+        &mut self,
+        project_root: &std::path::Path,
+        home_dir: &std::path::Path,
+        config: &crate::config::Config,
+    ) {
+        use crate::inspect::{reconciler, scanner, AuditReport, Category};
+        use crate::tui::tree::build_tree;
+
+        let enabled_plugins = scanner::collect_enabled_plugins(project_root, home_dir);
+        let mut report_entries = Vec::new();
+        for category in Category::all() {
+            let discovered = match category {
+                Category::Mcp => scanner::scan_mcp(project_root, home_dir),
+                Category::Plugins => scanner::scan_plugins(project_root, home_dir),
+                Category::Skills => scanner::scan_skills(project_root, home_dir),
+                Category::Commands => scanner::scan_commands(project_root, home_dir),
+                Category::Agents => scanner::scan_agents(project_root, home_dir),
+                Category::Hooks => scanner::scan_hooks(project_root, home_dir),
+            };
+            let entries =
+                reconciler::reconcile(category.clone(), &discovered, config, &enabled_plugins);
+            report_entries.push((category, entries));
+        }
+        let report = AuditReport {
+            entries: report_entries,
+        };
+        let new_tree = build_tree(&report);
+
+        let prev = self
+            .selected_node()
+            .map(|n| (n.name.clone(), n.kind.clone()));
+
+        self.tree = new_tree;
+        self.mode = Mode::Normal;
+        self.rebuild_flat();
+
+        if let Some((name, kind)) = prev {
+            for (i, entry) in self.flat.iter().enumerate() {
+                if let Some(node) = self.resolve_node(&entry.node_index) {
+                    if node.name == name && node.kind == kind {
+                        self.selected = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if self.selected >= self.flat.len().max(1) {
+            self.selected = 0;
+        }
+        self.detail_scroll = 0;
+        self.markdown_scroll = 0;
+        self.update_preview();
+    }
+
     /// Reload the markdown preview based on the current selection.
     ///
     /// Hides the preview when the selected node has no readable file. Resets
