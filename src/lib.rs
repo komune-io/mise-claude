@@ -7,6 +7,7 @@ pub mod lockfile;
 pub mod mcp_config;
 pub mod migrate;
 pub mod npm;
+pub mod operations;
 pub mod output;
 pub mod registry;
 pub mod resolver;
