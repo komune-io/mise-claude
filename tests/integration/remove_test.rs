@@ -100,7 +100,7 @@ fn remove_mcp_tool() {
 }
 
 #[test]
-fn remove_restores_chord_toml_when_mcp_json_write_fails() {
+fn remove_restores_chord_toml_when_mcp_json_operation_fails() {
     use chord::operations::{remove, OpContext, OperationError};
 
     let project = TempDir::new().unwrap();
@@ -110,8 +110,10 @@ fn remove_restores_chord_toml_when_mcp_json_write_fails() {
     let original_toml = "[mcp]\ncontext7 = \"latest\"\n";
     fs::write(project.path().join("chord.toml"), original_toml).unwrap();
 
-    // Make .mcp.json a directory (not a file) so writing it fails.
-    // Easiest reproducible failure mode without OS-specific permissions.
+    // Make .mcp.json a directory so mcp_config::remove_server fails. (The
+    // failure happens at the initial JSON read, not the eventual write, but
+    // the rollback path is the same: any error from remove_server triggers
+    // the chord.toml restore.)
     fs::create_dir_all(project.path().join(".mcp.json")).unwrap();
 
     let ctx = OpContext {

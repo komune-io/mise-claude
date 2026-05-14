@@ -60,7 +60,10 @@ pub fn remove(name: &str, ctx: &OpContext) -> Result<RemoveOutcome, OperationErr
     if section == "mcp" {
         if let Err(e) = mcp_config::remove_server(ctx.project_root, name) {
             // Restore chord.toml before reporting the failure.
-            let _ = std::fs::write(&config_path, &original_toml);
+            if let Err(rb_err) = std::fs::write(&config_path, &original_toml) {
+                eprintln!("warning: rollback of chord.toml also failed: {rb_err}");
+                eprintln!("         chord.toml may be missing '{name}' — manual restore required");
+            }
             return Err(OperationError::McpConfig(e));
         }
     }
