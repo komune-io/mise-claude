@@ -46,9 +46,15 @@ impl AddSpec {
     /// Rules:
     /// 1. Split on the FIRST `:` → `(section, rest)`. Section must be
     ///    `mcp` | `cli` | `skills` | `plugins`.
-    /// 2. Split `rest` on the LAST `@` → `(name, version)`. If no `@` is
-    ///    present, `name = rest`, `version = "latest"`.
-    /// 3. Reject empty `name`. Reject empty `version` if `@` was present.
+    /// 2. Section-aware `@` split for the version suffix:
+    ///    - Plugin names contain `@marketplace` by convention, so for
+    ///      `Section::Plugins` a version is recognized only when `rest`
+    ///      has 2+ `@` characters (split on the last one).
+    ///    - For every other section the first `@` is the version separator.
+    ///    - When no version separator is present, `version` defaults to
+    ///      `"latest"` and `name = rest` (preserving any inner `@`).
+    /// 3. Reject empty `name`. Reject empty `version` if a version
+    ///    separator was found but the suffix is empty.
     pub fn parse(input: &str) -> Result<Self, OperationError> {
         let (section_str, rest) = input
             .split_once(':')
