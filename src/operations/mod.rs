@@ -33,6 +33,9 @@ pub enum OperationError {
     #[error("failed to parse chord.toml: {0}")]
     ConfigParse(#[from] toml::de::Error),
 
+    #[error("failed to parse chord.lock: {0}")]
+    LockfileParse(toml::de::Error),
+
     #[error("failed to write chord.toml: {0}")]
     ConfigWrite(std::io::Error),
 

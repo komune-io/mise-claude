@@ -41,7 +41,7 @@ pub fn install_all(ctx: &OpContext, quiet: bool) -> Result<InstallOutcome, Opera
     })?;
 
     let lock_path = ctx.project_root.join("chord.lock");
-    let mut lockfile = Lockfile::from_file(&lock_path).map_err(OperationError::ConfigParse)?;
+    let mut lockfile = Lockfile::from_file(&lock_path).map_err(OperationError::LockfileParse)?;
 
     let packages_dir = ctx.packages_dir.to_path_buf();
     let is_installed = |section: &str, name: &str| -> bool {
@@ -66,6 +66,10 @@ pub fn install_all(ctx: &OpContext, quiet: bool) -> Result<InstallOutcome, Opera
         execute_action(action, &install_ctx, &mut lockfile, &mut reporter);
     }
 
+    // Only persist the lockfile when at least one action succeeded:
+    // `execute_action` increments `reporter.installed` on the same code path
+    // that mutates `lockfile`. Skipping the write when nothing changed keeps
+    // the file mtime stable.
     if reporter.installed > 0 {
         lockfile
             .write_to_file(&lock_path)
@@ -82,14 +86,12 @@ pub fn install_all(ctx: &OpContext, quiet: bool) -> Result<InstallOutcome, Opera
 }
 
 /// Execute a single planned action and update lockfile/reporter accordingly.
-///
-/// Returns `true` if the action ran (Install/Upgrade), `false` for Skip.
 fn execute_action(
     action: &PlannedAction,
     ctx: &InstallContext,
     lockfile: &mut Lockfile,
     reporter: &mut Reporter,
-) -> bool {
+) {
     let mcp_installer = McpInstaller::default();
     let cli_installer = CliToolInstaller::default();
     let skill_installer = SkillInstaller;
@@ -98,7 +100,6 @@ fn execute_action(
     match &action.action {
         Action::Skip => {
             reporter.skip(&action.name, &action.version);
-            false
         }
         Action::Install | Action::Upgrade => {
             let detail = match &action.action {
@@ -136,11 +137,9 @@ fn execute_action(
                         }
                     };
                     lockfile.set(section, &action.name, locked);
-                    true
                 }
                 Err(e) => {
                     reporter.failure(&action.name, &action.version, &e.to_string());
-                    true
                 }
             }
         }
