@@ -79,3 +79,33 @@ fn run_loop(
     }
     Ok(())
 }
+
+/// Temporarily leave the alternate screen + raw mode, run `f`, then
+/// re-enter. Used for slow subprocess operations (`npm`, `claude`, `npx`)
+/// so the user sees the install stream live.
+///
+/// The closure receives no arguments; it should not touch the terminal
+/// itself. After the closure returns, prints "press any key to return"
+/// and blocks on a single event before re-entering.
+pub fn run_inline<F, T>(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    header: &str,
+    f: F,
+) -> io::Result<T>
+where
+    F: FnOnce() -> T,
+{
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    println!("▶ {header}");
+    let result = f();
+    println!("\n[Press any key to return]");
+    // Drain any pending events, then wait for one.
+    while event::poll(Duration::from_millis(0))? {
+        let _ = event::read()?;
+    }
+    let _ = event::read()?;
+    execute!(terminal.backend_mut(), EnterAlternateScreen)?;
+    enable_raw_mode()?;
+    Ok(result)
+}
