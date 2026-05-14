@@ -6,16 +6,16 @@ use crate::tui::tree::NodeKind;
 
 pub fn render(frame: &mut Frame, app: &App) {
     match app.mode {
-        Mode::ViewMarkdown => {
-            render_markdown_overlay(frame, app);
-        }
+        Mode::ViewMarkdown => render_markdown_overlay(frame, app),
         Mode::ConfirmDisable => {
             render_main(frame, app);
             render_confirm_disable_popup(frame, app);
         }
-        _ => {
+        Mode::AddPrompt => {
             render_main(frame, app);
+            render_add_prompt(frame, app);
         }
+        _ => render_main(frame, app),
     }
 }
 
@@ -409,6 +409,55 @@ fn render_confirm_disable_popup(frame: &mut Frame, app: &App) {
             ),
             Span::raw("     "),
             Span::styled("[N]o / Esc", Style::default().fg(Color::Green)),
+        ])
+        .alignment(Alignment::Center),
+    ];
+
+    let para = Paragraph::new(lines).wrap(Wrap { trim: false });
+    frame.render_widget(para, inner);
+}
+
+fn render_add_prompt(frame: &mut Frame, app: &App) {
+    let area = centered_rect(60, 26, frame.area());
+    frame.render_widget(Clear, area);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Add tool ")
+        .title_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
+        .border_style(Style::default().fg(Color::Yellow));
+
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let lines = vec![
+        Line::from("<section>:<name>@<version>").alignment(Alignment::Center),
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("> "),
+            Span::styled(
+                app.add_input.clone(),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("_", Style::default().fg(Color::Cyan)),
+        ]),
+        Line::from(""),
+        Line::from(Span::styled(
+            "section \u{2208} {mcp, cli, skills, plugins}",
+            Style::default().fg(Color::DarkGray),
+        )),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("[Enter]", Style::default().fg(Color::Green)),
+            Span::raw(" add    "),
+            Span::styled("[Esc]", Style::default().fg(Color::Red)),
+            Span::raw(" cancel"),
         ])
         .alignment(Alignment::Center),
     ];

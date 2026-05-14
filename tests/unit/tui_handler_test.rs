@@ -1,6 +1,10 @@
+use chord::inspect::Scope;
+use chord::operations::add::AddSpec;
+use chord::operations::OperationError;
 use chord::tui::app::{App, Mode};
 use chord::tui::handler::handle_key;
 use chord::tui::tree::TreeNode;
+use chord::tui::{handler, OpRunner};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::fs;
 use tempfile::TempDir;
@@ -132,6 +136,109 @@ fn confirm_disable_esc_cancels_without_writing_settings() {
     let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();
     assert!(content.contains("demo@market"));
 }
+
+// ── MockRunner-based tests (Task 13) ──────────────────────────────────────
+
+#[derive(Default)]
+struct MockRunner {
+    pub adds: Vec<AddSpec>,
+    pub removes: Vec<String>,
+    pub installs_one: Vec<String>,
+    pub installs_all: u32,
+    pub set_scopes: Vec<(String, Scope, bool)>,
+}
+
+impl OpRunner for MockRunner {
+    fn add(&mut self, spec: &AddSpec) -> Result<(), OperationError> {
+        self.adds.push(spec.clone());
+        Ok(())
+    }
+    fn remove(&mut self, name: &str) -> Result<(), OperationError> {
+        self.removes.push(name.to_string());
+        Ok(())
+    }
+    fn install_one(&mut self, name: &str) -> Result<(), OperationError> {
+        self.installs_one.push(name.to_string());
+        Ok(())
+    }
+    fn install_all(&mut self) -> Result<(), OperationError> {
+        self.installs_all += 1;
+        Ok(())
+    }
+    fn set_scope(
+        &mut self,
+        plugin_id: &str,
+        scope: Scope,
+        enabled: bool,
+    ) -> Result<(), OperationError> {
+        self.set_scopes
+            .push((plugin_id.to_string(), scope, enabled));
+        Ok(())
+    }
+}
+
+#[test]
+fn pressing_a_enters_add_prompt_mode() {
+    let mut app = app_with_plugin("demo@market", true);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('a')), &mut runner).unwrap();
+    assert_eq!(app.mode, Mode::AddPrompt);
+    assert!(app.add_input.is_empty());
+}
+
+#[test]
+fn typing_in_add_prompt_accumulates_input() {
+    let mut app = app_with_plugin("demo@market", true);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('a')), &mut runner).unwrap();
+    for c in "mcp:foo".chars() {
+        handler::handle_key_with_runner(&mut app, key(KeyCode::Char(c)), &mut runner).unwrap();
+    }
+    assert_eq!(app.add_input, "mcp:foo");
+}
+
+#[test]
+fn enter_in_add_prompt_with_valid_spec_invokes_runner() {
+    let mut app = app_with_plugin("demo@market", true);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('a')), &mut runner).unwrap();
+    for c in "mcp:foo@latest".chars() {
+        handler::handle_key_with_runner(&mut app, key(KeyCode::Char(c)), &mut runner).unwrap();
+    }
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Enter), &mut runner).unwrap();
+    assert_eq!(runner.adds.len(), 1);
+    assert_eq!(runner.adds[0].name, "foo");
+    assert_eq!(app.mode, Mode::Normal);
+}
+
+#[test]
+fn enter_with_invalid_spec_keeps_modal_open() {
+    let mut app = app_with_plugin("demo@market", true);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('a')), &mut runner).unwrap();
+    for c in "bogus".chars() {
+        handler::handle_key_with_runner(&mut app, key(KeyCode::Char(c)), &mut runner).unwrap();
+    }
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Enter), &mut runner).unwrap();
+    assert_eq!(runner.adds.len(), 0);
+    assert_eq!(app.mode, Mode::AddPrompt);
+    assert!(app.status_message.is_some());
+}
+
+#[test]
+fn esc_in_add_prompt_cancels() {
+    let mut app = app_with_plugin("demo@market", true);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('a')), &mut runner).unwrap();
+    for c in "mcp:foo".chars() {
+        handler::handle_key_with_runner(&mut app, key(KeyCode::Char(c)), &mut runner).unwrap();
+    }
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Esc), &mut runner).unwrap();
+    assert_eq!(app.mode, Mode::Normal);
+    assert!(app.add_input.is_empty());
+}
+
+// ── reload test ────────────────────────────────────────────────────────────
 
 #[test]
 fn reload_rebuilds_tree_and_preserves_selection_by_name() {

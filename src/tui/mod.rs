@@ -16,9 +16,71 @@ use crossterm::terminal::{
 use ratatui::prelude::*;
 
 use crate::config::Config;
-use crate::inspect::{reconciler, scanner, AuditReport, Category};
-use app::App;
+use crate::inspect::{reconciler, scanner, AuditReport, Category, Scope};
+use crate::operations::add::AddSpec;
+use crate::operations::OperationError;
+use app::{App, Mode};
 use tree::build_tree;
+
+/// Indirection for operations called from the TUI handler.
+///
+/// The production impl forwards to `crate::operations::*`. Tests use a
+/// recording mock to verify which calls the handler made without running
+/// real subprocesses.
+pub trait OpRunner {
+    fn add(&mut self, spec: &AddSpec) -> Result<(), OperationError>;
+    fn remove(&mut self, name: &str) -> Result<(), OperationError>;
+    fn install_one(&mut self, name: &str) -> Result<(), OperationError>;
+    fn install_all(&mut self) -> Result<(), OperationError>;
+    fn set_scope(
+        &mut self,
+        plugin_id: &str,
+        scope: Scope,
+        enabled: bool,
+    ) -> Result<(), OperationError>;
+}
+
+/// Production [`OpRunner`] that calls `crate::operations::*`.
+pub struct DefaultOpRunner<'a> {
+    pub project_root: &'a std::path::Path,
+    pub home_dir: &'a std::path::Path,
+    pub packages_dir: &'a std::path::Path,
+    pub verbose: bool,
+}
+
+impl<'a> DefaultOpRunner<'a> {
+    fn ctx(&self) -> crate::operations::OpContext<'_> {
+        crate::operations::OpContext {
+            project_root: self.project_root,
+            home_dir: self.home_dir,
+            packages_dir: self.packages_dir,
+            verbose: self.verbose,
+        }
+    }
+}
+
+impl<'a> OpRunner for DefaultOpRunner<'a> {
+    fn add(&mut self, spec: &AddSpec) -> Result<(), OperationError> {
+        crate::operations::add::add(spec, &self.ctx()).map(|_| ())
+    }
+    fn remove(&mut self, name: &str) -> Result<(), OperationError> {
+        crate::operations::remove::remove(name, &self.ctx()).map(|_| ())
+    }
+    fn install_one(&mut self, name: &str) -> Result<(), OperationError> {
+        crate::operations::install::install_one(name, &self.ctx(), false).map(|_| ())
+    }
+    fn install_all(&mut self) -> Result<(), OperationError> {
+        crate::operations::install::install_all(&self.ctx(), false).map(|_| ())
+    }
+    fn set_scope(
+        &mut self,
+        plugin_id: &str,
+        scope: Scope,
+        enabled: bool,
+    ) -> Result<(), OperationError> {
+        crate::operations::scope::set_plugin_enabled(plugin_id, scope, enabled, &self.ctx())
+    }
+}
 
 pub fn run_tui(project_root: &Path, home_dir: &Path, config: &Config) -> io::Result<()> {
     let enabled_plugins = scanner::collect_enabled_plugins(project_root, home_dir);
@@ -48,7 +110,15 @@ pub fn run_tui(project_root: &Path, home_dir: &Path, config: &Config) -> io::Res
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let result = run_loop(&mut terminal, &mut app, home_dir);
+    let packages_dir = crate::operations::install::default_packages_dir();
+    let result = run_loop(
+        &mut terminal,
+        &mut app,
+        project_root,
+        home_dir,
+        &packages_dir,
+        config,
+    );
 
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
@@ -59,13 +129,37 @@ pub fn run_tui(project_root: &Path, home_dir: &Path, config: &Config) -> io::Res
 fn run_loop(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     app: &mut App,
+    project_root: &Path,
     home_dir: &Path,
+    packages_dir: &Path,
+    config: &Config,
 ) -> io::Result<()> {
+    let mut runner = DefaultOpRunner {
+        project_root,
+        home_dir,
+        packages_dir,
+        verbose: false,
+    };
+
     loop {
         terminal.draw(|frame| ui::render(frame, app))?;
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
-                handler::handle_key(app, key, home_dir)?;
+                let pre_add = app.mode == Mode::AddPrompt;
+                handler::handle_key_with_runner(app, key, &mut runner)?;
+                let added = pre_add
+                    && app.mode == Mode::Normal
+                    && app
+                        .status_message
+                        .as_ref()
+                        .map(|(m, _)| m.starts_with("Added "))
+                        .unwrap_or(false);
+                if added {
+                    let cfg_path = project_root.join("chord.toml");
+                    let fresh_config =
+                        crate::config::Config::from_file(&cfg_path).unwrap_or_default();
+                    app.reload(project_root, home_dir, &fresh_config);
+                }
             }
         }
         if let Some((_, time)) = &app.status_message {
@@ -77,6 +171,8 @@ fn run_loop(
             break;
         }
     }
+    // Keep config parameter for future tasks (Tasks 15, 16).
+    let _ = config;
     Ok(())
 }
 

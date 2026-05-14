@@ -7,7 +7,8 @@ pub enum Mode {
     Normal,
     Search,
     ViewMarkdown,
-    ConfirmDisable,
+    ConfirmDisable, // still here; replaced by ScopePicker in Task 16
+    AddPrompt,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -38,6 +39,7 @@ pub struct App {
     pub show_enabled_only: bool,
     /// Plugin awaiting disable confirmation in `Mode::ConfirmDisable`.
     pub pending_disable: Option<String>,
+    pub add_input: String,
     pub focus: Focus,
     pub home_dir: Option<PathBuf>,
 }
@@ -60,6 +62,7 @@ impl App {
             // cached-but-disabled plugins.
             show_enabled_only: true,
             pending_disable: None,
+            add_input: String::new(),
             focus: Focus::Tree,
             home_dir,
         };

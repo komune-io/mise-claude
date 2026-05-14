@@ -3,34 +3,47 @@ use std::path::Path;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
+use crate::operations::add::AddSpec;
 use crate::tui::app::{App, Mode};
+use crate::tui::OpRunner;
 
+/// Backwards-compatible entry point that constructs a [`DefaultOpRunner`]
+/// inline. Kept so existing call sites can continue to compile during the
+/// transition. New call sites should use `handle_key_with_runner` directly.
 pub fn handle_key(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
-    match app.mode {
-        Mode::Normal => handle_normal(app, key, home_dir),
-        Mode::Search => handle_search(app, key),
-        Mode::ViewMarkdown => handle_markdown(app, key),
-        Mode::ConfirmDisable => handle_confirm_disable(app, key, home_dir),
-    }
-}
-
-/// Apply a plugin enable/disable, sync the tree, and write a status message.
-fn execute_toggle(app: &mut App, home_dir: &Path, plugin_id: &str, currently_enabled: bool) {
-    use crate::inspect::Scope;
-    use crate::operations::{scope, OpContext};
-
-    // SAFETY: project_root and packages_dir are unused for Scope::Global,
-    // which is the only scope this handler currently writes to. Task 16
-    // replaces execute_toggle with the scope picker and threads project_root
-    // through properly.
-    let ctx = OpContext {
+    use crate::tui::DefaultOpRunner;
+    let mut runner = DefaultOpRunner {
         project_root: Path::new("."),
         home_dir,
         packages_dir: Path::new("."),
         verbose: false,
     };
+    handle_key_with_runner(app, key, &mut runner)
+}
 
-    match scope::set_plugin_enabled(plugin_id, Scope::Global, !currently_enabled, &ctx) {
+pub fn handle_key_with_runner<R: OpRunner>(
+    app: &mut App,
+    key: KeyEvent,
+    runner: &mut R,
+) -> io::Result<()> {
+    match app.mode {
+        Mode::Normal => handle_normal(app, key, runner),
+        Mode::Search => handle_search(app, key),
+        Mode::ViewMarkdown => handle_markdown(app, key),
+        Mode::ConfirmDisable => handle_confirm_disable(app, key, runner),
+        Mode::AddPrompt => handle_add_prompt(app, key, runner),
+    }
+}
+
+/// Apply a plugin enable/disable, sync the tree, and write a status message.
+fn execute_toggle<R: OpRunner>(
+    app: &mut App,
+    runner: &mut R,
+    plugin_id: &str,
+    currently_enabled: bool,
+) {
+    use crate::inspect::Scope;
+    match runner.set_scope(plugin_id, Scope::Global, !currently_enabled) {
         Ok(()) => {
             if let Some(node_mut) = app.selected_node_mut() {
                 node_mut.enabled = !currently_enabled;
@@ -50,7 +63,7 @@ fn execute_toggle(app: &mut App, home_dir: &Path, plugin_id: &str, currently_ena
     }
 }
 
-fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
+fn handle_normal<R: OpRunner>(app: &mut App, key: KeyEvent, runner: &mut R) -> io::Result<()> {
     use crate::tui::app::Focus;
 
     // Focus-routed keys.
@@ -121,12 +134,17 @@ fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()
                         app.pending_disable = Some(plugin_id);
                         app.mode = Mode::ConfirmDisable;
                     } else {
-                        execute_toggle(app, home_dir, &plugin_id, false);
+                        execute_toggle(app, runner, &plugin_id, false);
                     }
                 } else {
                     app.set_status("No plugin selected".to_string());
                 }
             }
+        }
+
+        KeyCode::Char('a') => {
+            app.mode = Mode::AddPrompt;
+            app.add_input.clear();
         }
 
         KeyCode::Char('i') => {
@@ -189,11 +207,15 @@ fn handle_search(app: &mut App, key: KeyEvent) -> io::Result<()> {
     Ok(())
 }
 
-fn handle_confirm_disable(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
+fn handle_confirm_disable<R: OpRunner>(
+    app: &mut App,
+    key: KeyEvent,
+    runner: &mut R,
+) -> io::Result<()> {
     match key.code {
         KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
             if let Some(plugin_id) = app.pending_disable.take() {
-                execute_toggle(app, home_dir, &plugin_id, true);
+                execute_toggle(app, runner, &plugin_id, true);
             }
             app.mode = Mode::Normal;
         }
@@ -201,6 +223,38 @@ fn handle_confirm_disable(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::
             app.pending_disable = None;
             app.mode = Mode::Normal;
             app.set_status("Disable cancelled".to_string());
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn handle_add_prompt<R: OpRunner>(app: &mut App, key: KeyEvent, runner: &mut R) -> io::Result<()> {
+    match key.code {
+        KeyCode::Esc => {
+            app.mode = Mode::Normal;
+            app.add_input.clear();
+        }
+        KeyCode::Backspace => {
+            app.add_input.pop();
+        }
+        KeyCode::Enter => match AddSpec::parse(&app.add_input) {
+            Ok(spec) => match runner.add(&spec) {
+                Ok(()) => {
+                    app.set_status(format!("Added {}", spec.name));
+                    app.mode = Mode::Normal;
+                    app.add_input.clear();
+                }
+                Err(e) => {
+                    app.set_status(format!("Add failed: {e}"));
+                }
+            },
+            Err(e) => {
+                app.set_status(format!("Invalid spec: {e}"));
+            }
+        },
+        KeyCode::Char(c) => {
+            app.add_input.push(c);
         }
         _ => {}
     }
@@ -340,6 +394,37 @@ mod tests {
         // to a different file (e.g., a previously-hidden plugin becomes visible).
         // This is a smoke test that update_preview is called after execute_toggle,
         // mirroring the same contract that move_*/expand/* satisfy.
+        use crate::inspect::Scope;
+        use crate::operations::OperationError;
+        use crate::tui::OpRunner;
+
+        struct NoopRunner;
+        impl OpRunner for NoopRunner {
+            fn add(
+                &mut self,
+                _spec: &crate::operations::add::AddSpec,
+            ) -> Result<(), OperationError> {
+                Ok(())
+            }
+            fn remove(&mut self, _name: &str) -> Result<(), OperationError> {
+                Ok(())
+            }
+            fn install_one(&mut self, _name: &str) -> Result<(), OperationError> {
+                Ok(())
+            }
+            fn install_all(&mut self) -> Result<(), OperationError> {
+                Ok(())
+            }
+            fn set_scope(
+                &mut self,
+                _plugin_id: &str,
+                _scope: Scope,
+                _enabled: bool,
+            ) -> Result<(), OperationError> {
+                Ok(())
+            }
+        }
+
         let (_f, p) = tmp_path("# initial");
         let mut node = leaf("a", Some(p.clone()));
         node.plugin_id = Some("a".to_string());
@@ -353,10 +438,8 @@ mod tests {
         // Overwrite the file mid-session.
         std::fs::write(&p, "# changed").unwrap();
 
-        // Use a real tempdir for HOME so execute_toggle can write settings.json.
-        let home_tmp = tempfile::tempdir().unwrap();
-        let home = home_tmp.path().to_path_buf();
-        execute_toggle(&mut app, &home, "a", false);
+        let mut runner = NoopRunner;
+        execute_toggle(&mut app, &mut runner, "a", false);
 
         assert!(app
             .markdown_content
