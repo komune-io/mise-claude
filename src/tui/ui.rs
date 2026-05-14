@@ -179,7 +179,9 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
         return;
     };
 
-    let metadata = build_metadata_lines(app, node);
+    let mut metadata = build_metadata_lines(node);
+    metadata.push(Line::from(""));
+    metadata.push(keybind_hint_line(app));
     let preview_present = app.markdown_content.is_some();
 
     if !preview_present {
@@ -221,7 +223,7 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(preview_para, preview_inner);
 }
 
-fn build_metadata_lines(app: &App, node: &crate::tui::tree::TreeNode) -> Vec<Line<'static>> {
+fn build_metadata_lines(node: &crate::tui::tree::TreeNode) -> Vec<Line<'static>> {
     let mut lines: Vec<Line> = Vec::new();
 
     lines.push(Line::from(vec![
@@ -288,9 +290,6 @@ fn build_metadata_lines(app: &App, node: &crate::tui::tree::TreeNode) -> Vec<Lin
             Span::raw(node.children.len().to_string()),
         ]));
     }
-
-    lines.push(Line::from(""));
-    lines.push(keybind_hint_line(app));
 
     lines
 }
@@ -428,16 +427,40 @@ fn render_markdown_overlay(frame: &mut Frame, app: &App) {
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Markdown View — [q/Esc] close ")
+        .title(" Markdown View — [q/Esc] close  [j/k] scroll  [PgUp/PgDn] page ")
         .title_style(Style::default().fg(Color::Cyan));
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
+    // Header: metadata when a selection exists; falls back to body-only otherwise.
+    let metadata = app.selected_node().map(build_metadata_lines);
+
     let content = app.markdown_content.as_deref().unwrap_or("");
     let rendered = crate::tui::markdown::render(content);
-    let para = Paragraph::new(rendered)
+
+    let body_para = Paragraph::new(rendered)
         .wrap(Wrap { trim: false })
         .scroll((app.markdown_scroll, 0));
-    frame.render_widget(para, inner);
+
+    match metadata {
+        Some(meta) if !meta.is_empty() => {
+            let meta_height = meta.len() as u16 + 1;
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(meta_height), Constraint::Min(0)])
+                .split(inner);
+
+            let meta_para = Paragraph::new(meta).wrap(Wrap { trim: false });
+            frame.render_widget(meta_para, chunks[0]);
+
+            let sep = Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(Color::DarkGray));
+            let sep_inner = sep.inner(chunks[1]);
+            frame.render_widget(sep, chunks[1]);
+            frame.render_widget(body_para, sep_inner);
+        }
+        _ => frame.render_widget(body_para, inner),
+    }
 }
