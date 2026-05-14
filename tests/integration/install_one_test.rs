@@ -21,6 +21,6 @@ fn install_one_missing_tool_returns_not_found() {
         verbose: false,
     };
 
-    let err = install::install_one("nope", &ctx).unwrap_err();
+    let err = install::install_one("nope", &ctx, false).unwrap_err();
     assert!(matches!(err, OperationError::NotFound(_)));
 }

@@ -161,7 +161,11 @@ pub(super) fn section_name(tool_type: &ToolType) -> &'static str {
 ///
 /// Returns [`OperationError::NotFound`] if the name is not present in any
 /// chord.toml section.
-pub fn install_one(name: &str, ctx: &OpContext) -> Result<InstallOutcome, OperationError> {
+pub fn install_one(
+    name: &str,
+    ctx: &OpContext,
+    quiet: bool,
+) -> Result<InstallOutcome, OperationError> {
     let config_path = ctx.project_root.join("chord.toml");
     let config = Config::from_file(&config_path).map_err(|e| match e {
         crate::error::ConfigError::Io(io) => OperationError::ConfigRead(io),
@@ -181,19 +185,25 @@ pub fn install_one(name: &str, ctx: &OpContext) -> Result<InstallOutcome, Operat
 
     let packages_dir = ctx.packages_dir.to_path_buf();
     let is_installed = |section: &str, n: &str| -> bool {
-        packages_dir.join(n).join("node_modules").exists()
-            && lockfile.get(section, n).is_some()
+        packages_dir.join(n).join("node_modules").exists() && lockfile.get(section, n).is_some()
     };
     let plan = resolver::resolve(&config, &lockfile, &is_installed);
 
-    let mut reporter = Reporter::new();
+    let mut reporter = if quiet {
+        Reporter::new_quiet()
+    } else {
+        Reporter::new()
+    };
     let install_ctx = InstallContext {
         project_root: ctx.project_root,
         packages_dir: &packages_dir,
         verbose: ctx.verbose,
     };
 
-    for action in plan.actions.iter().filter(|a| a.name == name) {
+    // Execute only the first plan action matching `name`. A chord.toml can
+    // legally declare the same name in two sections, but `install_one` is a
+    // per-name surgical operation — we install the first match and stop.
+    if let Some(action) = plan.actions.iter().find(|a| a.name == name) {
         execute_action(action, &install_ctx, &mut lockfile, &mut reporter);
     }
 
