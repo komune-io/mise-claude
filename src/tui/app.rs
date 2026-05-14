@@ -209,19 +209,13 @@ impl App {
             return;
         };
 
-        let resolved = if let Some(plugin_id) = path.strip_prefix("plugin ") {
-            match resolve_plugin_readme(plugin_id, self.home_dir.as_deref()) {
-                Some(p) => p.to_string_lossy().into_owned(),
-                None => {
-                    self.focus = Focus::Tree;
-                    return;
-                }
-            }
-        } else {
-            expand_tilde(&path, self.home_dir.as_deref())
-        };
+        if path.starts_with("plugin ") {
+            self.focus = Focus::Tree;
+            return;
+        }
 
-        match std::fs::read_to_string(&resolved) {
+        let expanded = expand_tilde(&path, self.home_dir.as_deref());
+        match std::fs::read_to_string(&expanded) {
             Ok(content) => {
                 self.markdown_content = Some(content);
             }
@@ -242,25 +236,6 @@ pub fn expand_tilde(path: &str, home: Option<&std::path::Path>) -> String {
         }
     }
     path.to_string()
-}
-
-/// Resolve a plugin identifier like "name@marketplace" to the README.md file
-/// inside its cache directory, if one exists.
-pub fn resolve_plugin_readme(
-    plugin_id: &str,
-    home: Option<&std::path::Path>,
-) -> Option<std::path::PathBuf> {
-    let home = home?;
-    let (name, marketplace) = plugin_id.split_once('@')?;
-    let plugin_dir = home
-        .join(".claude")
-        .join("plugins")
-        .join("cache")
-        .join(marketplace)
-        .join(name);
-    let version_dir = crate::inspect::scanner::latest_version_dir(&plugin_dir)?;
-    let readme = version_dir.join("README.md");
-    readme.is_file().then_some(readme)
 }
 
 fn flatten_node(
@@ -463,82 +438,5 @@ mod tests {
             .as_deref()
             .unwrap_or("")
             .contains("initial"));
-    }
-
-    /// Build a fake plugin cache layout under `home/.claude/plugins/cache/`
-    /// and return `(home_tempdir, plugin_id, readme_contents)`.
-    fn plugin_cache_with_readme(
-        marketplace: &str,
-        plugin: &str,
-        readme: &str,
-    ) -> (tempfile::TempDir, String, String) {
-        let home = tempfile::tempdir().unwrap();
-        let version_dir = home
-            .path()
-            .join(".claude")
-            .join("plugins")
-            .join("cache")
-            .join(marketplace)
-            .join(plugin)
-            .join("v1");
-        std::fs::create_dir_all(&version_dir).unwrap();
-        std::fs::write(version_dir.join("README.md"), readme).unwrap();
-        (
-            home,
-            format!("{}@{}", plugin, marketplace),
-            readme.to_string(),
-        )
-    }
-
-    #[test]
-    fn resolve_plugin_readme_finds_existing_readme() {
-        let (home, plugin_id, contents) = plugin_cache_with_readme("mp", "foo", "# Plugin Foo\n");
-        let path = resolve_plugin_readme(&plugin_id, Some(home.path())).unwrap();
-        assert!(path.ends_with("README.md"));
-        assert_eq!(std::fs::read_to_string(path).unwrap(), contents);
-    }
-
-    #[test]
-    fn resolve_plugin_readme_returns_none_when_missing() {
-        let home = tempfile::tempdir().unwrap();
-        assert!(resolve_plugin_readme("foo@mp", Some(home.path())).is_none());
-    }
-
-    #[test]
-    fn resolve_plugin_readme_returns_none_for_invalid_id() {
-        let home = tempfile::tempdir().unwrap();
-        assert!(resolve_plugin_readme("no-at-sign", Some(home.path())).is_none());
-    }
-
-    #[test]
-    fn resolve_plugin_readme_returns_none_without_home() {
-        assert!(resolve_plugin_readme("foo@mp", None).is_none());
-    }
-
-    #[test]
-    fn update_preview_loads_plugin_readme() {
-        let (home, plugin_id, _) = plugin_cache_with_readme("mp", "foo", "# Plugin Foo Readme\n");
-        let node = leaf_with_path("foo", Some(format!("plugin {}", plugin_id)));
-        let mut app = App::new(vec![node], Some(home.path().to_path_buf()));
-        // App::new triggers update_preview; should load the README.
-        assert!(app
-            .markdown_content
-            .as_deref()
-            .unwrap_or("")
-            .contains("# Plugin Foo Readme"));
-        // Focus should be eligible for preview (i.e., not forced back to Tree).
-        // update_preview only forces Tree on the no-preview path; here content
-        // is present so focus stays as initialized.
-        assert_eq!(app.focus, Focus::Tree);
-        let _ = (&mut app, &home);
-    }
-
-    #[test]
-    fn update_preview_clears_for_plugin_without_readme() {
-        let home = tempfile::tempdir().unwrap();
-        let node = leaf_with_path("foo", Some("plugin foo@mp".to_string()));
-        let app = App::new(vec![node], Some(home.path().to_path_buf()));
-        assert!(app.markdown_content.is_none());
-        assert_eq!(app.focus, Focus::Tree);
     }
 }

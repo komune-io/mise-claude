@@ -120,11 +120,6 @@ fn organize_plugin_children(plugin: &mut TreeNode) {
     plugin.children.extend(other);
 }
 
-/// If `path` starts with "plugin ", return the remainder (the plugin id).
-fn extract_plugin_from_path(path: Option<&str>) -> Option<String> {
-    path?.strip_prefix("plugin ").map(|rest| rest.to_string())
-}
-
 /// Build the TUI tree from an AuditReport.
 ///
 /// Layout:
@@ -150,7 +145,7 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
     }
 
     // ── Pass 2: route Skills / Commands / Agents ──────────────────────────
-    // Items whose path starts with "plugin <id>" become children of that plugin.
+    // Items tagged with `from_plugin` become children of that plugin.
     // The rest go into per-category standalone sections.
     let mut standalone: BTreeMap<&'static str, Vec<TreeNode>> = BTreeMap::new();
     let mut mcp_nodes: Vec<TreeNode> = Vec::new();
@@ -179,7 +174,7 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
 
             let leaf = TreeNode::leaf(&entry.name, kind.clone(), entry);
 
-            if let Some(plugin_id) = extract_plugin_from_path(entry.path.as_deref()) {
+            if let Some(plugin_id) = entry.from_plugin.clone() {
                 // Try exact match first, then fuzzy match on name (before @)
                 let matched_key = if plugins.contains_key(&plugin_id) {
                     Some(plugin_id.clone())

@@ -28,7 +28,7 @@ pub fn render_terminal(report: &AuditReport) {
         println!("{BOLD}{}{RESET}", category.label());
 
         // Group entries by source path to reduce noise
-        let mut last_source: Option<&str> = None;
+        let mut last_source: Option<String> = None;
 
         for entry in entries {
             // Static output: only show enabled/managed/drift items by default
@@ -64,11 +64,17 @@ pub fn render_terminal(report: &AuditReport) {
                 String::new()
             };
 
-            // Show source path header when it changes
-            let current_source = entry.path.as_deref();
-            if current_source != last_source.as_deref() {
-                if let Some(path) = current_source {
-                    println!("  {DIM}{path}{RESET}");
+            // Show source group header when it changes. Plugin-cache items
+            // group under the plugin id ("name@marketplace"); standalone items
+            // group under their own file path.
+            let current_source = entry
+                .from_plugin
+                .as_deref()
+                .map(|p| format!("plugin {}", p))
+                .or_else(|| entry.path.clone());
+            if current_source.as_deref() != last_source.as_deref() {
+                if let Some(label) = &current_source {
+                    println!("  {DIM}{label}{RESET}");
                 }
                 last_source = current_source;
             }
