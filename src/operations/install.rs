@@ -15,6 +15,7 @@ use crate::resolver::{self, Action, PlannedAction, ToolType};
 use super::{OpContext, OperationError};
 
 /// Summary of an install run.
+#[derive(Debug)]
 pub struct InstallOutcome {
     pub installed: u32,
     pub skipped: u32,
@@ -153,6 +154,63 @@ pub(super) fn section_name(tool_type: &ToolType) -> &'static str {
         ToolType::Skill => "skills",
         ToolType::Plugin => "plugins",
     }
+}
+
+/// Install a single tool by name. Looks up the tool in chord.toml, builds
+/// a plan, executes only the matching action, and updates the lockfile.
+///
+/// Returns [`OperationError::NotFound`] if the name is not present in any
+/// chord.toml section.
+pub fn install_one(name: &str, ctx: &OpContext) -> Result<InstallOutcome, OperationError> {
+    let config_path = ctx.project_root.join("chord.toml");
+    let config = Config::from_file(&config_path).map_err(|e| match e {
+        crate::error::ConfigError::Io(io) => OperationError::ConfigRead(io),
+        crate::error::ConfigError::Parse(p) => OperationError::ConfigParse(p),
+    })?;
+
+    if !config.mcp.contains_key(name)
+        && !config.cli.contains_key(name)
+        && !config.skills.contains_key(name)
+        && !config.plugins.contains_key(name)
+    {
+        return Err(OperationError::NotFound(name.to_string()));
+    }
+
+    let lock_path = ctx.project_root.join("chord.lock");
+    let mut lockfile = Lockfile::from_file(&lock_path).map_err(OperationError::LockfileParse)?;
+
+    let packages_dir = ctx.packages_dir.to_path_buf();
+    let is_installed = |section: &str, n: &str| -> bool {
+        packages_dir.join(n).join("node_modules").exists()
+            && lockfile.get(section, n).is_some()
+    };
+    let plan = resolver::resolve(&config, &lockfile, &is_installed);
+
+    let mut reporter = Reporter::new();
+    let install_ctx = InstallContext {
+        project_root: ctx.project_root,
+        packages_dir: &packages_dir,
+        verbose: ctx.verbose,
+    };
+
+    for action in plan.actions.iter().filter(|a| a.name == name) {
+        execute_action(action, &install_ctx, &mut lockfile, &mut reporter);
+    }
+
+    // See `install_all` for the invariant rationale behind this guard.
+    if reporter.installed > 0 {
+        lockfile
+            .write_to_file(&lock_path)
+            .map_err(OperationError::LockfileWrite)?;
+    }
+
+    reporter.summary();
+
+    Ok(InstallOutcome {
+        installed: reporter.installed,
+        skipped: reporter.skipped,
+        failed: reporter.failed,
+    })
 }
 
 /// Compute the default packages directory (`$CHORD_HOME` or `~/.chord/packages`).

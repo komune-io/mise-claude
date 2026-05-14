@@ -24,3 +24,6 @@ mod inspect_test;
 
 #[path = "integration/install_all_via_operations_test.rs"]
 mod install_all_via_operations_test;
+
+#[path = "integration/install_one_test.rs"]
+mod install_one_test;
