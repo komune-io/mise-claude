@@ -408,6 +408,7 @@ mod tests {
             hidden: false,
             drift: false,
             managed: false,
+            source_repo: None,
         }
     }
 
