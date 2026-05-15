@@ -6,6 +6,7 @@ use chord::tui::handler::handle_key;
 use chord::tui::tree::{NodeKind, TreeNode};
 use chord::tui::{handler, OpRunner};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use serde_json;
 use std::fs;
 use tempfile::TempDir;
 
@@ -16,125 +17,8 @@ fn app_with_plugin(plugin_id: &str, enabled: bool) -> App {
     App::new(vec![plugin], None)
 }
 
-/// Write a `~/.claude/settings.json` containing the given enabled plugin
-/// inside the supplied tempdir and return the home path.
-fn home_with_enabled_plugin(home: &TempDir, plugin_id: &str) {
-    let claude = home.path().join(".claude");
-    fs::create_dir_all(&claude).unwrap();
-    fs::write(
-        claude.join("settings.json"),
-        format!(r#"{{"enabledPlugins":{{"{}":true}}}}"#, plugin_id),
-    )
-    .unwrap();
-}
-
 fn key(code: KeyCode) -> KeyEvent {
     KeyEvent::new(code, KeyModifiers::NONE)
-}
-
-#[test]
-fn pressing_e_on_enabled_plugin_enters_confirm_disable_mode() {
-    let home = TempDir::new().unwrap();
-    home_with_enabled_plugin(&home, "demo@market");
-    let mut app = app_with_plugin("demo@market", true);
-
-    handle_key(&mut app, key(KeyCode::Char('e')), home.path()).unwrap();
-
-    assert_eq!(app.mode, Mode::ConfirmDisable);
-    assert_eq!(app.pending_disable.as_deref(), Some("demo@market"));
-
-    // settings.json must NOT have been touched yet.
-    let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();
-    assert!(content.contains("demo@market"));
-}
-
-#[test]
-fn pressing_e_on_disabled_plugin_enables_immediately_without_prompt() {
-    let home = TempDir::new().unwrap();
-    fs::create_dir_all(home.path().join(".claude")).unwrap();
-    fs::write(
-        home.path().join(".claude/settings.json"),
-        r#"{"enabledPlugins":{}}"#,
-    )
-    .unwrap();
-    let mut app = app_with_plugin("demo@market", false);
-    // Default filter hides disabled plugins; surface this one so 'e' has a
-    // selection to act on.
-    app.toggle_enabled_filter();
-
-    handle_key(&mut app, key(KeyCode::Char('e')), home.path()).unwrap();
-
-    assert_eq!(app.mode, Mode::Normal);
-    assert!(app.pending_disable.is_none());
-
-    let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();
-    assert!(content.contains("demo@market"));
-}
-
-#[test]
-fn confirm_disable_y_writes_settings_and_returns_to_normal() {
-    let home = TempDir::new().unwrap();
-    home_with_enabled_plugin(&home, "demo@market");
-    let mut app = app_with_plugin("demo@market", true);
-
-    handle_key(&mut app, key(KeyCode::Char('e')), home.path()).unwrap();
-    assert_eq!(app.mode, Mode::ConfirmDisable);
-
-    handle_key(&mut app, key(KeyCode::Char('y')), home.path()).unwrap();
-
-    assert_eq!(app.mode, Mode::Normal);
-    assert!(app.pending_disable.is_none());
-
-    let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();
-    let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
-    assert!(parsed["enabledPlugins"].get("demo@market").is_none());
-}
-
-#[test]
-fn confirm_disable_enter_also_confirms() {
-    let home = TempDir::new().unwrap();
-    home_with_enabled_plugin(&home, "demo@market");
-    let mut app = app_with_plugin("demo@market", true);
-
-    handle_key(&mut app, key(KeyCode::Char('e')), home.path()).unwrap();
-    handle_key(&mut app, key(KeyCode::Enter), home.path()).unwrap();
-
-    assert_eq!(app.mode, Mode::Normal);
-    let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();
-    let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
-    assert!(parsed["enabledPlugins"].get("demo@market").is_none());
-}
-
-#[test]
-fn confirm_disable_n_cancels_without_writing_settings() {
-    let home = TempDir::new().unwrap();
-    home_with_enabled_plugin(&home, "demo@market");
-    let mut app = app_with_plugin("demo@market", true);
-
-    handle_key(&mut app, key(KeyCode::Char('e')), home.path()).unwrap();
-    handle_key(&mut app, key(KeyCode::Char('n')), home.path()).unwrap();
-
-    assert_eq!(app.mode, Mode::Normal);
-    assert!(app.pending_disable.is_none());
-
-    let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();
-    assert!(content.contains("demo@market"));
-}
-
-#[test]
-fn confirm_disable_esc_cancels_without_writing_settings() {
-    let home = TempDir::new().unwrap();
-    home_with_enabled_plugin(&home, "demo@market");
-    let mut app = app_with_plugin("demo@market", true);
-
-    handle_key(&mut app, key(KeyCode::Char('e')), home.path()).unwrap();
-    handle_key(&mut app, key(KeyCode::Esc), home.path()).unwrap();
-
-    assert_eq!(app.mode, Mode::Normal);
-    assert!(app.pending_disable.is_none());
-
-    let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();
-    assert!(content.contains("demo@market"));
 }
 
 // ── MockRunner-based tests (Task 13) ──────────────────────────────────────
@@ -368,6 +252,93 @@ fn successful_remove_sets_dirty() {
     handler::handle_key_with_runner(&mut app, key(KeyCode::Char('d')), &mut runner).unwrap();
     handler::handle_key_with_runner(&mut app, key(KeyCode::Char('y')), &mut runner).unwrap();
     assert!(app.dirty);
+}
+
+// ── ScopePicker tests (Task 16) ───────────────────────────────────────────
+
+use chord::tui::app::{ScopeState, ScopeTarget};
+
+fn home_with_global_plugins(home: &TempDir, global_enabled: &[&str]) {
+    let claude = home.path().join(".claude");
+    fs::create_dir_all(&claude).unwrap();
+    let plugins: serde_json::Map<String, serde_json::Value> = global_enabled
+        .iter()
+        .map(|p| (p.to_string(), serde_json::Value::Bool(true)))
+        .collect();
+    fs::write(
+        claude.join("settings.json"),
+        serde_json::json!({ "enabledPlugins": plugins }).to_string(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn pressing_e_on_plugin_enters_scope_picker_with_staged_eq_current() {
+    let home = TempDir::new().unwrap();
+    home_with_global_plugins(&home, &["demo@market"]);
+    let mut app = app_with_plugin("demo@market", true);
+    app.home_dir = Some(home.path().to_path_buf());
+
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('e')), &mut runner).unwrap();
+    assert_eq!(app.mode, Mode::ScopePicker);
+
+    let target = app.scope_target.as_ref().unwrap();
+    assert_eq!(target.plugin_id, "demo@market");
+    assert!(target.current.global);
+    assert!(!target.current.project);
+    assert_eq!(target.staged, target.current);
+}
+
+#[test]
+fn pressing_p_in_scope_picker_flips_project_staged() {
+    let home = TempDir::new().unwrap();
+    home_with_global_plugins(&home, &["demo@market"]);
+    let mut app = app_with_plugin("demo@market", true);
+    app.home_dir = Some(home.path().to_path_buf());
+
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('e')), &mut runner).unwrap();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('p')), &mut runner).unwrap();
+
+    let target = app.scope_target.as_ref().unwrap();
+    assert!(target.staged.project);
+    assert!(!target.current.project, "current must not change");
+}
+
+#[test]
+fn enter_in_scope_picker_applies_only_changed_scopes() {
+    let home = TempDir::new().unwrap();
+    home_with_global_plugins(&home, &["demo@market"]);
+    let mut app = app_with_plugin("demo@market", true);
+    app.home_dir = Some(home.path().to_path_buf());
+
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('e')), &mut runner).unwrap();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('p')), &mut runner).unwrap();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Enter), &mut runner).unwrap();
+
+    assert_eq!(runner.set_scopes.len(), 1);
+    assert_eq!(runner.set_scopes[0].0, "demo@market");
+    assert_eq!(runner.set_scopes[0].1, Scope::Project);
+    assert!(runner.set_scopes[0].2);
+    assert_eq!(app.mode, Mode::Normal);
+    assert!(app.dirty);
+}
+
+#[test]
+fn esc_in_scope_picker_discards() {
+    let home = TempDir::new().unwrap();
+    home_with_global_plugins(&home, &["demo@market"]);
+    let mut app = app_with_plugin("demo@market", true);
+    app.home_dir = Some(home.path().to_path_buf());
+
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('e')), &mut runner).unwrap();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('p')), &mut runner).unwrap();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Esc), &mut runner).unwrap();
+    assert_eq!(runner.set_scopes.len(), 0);
+    assert_eq!(app.mode, Mode::Normal);
 }
 
 // ── reload test ────────────────────────────────────────────────────────────

@@ -7,9 +7,9 @@ use crate::tui::tree::NodeKind;
 pub fn render(frame: &mut Frame, app: &App) {
     match app.mode {
         Mode::ViewMarkdown => render_markdown_overlay(frame, app),
-        Mode::ConfirmDisable => {
+        Mode::ScopePicker => {
             render_main(frame, app);
-            render_confirm_disable_popup(frame, app);
+            render_scope_picker(frame, app);
         }
         Mode::AddPrompt => {
             render_main(frame, app);
@@ -323,11 +323,11 @@ fn keybind_hint_line(app: &App) -> Line<'static> {
             "[Tab/Esc] back  [j/k] scroll  [PgUp/PgDn] page  [v] fullscreen  [q] quit".to_string()
         }
         (crate::tui::app::Focus::Tree, true) => format!(
-            "[Tab] preview  [e] toggle  [v] full  [i] {}  [/] search  [q] quit",
+            "[a]dd [d]el [r]drift [R]econcile [e]scope  [Tab] preview  [v] full  [i] {}  [/] search  [q] quit",
             filter_label
         ),
         (crate::tui::app::Focus::Tree, false) => format!(
-            "[e] toggle  [v] view  [i] {}  [/] search  [q] quit",
+            "[a]dd [d]el [r]drift [R]econcile [e]scope  [v] view  [i] {}  [/] search  [q] quit",
             filter_label
         ),
     };
@@ -373,17 +373,18 @@ fn render_status(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(para, area);
 }
 
-fn render_confirm_disable_popup(frame: &mut Frame, app: &App) {
-    let area = centered_rect(60, 28, frame.area());
-
-    // Wipe the cells underneath so the main view doesn't bleed through.
+fn render_scope_picker(frame: &mut Frame, app: &App) {
+    let area = centered_rect(60, 36, frame.area());
     frame.render_widget(Clear, area);
 
-    let plugin_id = app.pending_disable.as_deref().unwrap_or("(unknown)");
+    let target = match app.scope_target.as_ref() {
+        Some(t) => t,
+        None => return,
+    };
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Confirm disable ")
+        .title(format!(" Plugin scope: {} ", target.plugin_id))
         .title_style(
             Style::default()
                 .fg(Color::Yellow)
@@ -394,27 +395,45 @@ fn render_confirm_disable_popup(frame: &mut Frame, app: &App) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
+    fn fmt_state(b: bool) -> (&'static str, Color) {
+        if b {
+            ("● enabled ", Color::Green)
+        } else {
+            ("○ disabled", Color::DarkGray)
+        }
+    }
+
+    let (proj_text, proj_color) = fmt_state(target.staged.project);
+    let (glob_text, glob_color) = fmt_state(target.staged.global);
+
     let lines = vec![
         Line::from(""),
-        Line::from("Disable plugin?").alignment(Alignment::Center),
+        Line::from(vec![
+            Span::raw("  Project:  "),
+            Span::styled(proj_text, Style::default().fg(proj_color)),
+        ]),
+        Line::from(vec![
+            Span::raw("  Global:   "),
+            Span::styled(glob_text, Style::default().fg(glob_color)),
+        ]),
         Line::from(""),
-        Line::from(Span::styled(
-            plugin_id.to_string(),
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        ))
-        .alignment(Alignment::Center),
+        Line::from(vec![
+            Span::styled("  [p]", Style::default().fg(Color::Cyan)),
+            Span::raw(" toggle project    "),
+            Span::styled("[g]", Style::default().fg(Color::Cyan)),
+            Span::raw(" toggle global"),
+        ]),
         Line::from(""),
         Line::from(vec![
             Span::styled(
-                "[Y]es / Enter",
-                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                "  [Enter] apply",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("     "),
-            Span::styled("[N]o / Esc", Style::default().fg(Color::Green)),
-        ])
-        .alignment(Alignment::Center),
+            Span::raw("         "),
+            Span::styled("[Esc] cancel", Style::default().fg(Color::Red)),
+        ]),
     ];
 
     let para = Paragraph::new(lines).wrap(Wrap { trim: false });

@@ -14,12 +14,25 @@ pub enum InlineOp {
     InstallAll,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct ScopeState {
+    pub project: bool,
+    pub global: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ScopeTarget {
+    pub plugin_id: String,
+    pub current: ScopeState,
+    pub staged: ScopeState,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Mode {
     Normal,
     Search,
     ViewMarkdown,
-    ConfirmDisable, // still here; replaced by ScopePicker in Task 16
+    ScopePicker,
     AddPrompt,
     ConfirmRemove,
 }
@@ -50,8 +63,7 @@ pub struct App {
     pub status_message: Option<(String, std::time::Instant)>,
     pub should_quit: bool,
     pub show_enabled_only: bool,
-    /// Plugin awaiting disable confirmation in `Mode::ConfirmDisable`.
-    pub pending_disable: Option<String>,
+    pub scope_target: Option<ScopeTarget>,
     pub add_input: String,
     pub focus: Focus,
     pub home_dir: Option<PathBuf>,
@@ -80,7 +92,7 @@ impl App {
             // their environment; `i` toggles to show everything including
             // cached-but-disabled plugins.
             show_enabled_only: true,
-            pending_disable: None,
+            scope_target: None,
             add_input: String::new(),
             focus: Focus::Tree,
             home_dir,
