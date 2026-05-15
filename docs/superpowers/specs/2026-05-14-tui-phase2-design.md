@@ -192,7 +192,7 @@ where F: FnOnce() -> T
 }
 ```
 
-Called by `a`, `d`, `r`, and `R`. Not called by `e` (scope toggles are fast file writes, same as today's behavior).
+Called by `a` (post-add install via the inline-op queue), `r`, and `R`. Not called by `d` (remove is filesystem-only: chord.toml edit + `.mcp.json` edit + package dir delete + lockfile edit — no subprocess output worth streaming) or by `e` (scope toggles are fast file writes).
 
 ### Tree reload after any op
 
@@ -230,14 +230,13 @@ After add/remove, the config is re-read from disk (file changed). For scope and 
 
 1. Selection must satisfy `node.managed`. If not → status-bar: "Not in chord.toml".
 2. `Mode::ConfirmRemove`. `y`/`Y`/Enter → proceed; `n`/`N`/Esc → cancel.
-3. Drop to inline.
-4. `operations::remove::remove(name, &ctx)`:
+3. Call `operations::remove::remove(name, &ctx)` synchronously (no inline drop — remove is filesystem-only, no subprocess to stream):
    - Read chord.toml; locate section by membership; capture original TOML string for rollback.
    - Strip from in-memory config; write chord.toml.
    - If MCP: `mcp_config::remove_server(...)`. On failure → restore chord.toml from the captured string, return `McpConfig` error.
    - Strip lockfile entry; write lockfile. On failure → warn but continue (matches current behavior).
    - Delete package directory (`std::fs::remove_dir_all`). `NotFound` is OK.
-5. Re-enter + reload.
+4. Set `dirty = true` so the run loop reloads the tree.
 
 ### Drift install (`r`)
 

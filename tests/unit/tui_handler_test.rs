@@ -2,7 +2,6 @@ use chord::inspect::Scope;
 use chord::operations::add::AddSpec;
 use chord::operations::OperationError;
 use chord::tui::app::{App, Mode};
-use chord::tui::handler::handle_key;
 use chord::tui::tree::{NodeKind, TreeNode};
 use chord::tui::{handler, OpRunner};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -255,8 +254,6 @@ fn successful_remove_sets_dirty() {
 }
 
 // ── ScopePicker tests (Task 16) ───────────────────────────────────────────
-
-use chord::tui::app::{ScopeState, ScopeTarget};
 
 fn home_with_global_plugins(home: &TempDir, global_enabled: &[&str]) {
     let claude = home.path().join(".claude");

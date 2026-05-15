@@ -7,9 +7,15 @@ use crate::operations::add::AddSpec;
 use crate::tui::app::{App, Mode};
 use crate::tui::OpRunner;
 
-/// Backwards-compatible entry point that constructs a [`DefaultOpRunner`]
-/// inline. Kept so existing call sites can continue to compile during the
-/// transition. New call sites should use `handle_key_with_runner` directly.
+/// Test-only entry point that constructs a [`DefaultOpRunner`] inline.
+///
+/// Production code uses `handle_key_with_runner` directly (called from
+/// `tui::run_loop` with a single runner shared across the loop). This
+/// shim exists only for unit tests that exercise focus / navigation /
+/// search / markdown paths — none of which touch the install or remove
+/// subprocess paths, so the placeholder `project_root` and `packages_dir`
+/// values below are inert in practice.
+#[cfg(test)]
 pub fn handle_key(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
     use crate::tui::DefaultOpRunner;
     let mut runner = DefaultOpRunner {
