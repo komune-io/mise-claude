@@ -1,4 +1,5 @@
 use chord::operations::{install, OpContext, OperationError};
+use chord::store::{FileConfigStore, FileLockfileStore};
 use std::fs;
 use tempfile::TempDir;
 
@@ -14,7 +15,11 @@ fn install_one_missing_tool_returns_not_found() {
     )
     .unwrap();
 
+    let config_store = FileConfigStore::new(project.path());
+    let lockfile_store = FileLockfileStore::new(project.path());
     let ctx = OpContext {
+        config_store: &config_store,
+        lockfile_store: &lockfile_store,
         project_root: project.path(),
         home_dir: home.path(),
         packages_dir: packages.path(),

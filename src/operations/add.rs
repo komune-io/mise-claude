@@ -1,8 +1,6 @@
 //! `chord add` core. Parses `<section>:<name>@<version>` and writes the
 //! entry to chord.toml before delegating to `install_one`.
 
-use crate::config::Config;
-
 use super::{OpContext, OperationError};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -110,17 +108,7 @@ impl AddSpec {
 ///
 /// Exposed for unit testing in isolation from the installer call chain.
 pub fn write_toml_entry(spec: &AddSpec, ctx: &OpContext) -> Result<(), OperationError> {
-    let config_path = ctx.project_root.join("chord.toml");
-
-    let original_toml = std::fs::read_to_string(&config_path).or_else(|e| {
-        if e.kind() == std::io::ErrorKind::NotFound {
-            Ok(String::new())
-        } else {
-            Err(OperationError::ConfigRead(e))
-        }
-    })?;
-
-    let mut config: Config = toml::from_str(&original_toml).map_err(OperationError::ConfigParse)?;
+    let mut config = ctx.config_store.load()?;
 
     let already_present = config.mcp.contains_key(&spec.name)
         || config.cli.contains_key(&spec.name)
@@ -139,9 +127,7 @@ pub fn write_toml_entry(spec: &AddSpec, ctx: &OpContext) -> Result<(), Operation
     };
     target.insert(spec.name.clone(), spec.version.clone());
 
-    let new_toml = toml::to_string_pretty(&config)
-        .map_err(|e| OperationError::ConfigWrite(std::io::Error::other(e)))?;
-    std::fs::write(&config_path, new_toml).map_err(OperationError::ConfigWrite)?;
+    ctx.config_store.save(&config)?;
     Ok(())
 }
 

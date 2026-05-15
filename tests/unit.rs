@@ -39,3 +39,9 @@ mod tui_handler_test;
 
 #[path = "unit/operations_add_test.rs"]
 mod operations_add_test;
+
+#[path = "unit/store_test.rs"]
+mod store_test;
+
+#[path = "unit/operations_install_test.rs"]
+mod operations_install_test;

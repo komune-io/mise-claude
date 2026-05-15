@@ -9,15 +9,26 @@ use std::path::Path;
 use thiserror::Error;
 
 use crate::error::InstallError;
+use crate::store::{ConfigStore, ConfigStoreError, LockfileStore, LockfileStoreError};
 
 pub mod add;
 pub mod install;
 pub mod remove;
 pub mod scope;
 
-/// Shared context for all operations. Replaces the ad-hoc `&Path` arguments
-/// previously threaded through `main.rs`.
+/// Shared context for all operations. Carries trait-object references to
+/// the persistent-state stores plus the path bag that the remaining
+/// non-store operations (settings.json, .mcp.json, packages dir) still
+/// need.
+///
+/// Construct one per top-level entry point (CLI command arm, TUI runner)
+/// from concrete adapters and pass `&OpContext` into each operation. The
+/// store trait objects use interior mutability (the in-memory adapter
+/// uses `RefCell`; the file adapter doesn't mutate), so callers don't
+/// thread `&mut` through.
 pub struct OpContext<'a> {
+    pub config_store: &'a dyn ConfigStore,
+    pub lockfile_store: &'a dyn LockfileStore,
     pub project_root: &'a Path,
     pub home_dir: &'a Path,
     pub packages_dir: &'a Path,
@@ -27,20 +38,11 @@ pub struct OpContext<'a> {
 /// All error variants returned by `operations::*` functions.
 #[derive(Debug, Error)]
 pub enum OperationError {
-    #[error("failed to read chord.toml: {0}")]
-    ConfigRead(std::io::Error),
+    #[error(transparent)]
+    Config(#[from] ConfigStoreError),
 
-    #[error("failed to parse chord.toml: {0}")]
-    ConfigParse(#[from] toml::de::Error),
-
-    #[error("failed to parse chord.lock: {0}")]
-    LockfileParse(toml::de::Error),
-
-    #[error("failed to write chord.toml: {0}")]
-    ConfigWrite(std::io::Error),
-
-    #[error("failed to write chord.lock: {0}")]
-    LockfileWrite(std::io::Error),
+    #[error(transparent)]
+    Lockfile(#[from] LockfileStoreError),
 
     #[error("tool '{0}' not found in chord.toml")]
     NotFound(String),

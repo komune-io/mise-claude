@@ -2,9 +2,19 @@ use chord::cli::{Cli, Command};
 use chord::config::Config;
 use chord::lockfile::Lockfile;
 use chord::migrate;
+use chord::store::{FileConfigStore, FileLockfileStore};
 use clap::Parser;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
+
+/// Construct the production File* store pair for a given project root.
+/// Used by every CLI arm that needs Operations.
+fn file_stores(project_root: &Path) -> (FileConfigStore, FileLockfileStore) {
+    (
+        FileConfigStore::new(project_root),
+        FileLockfileStore::new(project_root),
+    )
+}
 
 fn main() {
     let cli = Cli::parse();
@@ -18,7 +28,10 @@ fn main() {
             let project_root = PathBuf::from(".");
             let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
             let packages_dir = chord::operations::install::default_packages_dir();
+            let (config_store, lockfile_store) = file_stores(&project_root);
             let ctx = chord::operations::OpContext {
+                config_store: &config_store,
+                lockfile_store: &lockfile_store,
                 project_root: &project_root,
                 home_dir: &home_dir,
                 packages_dir: &packages_dir,
@@ -76,7 +89,10 @@ fn main() {
             let project_root = PathBuf::from(".");
             let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
             let packages_dir = chord::operations::install::default_packages_dir();
+            let (config_store, lockfile_store) = file_stores(&project_root);
             let ctx = chord::operations::OpContext {
+                config_store: &config_store,
+                lockfile_store: &lockfile_store,
                 project_root: &project_root,
                 home_dir: &home_dir,
                 packages_dir: &packages_dir,
@@ -103,7 +119,10 @@ fn main() {
             let project_root = PathBuf::from(".");
             let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
             let packages_dir = chord::operations::install::default_packages_dir();
+            let (config_store, lockfile_store) = file_stores(&project_root);
             let ctx = chord::operations::OpContext {
+                config_store: &config_store,
+                lockfile_store: &lockfile_store,
                 project_root: &project_root,
                 home_dir: &home_dir,
                 packages_dir: &packages_dir,

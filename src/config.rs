@@ -10,7 +10,7 @@ use crate::error::ConfigError;
 /// Each section is a flat `BTreeMap<String, String>` so that individual tool
 /// entries can carry arbitrary version / options strings without a fixed schema.
 /// Unknown top-level keys are rejected via `#[serde(deny_unknown_fields)]`.
-#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     /// MCP server declarations (`[mcp]` table).

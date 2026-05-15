@@ -1,13 +1,22 @@
+use chord::config::Config;
 use chord::operations::add::{AddSpec, Section};
 use chord::operations::{add, OpContext, OperationError};
-use std::fs;
-use tempfile::TempDir;
+use chord::store::{ConfigStore, InMemoryConfigStore, InMemoryLockfileStore, LockfileStore};
+use std::path::Path;
 
-fn make_ctx<'a>(project: &'a TempDir, home: &'a TempDir, packages: &'a TempDir) -> OpContext<'a> {
+/// Build a minimal OpContext backed by in-memory stores. No TempDir,
+/// no filesystem — the path fields are inert placeholders since none of
+/// the Op functions under test reach for them.
+fn ctx_with<'a>(
+    config_store: &'a dyn ConfigStore,
+    lockfile_store: &'a dyn LockfileStore,
+) -> OpContext<'a> {
     OpContext {
-        project_root: project.path(),
-        home_dir: home.path(),
-        packages_dir: packages.path(),
+        config_store,
+        lockfile_store,
+        project_root: Path::new("."),
+        home_dir: Path::new("."),
+        packages_dir: Path::new("."),
         verbose: false,
     }
 }
@@ -80,53 +89,47 @@ fn rejects_trailing_at() {
 
 #[test]
 fn add_writes_entry_to_empty_chord_toml() {
-    let project = TempDir::new().unwrap();
-    let home = TempDir::new().unwrap();
-    let packages = TempDir::new().unwrap();
-    fs::write(project.path().join("chord.toml"), "").unwrap();
-
-    let ctx = make_ctx(&project, &home, &packages);
+    let config_store = InMemoryConfigStore::empty();
+    let lockfile_store = InMemoryLockfileStore::empty();
+    let ctx = ctx_with(&config_store, &lockfile_store);
     let spec = AddSpec::parse("mcp:context7@latest").unwrap();
 
-    // Test chord.toml mutation only. Calling add() would also invoke
-    // install_one which needs network. Use add::write_toml_entry directly.
     add::write_toml_entry(&spec, &ctx).unwrap();
 
-    let toml_content = fs::read_to_string(project.path().join("chord.toml")).unwrap();
-    assert!(toml_content.contains("context7"), "got: {toml_content}");
-    assert!(toml_content.contains("[mcp]"));
+    let stored = config_store.load().unwrap();
+    assert_eq!(
+        stored.mcp.get("context7").map(String::as_str),
+        Some("latest")
+    );
 }
 
 #[test]
 fn add_rejects_duplicate_in_same_section() {
-    let project = TempDir::new().unwrap();
-    let home = TempDir::new().unwrap();
-    let packages = TempDir::new().unwrap();
-    fs::write(
-        project.path().join("chord.toml"),
-        "[mcp]\ncontext7 = \"latest\"\n",
-    )
-    .unwrap();
-
-    let ctx = make_ctx(&project, &home, &packages);
+    let mut seeded = Config::default();
+    seeded
+        .mcp
+        .insert("context7".to_string(), "latest".to_string());
+    let config_store = InMemoryConfigStore::new(seeded.clone());
+    let lockfile_store = InMemoryLockfileStore::empty();
+    let ctx = ctx_with(&config_store, &lockfile_store);
     let spec = AddSpec::parse("mcp:context7@1.0.0").unwrap();
+
     let err = add::write_toml_entry(&spec, &ctx).unwrap_err();
     assert!(matches!(err, OperationError::Duplicate(_)));
+
+    // chord.toml is left untouched.
+    assert_eq!(config_store.load().unwrap(), seeded);
 }
 
 #[test]
 fn add_rejects_duplicate_across_sections() {
-    let project = TempDir::new().unwrap();
-    let home = TempDir::new().unwrap();
-    let packages = TempDir::new().unwrap();
-    fs::write(
-        project.path().join("chord.toml"),
-        "[cli]\nfoo = \"latest\"\n",
-    )
-    .unwrap();
-
-    let ctx = make_ctx(&project, &home, &packages);
+    let mut seeded = Config::default();
+    seeded.cli.insert("foo".to_string(), "latest".to_string());
+    let config_store = InMemoryConfigStore::new(seeded);
+    let lockfile_store = InMemoryLockfileStore::empty();
+    let ctx = ctx_with(&config_store, &lockfile_store);
     let spec = AddSpec::parse("mcp:foo@latest").unwrap();
+
     let err = add::write_toml_entry(&spec, &ctx).unwrap_err();
     assert!(matches!(err, OperationError::Duplicate(_)));
 }
