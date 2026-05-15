@@ -49,3 +49,17 @@ The mise plugin implements three of mise's Lua backend hooks. All hooks live in 
 - `docs/superpowers/`: design specs and implementation plans (historical record, kept).
 
 For contributors arriving from JVM / Gradle backgrounds: `src/` ≈ `src/main/`, `tests/` ≈ `src/test/`, `e2e/` ≈ `src/e2e/`. Cargo's path conventions are non-negotiable, so we use Rust's native names.
+
+## Agent skills
+
+### Issue tracker
+
+Local markdown under `.scratch/<feature-slug>/` (no GitHub Issues). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical role strings, used as `Status:` lines in issue files. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — `CONTEXT.md` + `docs/adr/` at the repo root (will be created lazily by `/grill-with-docs`). See `docs/agents/domain.md`.
