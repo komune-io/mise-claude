@@ -61,7 +61,7 @@ impl<'a> DefaultOpRunner<'a> {
 
 impl<'a> OpRunner for DefaultOpRunner<'a> {
     fn add(&mut self, spec: &AddSpec) -> Result<(), OperationError> {
-        crate::operations::add::add(spec, &self.ctx()).map(|_| ())
+        crate::operations::add::write_toml_entry(spec, &self.ctx())
     }
     fn remove(&mut self, name: &str) -> Result<(), OperationError> {
         crate::operations::remove::remove(name, &self.ctx()).map(|_| ())
@@ -132,7 +132,7 @@ fn run_loop(
     project_root: &Path,
     home_dir: &Path,
     packages_dir: &Path,
-    config: &Config,
+    _config: &Config,
 ) -> io::Result<()> {
     let mut runner = DefaultOpRunner {
         project_root,
@@ -147,16 +147,34 @@ fn run_loop(
             if let Event::Key(key) = event::read()? {
                 handler::handle_key_with_runner(app, key, &mut runner)?;
 
-                let should_reload = app
-                    .status_message
-                    .as_ref()
-                    .map(|(m, _)| m.starts_with("Added ") || m.starts_with("Removed "))
-                    .unwrap_or(false);
-                if should_reload {
+                // Drain any queued inline operation. These drop out of the alt-screen
+                // to show subprocess output, run the op via the runner, then mark
+                // dirty so the tree refreshes below.
+                if let Some(op) = app.pending_inline_op.take() {
+                    use crate::tui::app::InlineOp;
+                    let result = match &op {
+                        InlineOp::InstallOne(name) => {
+                            let header = format!("chord install {name}");
+                            run_inline(terminal, &header, || runner.install_one(name))?
+                        }
+                        InlineOp::InstallAll => {
+                            let header = "chord install".to_string();
+                            run_inline(terminal, &header, || runner.install_all())?
+                        }
+                    };
+                    match result {
+                        Ok(()) => app.set_status("Install complete".to_string()),
+                        Err(e) => app.set_status(format!("Install failed: {e}")),
+                    }
+                    app.dirty = true;
+                }
+
+                if app.dirty {
                     let cfg_path = project_root.join("chord.toml");
                     let fresh_config =
                         crate::config::Config::from_file(&cfg_path).unwrap_or_default();
                     app.reload(project_root, home_dir, &fresh_config);
+                    app.dirty = false;
                 }
             }
         }
@@ -169,8 +187,6 @@ fn run_loop(
             break;
         }
     }
-    // Keep config parameter for future tasks (Tasks 15, 16).
-    let _ = config;
     Ok(())
 }
 

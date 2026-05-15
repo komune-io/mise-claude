@@ -2,6 +2,18 @@ use std::path::PathBuf;
 
 use crate::tui::tree::TreeNode;
 
+/// Slow operations the handler queues for execution outside raw mode.
+///
+/// The handler sets `App::pending_inline_op` and returns. The TUI's
+/// `run_loop` checks the queue after each key event, drops out of the
+/// alternate screen via `run_inline`, executes the operation, then
+/// triggers a tree refresh.
+#[derive(Debug, Clone, PartialEq)]
+pub enum InlineOp {
+    InstallOne(String),
+    InstallAll,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Mode {
     Normal,
@@ -44,6 +56,11 @@ pub struct App {
     pub focus: Focus,
     pub home_dir: Option<PathBuf>,
     pub pending_remove: Option<String>,
+    pub pending_inline_op: Option<InlineOp>,
+    /// Marks the tree as needing a refresh from disk. Set by any operation
+    /// that mutates filesystem state (add, remove, install, scope). The
+    /// run loop checks this after each iteration and calls `reload` when set.
+    pub dirty: bool,
 }
 
 impl App {
@@ -68,6 +85,8 @@ impl App {
             focus: Focus::Tree,
             home_dir,
             pending_remove: None,
+            pending_inline_op: None,
+            dirty: false,
         };
         app.rebuild_flat();
         app.update_preview();

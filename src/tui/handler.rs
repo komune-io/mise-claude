@@ -159,6 +159,21 @@ fn handle_normal<R: OpRunner>(app: &mut App, key: KeyEvent, runner: &mut R) -> i
             }
         }
 
+        KeyCode::Char('r') => {
+            if let Some(node) = app.selected_node() {
+                if node.drift {
+                    app.pending_inline_op =
+                        Some(crate::tui::app::InlineOp::InstallOne(node.name.clone()));
+                } else {
+                    app.set_status("Not a drift entry".to_string());
+                }
+            }
+        }
+
+        KeyCode::Char('R') => {
+            app.pending_inline_op = Some(crate::tui::app::InlineOp::InstallAll);
+        }
+
         KeyCode::Char('i') => {
             app.toggle_enabled_filter();
         }
@@ -250,7 +265,10 @@ fn handle_confirm_remove<R: OpRunner>(
         KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
             if let Some(name) = app.pending_remove.take() {
                 match runner.remove(&name) {
-                    Ok(()) => app.set_status(format!("Removed {name}")),
+                    Ok(()) => {
+                        app.set_status(format!("Removed {name}"));
+                        app.dirty = true;
+                    }
                     Err(e) => app.set_status(format!("Remove failed: {e}")),
                 }
             }
@@ -279,6 +297,9 @@ fn handle_add_prompt<R: OpRunner>(app: &mut App, key: KeyEvent, runner: &mut R) 
             Ok(spec) => match runner.add(&spec) {
                 Ok(()) => {
                     app.set_status(format!("Added {}", spec.name));
+                    app.pending_inline_op =
+                        Some(crate::tui::app::InlineOp::InstallOne(spec.name.clone()));
+                    app.dirty = true;
                     app.mode = Mode::Normal;
                     app.add_input.clear();
                 }

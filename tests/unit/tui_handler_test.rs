@@ -296,6 +296,80 @@ fn n_in_confirm_remove_cancels() {
     assert_eq!(app.mode, Mode::Normal);
 }
 
+// ── InlineOp queue tests (Task 15) ────────────────────────────────────────
+
+use chord::tui::app::InlineOp;
+
+fn drift_leaf(name: &str) -> TreeNode {
+    TreeNode {
+        name: name.to_string(),
+        kind: NodeKind::McpServer,
+        enabled: false,
+        scope: None,
+        path: None,
+        plugin_id: None,
+        children: Vec::new(),
+        expanded: false,
+        hidden: false,
+        drift: true,
+        managed: true,
+    }
+}
+
+#[test]
+fn pressing_r_on_drift_sets_pending_install_one() {
+    let mut app = App::new(vec![drift_leaf("context7")], None);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('r')), &mut runner).unwrap();
+    assert!(matches!(
+        app.pending_inline_op,
+        Some(InlineOp::InstallOne(ref n)) if n == "context7"
+    ));
+}
+
+#[test]
+fn pressing_r_on_non_drift_is_noop_with_status() {
+    let mut app = App::new(vec![managed_leaf("context7")], None);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('r')), &mut runner).unwrap();
+    assert!(app.pending_inline_op.is_none());
+    assert!(app.status_message.is_some());
+}
+
+#[test]
+fn pressing_capital_r_sets_pending_install_all() {
+    let mut app = App::new(vec![managed_leaf("context7")], None);
+    let mut runner = MockRunner::default();
+    let event = KeyEvent::new(KeyCode::Char('R'), KeyModifiers::SHIFT);
+    handler::handle_key_with_runner(&mut app, event, &mut runner).unwrap();
+    assert!(matches!(app.pending_inline_op, Some(InlineOp::InstallAll)));
+}
+
+#[test]
+fn successful_add_sets_pending_install_one_and_dirty() {
+    let mut app = app_with_plugin("demo@market", true);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('a')), &mut runner).unwrap();
+    for c in "mcp:context7@latest".chars() {
+        handler::handle_key_with_runner(&mut app, key(KeyCode::Char(c)), &mut runner).unwrap();
+    }
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Enter), &mut runner).unwrap();
+    assert!(app.dirty);
+    assert!(matches!(
+        app.pending_inline_op,
+        Some(InlineOp::InstallOne(ref n)) if n == "context7"
+    ));
+}
+
+#[test]
+fn successful_remove_sets_dirty() {
+    let mut app = App::new(vec![managed_leaf("context7")], None);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('d')), &mut runner).unwrap();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('y')), &mut runner).unwrap();
+    assert!(app.dirty);
+}
+
 // ── reload test ────────────────────────────────────────────────────────────
 
 #[test]
