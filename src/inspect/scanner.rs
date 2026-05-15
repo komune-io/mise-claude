@@ -375,13 +375,12 @@ pub fn scan_skills(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> 
     );
 
     // Enrich project-scoped items with their upstream source from skills-lock.json.
+    // The map is empty when the file is absent, which makes the lookup a no-op.
     let project_sources = read_skills_lock_sources(project_root);
-    if !project_sources.is_empty() {
-        for item in &mut items {
-            if item.scope == Scope::Project {
-                if let Some(source) = project_sources.get(&item.name) {
-                    item.source_repo = Some(source.clone());
-                }
+    for item in &mut items {
+        if item.scope == Scope::Project {
+            if let Some(source) = project_sources.get(&item.name) {
+                item.source_repo = Some(source.clone());
             }
         }
     }

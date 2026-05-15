@@ -50,12 +50,6 @@ fn match_names_for(category: &Category, key: &str, registry: &Registry) -> Vec<S
     }
 }
 
-/// Cross-reference `discovered` items with the `config` for `category`.
-///
-/// Returns a vec of `AuditEntry` that includes:
-/// - Discovered items tagged as `Managed` or `Manual`.
-/// - Config entries that were never discovered (drift entries).
-/// - Override annotations when the same name appears at both scopes.
 /// If `key` is a 2-segment `[skills]` entry (`"owner/repo"`), return the
 /// `owner/repo` string. The reconciler matches such wildcard entries
 /// against `DiscoveredItem::source_repo` rather than by name, because
@@ -65,12 +59,11 @@ fn wildcard_skill_owner_repo<'a>(category: &Category, key: &'a str) -> Option<&'
     if *category != Category::Skills {
         return None;
     }
-    let parts: Vec<&str> = key.splitn(3, '/').collect();
-    if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
-        Some(key)
-    } else {
-        None
+    let (first, rest) = key.split_once('/')?;
+    if first.is_empty() || rest.is_empty() || rest.contains('/') {
+        return None;
     }
+    Some(key)
 }
 
 /// Check if a plugin (from cache: "name@cache-marketplace") is enabled
@@ -82,6 +75,12 @@ fn is_plugin_enabled(from_plugin: &str, enabled_plugins: &HashSet<String>) -> bo
         .any(|ep| ep.split('@').next().unwrap_or(ep) == cache_name)
 }
 
+/// Cross-reference `discovered` items with the `config` for `category`.
+///
+/// Returns a vec of `AuditEntry` that includes:
+/// - Discovered items tagged as `Managed` or `Manual`.
+/// - Config entries that were never discovered (drift entries).
+/// - Override annotations when the same name appears at both scopes.
 pub fn reconcile(
     category: Category,
     discovered: &[DiscoveredItem],
