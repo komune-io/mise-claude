@@ -11,6 +11,15 @@ function PLUGIN:BackendExecEnv(ctx)
   -- Trigger install only when chord.toml exists in the project root.
   -- Failures are swallowed so a broken config never breaks the shell.
   local ok, err = pcall(function()
+    -- Skip silently if the chord binary is missing from this install dir.
+    -- This handles legacy mise installs that predate the claude-env → chord
+    -- rename: those dirs carry only the .installed sentinel without ever
+    -- running `cargo install`. Firing chord install per shell entry would
+    -- spam stderr for every stale tool the user has registered.
+    local f_bin = io.open(bin, "r")
+    if not f_bin then return end
+    f_bin:close()
+
     local cmd = require("cmd")
     -- Use pwd, not MISE_PROJECT_ROOT: MISE_PROJECT_ROOT can point to a parent
     -- directory when running inside `mise run` tasks, causing false positives.
