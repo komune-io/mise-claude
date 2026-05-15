@@ -32,6 +32,7 @@ fn extract_json_keys(json: &Value, field: &str, scope: Scope, source: &str) -> V
             scope: scope.clone(),
             source_path: source.to_string(),
             from_plugin: None,
+            source_repo: None,
         })
         .collect()
 }
@@ -94,6 +95,7 @@ fn scan_md_dirs(
             scope: scope.clone(),
             source_path: marker_path.to_string_lossy().into_owned(),
             from_plugin: None,
+            source_repo: None,
         });
     }
 }
@@ -166,6 +168,7 @@ fn scan_md_files_in_dir(
             scope: scope.clone(),
             source_path: entry_path.to_string_lossy().into_owned(),
             from_plugin: None,
+            source_repo: None,
         });
     }
 }
@@ -345,6 +348,11 @@ pub fn scan_plugins(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem>
 }
 
 /// Scan for skills from `.claude/skills/*/SKILL.md` (project) and `~/.claude/skills/*/SKILL.md` (global).
+///
+/// For project-scoped skills, also reads `<project_root>/skills-lock.json` (written
+/// by `npx skills add`) to attach the upstream `owner/repo` to each discovered
+/// item's `source_repo`. The reconciler uses that to match 2-segment wildcard
+/// entries in chord.toml.
 pub fn scan_skills(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> {
     let mut items = Vec::new();
 
@@ -366,10 +374,42 @@ pub fn scan_skills(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> 
         &mut items,
     );
 
+    // Enrich project-scoped items with their upstream source from skills-lock.json.
+    let project_sources = read_skills_lock_sources(project_root);
+    if !project_sources.is_empty() {
+        for item in &mut items {
+            if item.scope == Scope::Project {
+                if let Some(source) = project_sources.get(&item.name) {
+                    item.source_repo = Some(source.clone());
+                }
+            }
+        }
+    }
+
     // Plugin cache: ~/.claude/plugins/cache/<mp>/<plugin>/<ver>/skills/
     scan_plugin_cache(home_dir, "skills", ScanMode::SkillMarker, &mut items);
 
     items
+}
+
+/// Read `<project_root>/skills-lock.json` and build a map of skill name →
+/// upstream `owner/repo`. Returns an empty map on any failure (missing file,
+/// malformed JSON, etc).
+fn read_skills_lock_sources(project_root: &Path) -> std::collections::HashMap<String, String> {
+    let mut sources = std::collections::HashMap::new();
+    let lock_path = project_root.join("skills-lock.json");
+    let Some(json) = read_json(&lock_path) else {
+        return sources;
+    };
+    let Some(skills) = json.get("skills").and_then(|v| v.as_object()) else {
+        return sources;
+    };
+    for (name, entry) in skills {
+        if let Some(source) = entry.get("source").and_then(|v| v.as_str()) {
+            sources.insert(name.clone(), source.to_string());
+        }
+    }
+    sources
 }
 
 /// Scan for commands from `.claude/commands/**/*.md` (project) and `~/.claude/commands/**/*.md` (global).
@@ -482,6 +522,7 @@ fn extract_hooks(json: &Value, scope: Scope, source: &str, items: &mut Vec<Disco
                     scope: scope.clone(),
                     source_path: source.to_string(),
                     from_plugin: Some(format!("hook:{}/{}", hook_plugin, event_label)),
+                    source_repo: None,
                 });
             }
         }
