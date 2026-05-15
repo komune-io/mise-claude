@@ -43,6 +43,10 @@ pub struct AuditEntry {
     pub enabled: bool,
     /// For plugin-cache items: "plugin@marketplace". For hooks: "hook:EventName".
     pub from_plugin: Option<String>,
+    /// For skills installed via `npx skills add`: the upstream `owner/repo`
+    /// recorded in `skills-lock.json`. Drives source-repo grouping in the
+    /// renderer and the TUI tree.
+    pub source_repo: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

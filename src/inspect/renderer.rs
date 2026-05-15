@@ -64,13 +64,22 @@ pub fn render_terminal(report: &AuditReport) {
                 String::new()
             };
 
-            // Show source group header when it changes. Plugin-cache items
-            // group under the plugin id ("name@marketplace"); standalone items
-            // group under their own file path.
+            // Show source group header when it changes. Three group keys,
+            // in priority order:
+            //   1. plugin-cache items group under "plugin <name>@<marketplace>"
+            //   2. skill repos installed via `npx skills add` group under
+            //      "skills from <owner>/<repo>"
+            //   3. everything else groups under its own file path
             let current_source = entry
                 .from_plugin
                 .as_deref()
                 .map(|p| format!("plugin {}", p))
+                .or_else(|| {
+                    entry
+                        .source_repo
+                        .as_deref()
+                        .map(|s| format!("skills from {}", s))
+                })
                 .or_else(|| entry.path.clone());
             if current_source.as_deref() != last_source.as_deref() {
                 if let Some(label) = &current_source {

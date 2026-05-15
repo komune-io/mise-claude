@@ -12,6 +12,7 @@ fn make_entry(name: &str, scope: Option<Scope>, enabled: bool, path: Option<&str
         overridden_by: None,
         enabled,
         from_plugin: None,
+        source_repo: None,
     }
 }
 
@@ -26,6 +27,7 @@ fn make_plugin_child(name: &str, plugin_id: &str, path: Option<&str>) -> AuditEn
         overridden_by: None,
         enabled: true,
         from_plugin: Some(plugin_id.to_string()),
+        source_repo: None,
     }
 }
 
@@ -226,6 +228,7 @@ fn drift_entry_propagates_to_tree_node() {
         overridden_by: None,
         enabled: false,
         from_plugin: None,
+        source_repo: None,
     };
     let report = AuditReport {
         entries: vec![(Category::Mcp, vec![entry])],
