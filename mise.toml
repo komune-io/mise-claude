@@ -2,7 +2,11 @@
 # Usage:
 #   mise plugin link chord ./   # register the bundled mise plugin
 #   mise install                # builtin: install tools from [tools] (rust)
-#   mise run install            # task below: cargo-install chord locally
+#   mise run install:local      # task below: cargo-install chord from local source
+#
+# Note: the dev install task is `install:local`, not `install`. `mise install`
+# is reserved by mise itself for the [tools] installer — naming the task
+# `install` would let the built-in shadow it.
 
 [tools]
 rust = "latest"
@@ -17,8 +21,8 @@ run = "cargo build"
 description = "Build optimized release binary"
 run = "cargo build --release"
 
-[tasks.install]
-description = "cargo-install chord to ~/.cargo/bin from local source (use 'mise run install'; 'mise install' is the builtin tool installer)"
+[tasks."install:local"]
+description = "cargo-install chord to ~/.cargo/bin from local source"
 run = "cargo install --path . --locked --force"
 
 [tasks.test]
@@ -34,7 +38,7 @@ description = "Run inspect TUI"
 run = "cargo run -- inspect --tui"
 
 [tasks."run:install"]
-description = "cargo run -- install (debug build, in-place; see 'install' task for release install)"
+description = "cargo run -- install (debug build, in-place; see 'install:local' task for release install)"
 run = "cargo run -- install"
 
 [tasks.lint]
