@@ -8,6 +8,16 @@ sample/**/.agents/
 sample/**/skills-lock.json
 sample/skillssh/.claude/skills/
 
+# Install artifacts at repo root — mirror of the sample patterns above.
+# Generated when chord.toml lives at the repo root; chord.lock is the source
+# of truth, so the skills CLI's project-local skills-lock.json is redundant.
+/chord.toml
+/chord.lock
+/skills-lock.json
+/.agents/
+/.claude/skills/
+/.claude/settings.json
+
 # Brainstorming session state (HTML mockups, server logs, PIDs)
 .superpowers/
 _bmad-output/
