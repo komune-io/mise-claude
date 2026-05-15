@@ -118,6 +118,7 @@ pub fn reconcile(
                         overridden_by: None,
                         enabled,
                         from_plugin: item.from_plugin.clone(),
+                        source_repo: item.source_repo.clone(),
                     }
                 })
                 .collect();
@@ -183,6 +184,7 @@ pub fn reconcile(
             overridden_by: None,
             enabled,
             from_plugin: item.from_plugin.clone(),
+            source_repo: item.source_repo.clone(),
         });
     }
 
@@ -199,6 +201,7 @@ pub fn reconcile(
                 overridden_by: None,
                 enabled: false,
                 from_plugin: None,
+                source_repo: None,
             });
         }
     }
