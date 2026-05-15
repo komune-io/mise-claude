@@ -9,6 +9,7 @@ pub enum Mode {
     ViewMarkdown,
     ConfirmDisable, // still here; replaced by ScopePicker in Task 16
     AddPrompt,
+    ConfirmRemove,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -42,6 +43,7 @@ pub struct App {
     pub add_input: String,
     pub focus: Focus,
     pub home_dir: Option<PathBuf>,
+    pub pending_remove: Option<String>,
 }
 
 impl App {
@@ -65,6 +67,7 @@ impl App {
             add_input: String::new(),
             focus: Focus::Tree,
             home_dir,
+            pending_remove: None,
         };
         app.rebuild_flat();
         app.update_preview();

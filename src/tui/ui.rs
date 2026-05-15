@@ -15,6 +15,10 @@ pub fn render(frame: &mut Frame, app: &App) {
             render_main(frame, app);
             render_add_prompt(frame, app);
         }
+        Mode::ConfirmRemove => {
+            render_main(frame, app);
+            render_confirm_remove_popup(frame, app);
+        }
         _ => render_main(frame, app),
     }
 }
@@ -458,6 +462,55 @@ fn render_add_prompt(frame: &mut Frame, app: &App) {
             Span::raw(" add    "),
             Span::styled("[Esc]", Style::default().fg(Color::Red)),
             Span::raw(" cancel"),
+        ])
+        .alignment(Alignment::Center),
+    ];
+
+    let para = Paragraph::new(lines).wrap(Wrap { trim: false });
+    frame.render_widget(para, inner);
+}
+
+fn render_confirm_remove_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(60, 30, frame.area());
+    frame.render_widget(Clear, area);
+
+    let name = app.pending_remove.as_deref().unwrap_or("(unknown)");
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Confirm remove ")
+        .title_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
+        .border_style(Style::default().fg(Color::Yellow));
+
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let lines = vec![
+        Line::from(""),
+        Line::from("Remove tool from chord.toml?").alignment(Alignment::Center),
+        Line::from(""),
+        Line::from(Span::styled(
+            name.to_string(),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ))
+        .alignment(Alignment::Center),
+        Line::from(""),
+        Line::from("Also deletes the package dir and .mcp.json entry.")
+            .alignment(Alignment::Center),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(
+                "[Y]es / Enter",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("     "),
+            Span::styled("[N]o / Esc", Style::default().fg(Color::Green)),
         ])
         .alignment(Alignment::Center),
     ];

@@ -32,6 +32,7 @@ pub fn handle_key_with_runner<R: OpRunner>(
         Mode::ViewMarkdown => handle_markdown(app, key),
         Mode::ConfirmDisable => handle_confirm_disable(app, key, runner),
         Mode::AddPrompt => handle_add_prompt(app, key, runner),
+        Mode::ConfirmRemove => handle_confirm_remove(app, key, runner),
     }
 }
 
@@ -147,6 +148,17 @@ fn handle_normal<R: OpRunner>(app: &mut App, key: KeyEvent, runner: &mut R) -> i
             app.add_input.clear();
         }
 
+        KeyCode::Char('d') => {
+            if let Some(node) = app.selected_node() {
+                if node.managed {
+                    app.pending_remove = Some(node.name.clone());
+                    app.mode = Mode::ConfirmRemove;
+                } else {
+                    app.set_status("Not in chord.toml".to_string());
+                }
+            }
+        }
+
         KeyCode::Char('i') => {
             app.toggle_enabled_filter();
         }
@@ -223,6 +235,31 @@ fn handle_confirm_disable<R: OpRunner>(
             app.pending_disable = None;
             app.mode = Mode::Normal;
             app.set_status("Disable cancelled".to_string());
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn handle_confirm_remove<R: OpRunner>(
+    app: &mut App,
+    key: KeyEvent,
+    runner: &mut R,
+) -> io::Result<()> {
+    match key.code {
+        KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
+            if let Some(name) = app.pending_remove.take() {
+                match runner.remove(&name) {
+                    Ok(()) => app.set_status(format!("Removed {name}")),
+                    Err(e) => app.set_status(format!("Remove failed: {e}")),
+                }
+            }
+            app.mode = Mode::Normal;
+        }
+        KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+            app.pending_remove = None;
+            app.mode = Mode::Normal;
+            app.set_status("Remove cancelled".to_string());
         }
         _ => {}
     }

@@ -3,7 +3,7 @@ use chord::operations::add::AddSpec;
 use chord::operations::OperationError;
 use chord::tui::app::{App, Mode};
 use chord::tui::handler::handle_key;
-use chord::tui::tree::TreeNode;
+use chord::tui::tree::{NodeKind, TreeNode};
 use chord::tui::{handler, OpRunner};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::fs;
@@ -236,6 +236,64 @@ fn esc_in_add_prompt_cancels() {
     handler::handle_key_with_runner(&mut app, key(KeyCode::Esc), &mut runner).unwrap();
     assert_eq!(app.mode, Mode::Normal);
     assert!(app.add_input.is_empty());
+}
+
+// ── ConfirmRemove tests (Task 14) ──────────────────────────────────────────
+
+fn managed_leaf(name: &str) -> TreeNode {
+    TreeNode {
+        name: name.to_string(),
+        kind: NodeKind::McpServer,
+        enabled: true,
+        scope: None,
+        path: None,
+        plugin_id: None,
+        children: Vec::new(),
+        expanded: false,
+        hidden: false,
+        drift: false,
+        managed: true,
+    }
+}
+
+#[test]
+fn pressing_d_on_managed_enters_confirm_remove() {
+    let mut app = App::new(vec![managed_leaf("context7")], None);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('d')), &mut runner).unwrap();
+    assert_eq!(app.mode, Mode::ConfirmRemove);
+    assert_eq!(app.pending_remove.as_deref(), Some("context7"));
+}
+
+#[test]
+fn pressing_d_on_unmanaged_is_status_message() {
+    let mut unmanaged = managed_leaf("standalone-skill");
+    unmanaged.managed = false;
+    let mut app = App::new(vec![unmanaged], None);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('d')), &mut runner).unwrap();
+    assert_eq!(app.mode, Mode::Normal);
+    assert!(app.status_message.is_some());
+}
+
+#[test]
+fn y_in_confirm_remove_calls_runner() {
+    let mut app = App::new(vec![managed_leaf("context7")], None);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('d')), &mut runner).unwrap();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('y')), &mut runner).unwrap();
+    assert_eq!(runner.removes, vec!["context7".to_string()]);
+    assert_eq!(app.mode, Mode::Normal);
+}
+
+#[test]
+fn n_in_confirm_remove_cancels() {
+    let mut app = App::new(vec![managed_leaf("context7")], None);
+    let mut runner = MockRunner::default();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('d')), &mut runner).unwrap();
+    handler::handle_key_with_runner(&mut app, key(KeyCode::Char('n')), &mut runner).unwrap();
+    assert_eq!(runner.removes.len(), 0);
+    assert_eq!(app.mode, Mode::Normal);
 }
 
 // ── reload test ────────────────────────────────────────────────────────────

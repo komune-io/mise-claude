@@ -19,7 +19,7 @@ use crate::config::Config;
 use crate::inspect::{reconciler, scanner, AuditReport, Category, Scope};
 use crate::operations::add::AddSpec;
 use crate::operations::OperationError;
-use app::{App, Mode};
+use app::App;
 use tree::build_tree;
 
 /// Indirection for operations called from the TUI handler.
@@ -145,16 +145,14 @@ fn run_loop(
         terminal.draw(|frame| ui::render(frame, app))?;
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
-                let pre_add = app.mode == Mode::AddPrompt;
                 handler::handle_key_with_runner(app, key, &mut runner)?;
-                let added = pre_add
-                    && app.mode == Mode::Normal
-                    && app
-                        .status_message
-                        .as_ref()
-                        .map(|(m, _)| m.starts_with("Added "))
-                        .unwrap_or(false);
-                if added {
+
+                let should_reload = app
+                    .status_message
+                    .as_ref()
+                    .map(|(m, _)| m.starts_with("Added ") || m.starts_with("Removed "))
+                    .unwrap_or(false);
+                if should_reload {
                     let cfg_path = project_root.join("chord.toml");
                     let fresh_config =
                         crate::config::Config::from_file(&cfg_path).unwrap_or_default();
