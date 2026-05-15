@@ -56,6 +56,23 @@ fn match_names_for(category: &Category, key: &str, registry: &Registry) -> Vec<S
 /// - Discovered items tagged as `Managed` or `Manual`.
 /// - Config entries that were never discovered (drift entries).
 /// - Override annotations when the same name appears at both scopes.
+/// If `key` is a 2-segment `[skills]` entry (`"owner/repo"`), return the
+/// `owner/repo` string. The reconciler matches such wildcard entries
+/// against `DiscoveredItem::source_repo` rather than by name, because
+/// individual installed skills have leaf names like `caveman` /
+/// `diagnose` — never the repo name itself.
+fn wildcard_skill_owner_repo<'a>(category: &Category, key: &'a str) -> Option<&'a str> {
+    if *category != Category::Skills {
+        return None;
+    }
+    let parts: Vec<&str> = key.splitn(3, '/').collect();
+    if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
+        Some(key)
+    } else {
+        None
+    }
+}
+
 /// Check if a plugin (from cache: "name@cache-marketplace") is enabled
 /// (in settings: "name@settings-marketplace"). Match on plugin name only.
 fn is_plugin_enabled(from_plugin: &str, enabled_plugins: &HashSet<String>) -> bool {
@@ -116,11 +133,18 @@ pub fn reconcile(
         })
         .collect();
 
-    // Build lookup: each possible match name → index into config_entries
+    // Build lookups. Wildcard `[skills]` entries (2-segment `owner/repo`)
+    // go into a separate index keyed by source_repo; everything else uses
+    // name-based exact matching.
     let mut name_to_config: HashMap<String, usize> = HashMap::new();
-    for (idx, (_, names, _)) in config_entries.iter().enumerate() {
-        for n in names {
-            name_to_config.insert(n.clone(), idx);
+    let mut wildcard_index: HashMap<String, usize> = HashMap::new();
+    for (idx, (key, names, _)) in config_entries.iter().enumerate() {
+        if let Some(owner_repo) = wildcard_skill_owner_repo(&category, key) {
+            wildcard_index.insert(owner_repo.to_string(), idx);
+        } else {
+            for n in names {
+                name_to_config.insert(n.clone(), idx);
+            }
         }
     }
 
@@ -130,6 +154,15 @@ pub fn reconcile(
     for item in discovered {
         let management = if let Some(&idx) = name_to_config.get(&item.name) {
             config_entries[idx].2 = true; // mark matched
+            Management::Managed
+        } else if let Some(idx) = item
+            .source_repo
+            .as_deref()
+            .and_then(|src| wildcard_index.get(src).copied())
+        {
+            // The item came from a repo declared as a `"owner/repo" = ...`
+            // wildcard entry. Mark the wildcard matched and the item Managed.
+            config_entries[idx].2 = true;
             Management::Managed
         } else {
             Management::Manual
@@ -198,6 +231,7 @@ mod tests {
             scope,
             source_path: "/some/path".to_string(),
             from_plugin: None,
+            source_repo: None,
         }
     }
 }

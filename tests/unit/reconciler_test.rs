@@ -10,6 +10,7 @@ fn make_item(name: &str, scope: Scope) -> DiscoveredItem {
         scope,
         source_path: "/some/path".to_string(),
         from_plugin: None,
+        source_repo: None,
     }
 }
 
@@ -137,4 +138,62 @@ fn skills_reconciliation() {
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].management, Management::Managed);
     assert!(!entries[0].drift);
+}
+
+/// Helper: build a discovered skill item with the source_repo populated
+/// (as the scanner does when it finds `skills-lock.json`).
+fn sourced_item(name: &str, source_repo: &str) -> DiscoveredItem {
+    let mut item = make_item(name, Scope::Project);
+    item.source_repo = Some(source_repo.to_string());
+    item
+}
+
+#[test]
+fn wildcard_skill_entry_matches_by_source_repo() {
+    // `"mattpocock/skills" = "latest"` is a 2-segment wildcard. Multiple
+    // discovered items with source_repo == "mattpocock/skills" should all
+    // be Managed; no Drift entry should be emitted for the wildcard key.
+    let config = Config::parse("[skills]\n\"mattpocock/skills\" = \"latest\"\n").unwrap();
+    let discovered = vec![
+        sourced_item("caveman", "mattpocock/skills"),
+        sourced_item("diagnose", "mattpocock/skills"),
+    ];
+
+    let entries = reconcile(Category::Skills, &discovered, &config, &no_plugins());
+
+    assert_eq!(entries.len(), 2, "got entries: {:?}", entries);
+    for e in &entries {
+        assert_eq!(e.management, Management::Managed);
+        assert!(!e.drift);
+    }
+}
+
+#[test]
+fn wildcard_skill_entry_drifts_when_no_source_matches() {
+    // chord.toml declares `"mattpocock/skills"` but no discovered skill
+    // has that source. The wildcard should emit a Drift entry.
+    let config = Config::parse("[skills]\n\"mattpocock/skills\" = \"latest\"\n").unwrap();
+    let discovered = vec![sourced_item("unrelated", "someone-else/repo")];
+
+    let entries = reconcile(Category::Skills, &discovered, &config, &no_plugins());
+
+    // One Manual entry for the unrelated item, one Drift entry for the wildcard.
+    assert_eq!(entries.len(), 2);
+    let drift_entries: Vec<_> = entries.iter().filter(|e| e.drift).collect();
+    assert_eq!(drift_entries.len(), 1);
+    assert_eq!(drift_entries[0].name, "mattpocock/skills");
+}
+
+#[test]
+fn wildcard_skill_entry_ignores_items_without_source_repo() {
+    // A skill with `source_repo: None` (no skills-lock.json mapping) should
+    // not satisfy a wildcard match — chord can't prove ownership.
+    let config = Config::parse("[skills]\n\"mattpocock/skills\" = \"latest\"\n").unwrap();
+    let discovered = vec![make_item("orphan-skill", Scope::Project)];
+
+    let entries = reconcile(Category::Skills, &discovered, &config, &no_plugins());
+
+    assert_eq!(entries.len(), 2);
+    let drift_entries: Vec<_> = entries.iter().filter(|e| e.drift).collect();
+    assert_eq!(drift_entries.len(), 1);
 }

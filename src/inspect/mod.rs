@@ -22,6 +22,12 @@ pub struct DiscoveredItem {
     pub source_path: String,
     /// For plugin-cache items: "plugin@marketplace" identifier
     pub from_plugin: Option<String>,
+    /// For skills installed via `npx skills add`: the upstream
+    /// `owner/repo` recorded in `skills-lock.json`. Used by the
+    /// reconciler to match 2-segment wildcard entries in chord.toml
+    /// (`"mattpocock/skills" = "latest"`) against the individual
+    /// SKILL.md directories on disk.
+    pub source_repo: Option<String>,
 }
 
 #[derive(Debug, Clone)]
