@@ -68,3 +68,43 @@ fn install_skill() {
         "lockfile should contain version latest"
     );
 }
+
+#[test]
+fn install_skill_wildcard() {
+    let project_dir = TempDir::new().unwrap();
+    let packages_dir = TempDir::new().unwrap();
+    let log_dir = TempDir::new().unwrap();
+
+    // Two-segment key triggers the wildcard install: all skills from the repo.
+    fs::write(
+        project_dir.path().join("chord.toml"),
+        "[skills]\n\"mattpocock/skills\" = \"latest\"\n",
+    )
+    .unwrap();
+
+    let original_path = std::env::var("PATH").unwrap_or_default();
+    let new_path = format!("{}:{}", shims_dir().display(), original_path);
+
+    let mut cmd = Command::cargo_bin("chord").unwrap();
+    cmd.arg("install")
+        .current_dir(project_dir.path())
+        .env("PATH", &new_path)
+        .env("CHORD_HOME", packages_dir.path())
+        .env("CLAUDE_ENV_TEST_LOG", log_dir.path());
+
+    cmd.assert().success();
+
+    let npx_log = fs::read_to_string(log_dir.path().join("npx_calls.log")).unwrap();
+    assert!(
+        npx_log.contains("skills add mattpocock/skills"),
+        "expected 'skills add mattpocock/skills' in npx call, got: {npx_log}"
+    );
+    assert!(
+        npx_log.contains("--skill *"),
+        "expected '--skill *' in npx call, got: {npx_log}"
+    );
+    assert!(
+        npx_log.contains("-a claude-code"),
+        "expected '-a claude-code' in npx call, got: {npx_log}"
+    );
+}
