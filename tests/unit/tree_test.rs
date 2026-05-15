@@ -184,6 +184,7 @@ fn drift_node_visible_under_enabled_only_filter() {
         hidden: false,
         drift: true,
         managed: true,
+        source_repo: None,
     };
 
     let mut section = TreeNode::section("MCP Servers (1)");
@@ -241,4 +242,75 @@ fn drift_entry_propagates_to_tree_node() {
     let drift_node = &mcp_section.children[0];
     assert!(drift_node.drift, "drift flag should propagate");
     assert!(drift_node.managed, "managed flag should propagate");
+}
+
+fn skill_entry(name: &str, source_repo: Option<&str>) -> AuditEntry {
+    AuditEntry {
+        name: name.to_string(),
+        version: None,
+        scope: Some(Scope::Project),
+        management: Management::Managed,
+        path: Some(format!("/p/{}/SKILL.md", name)),
+        drift: false,
+        overridden_by: None,
+        enabled: true,
+        from_plugin: None,
+        source_repo: source_repo.map(str::to_string),
+    }
+}
+
+#[test]
+fn standalone_skills_collapse_by_source_repo() {
+    // Three skills from mattpocock/skills + one orphan with no source_repo.
+    let report = AuditReport {
+        entries: vec![(
+            Category::Skills,
+            vec![
+                skill_entry("caveman", Some("mattpocock/skills")),
+                skill_entry("diagnose", Some("mattpocock/skills")),
+                skill_entry("triage", Some("mattpocock/skills")),
+                skill_entry("hand-written", None),
+            ],
+        )],
+    };
+
+    let tree = chord::tui::tree::build_tree(&report);
+
+    // Find the "Skills" section in the top-level tree.
+    let skills_section = tree
+        .iter()
+        .find(|n| n.name == "Skills")
+        .expect("Skills section missing");
+
+    // Expect one sub-header (the source-repo group) plus one direct
+    // ungrouped child (the hand-written orphan).
+    let names: Vec<&str> = skills_section
+        .children
+        .iter()
+        .map(|c| c.name.as_str())
+        .collect();
+    assert!(
+        names
+            .iter()
+            .any(|n| n.starts_with("skills from mattpocock/skills")),
+        "expected source-repo sub-header, got: {:?}",
+        names
+    );
+    assert!(
+        names.iter().any(|n| *n == "hand-written"),
+        "expected ungrouped orphan as direct child, got: {:?}",
+        names
+    );
+
+    // The source-repo sub-header should carry the three matching items.
+    let group = skills_section
+        .children
+        .iter()
+        .find(|c| c.name.starts_with("skills from mattpocock/skills"))
+        .unwrap();
+    assert_eq!(group.children.len(), 3);
+    let group_names: Vec<&str> = group.children.iter().map(|c| c.name.as_str()).collect();
+    assert!(group_names.contains(&"caveman"));
+    assert!(group_names.contains(&"diagnose"));
+    assert!(group_names.contains(&"triage"));
 }

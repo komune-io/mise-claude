@@ -26,6 +26,10 @@ pub struct TreeNode {
     pub hidden: bool,
     pub drift: bool,
     pub managed: bool,
+    /// For skills installed via `npx skills add`: the upstream `owner/repo`.
+    /// Drives source-repo grouping in `build_tree` so standalone skills from
+    /// the same repo collapse under one sub-header.
+    pub source_repo: Option<String>,
 }
 
 impl TreeNode {
@@ -43,6 +47,7 @@ impl TreeNode {
             hidden: false,
             drift: false,
             managed: false,
+            source_repo: None,
         }
     }
 
@@ -61,6 +66,7 @@ impl TreeNode {
             hidden: false,
             drift: entry.drift,
             managed: entry.management == Management::Managed,
+            source_repo: entry.source_repo.clone(),
         }
     }
 
@@ -78,6 +84,7 @@ impl TreeNode {
             hidden: false,
             drift: false,
             managed: false,
+            source_repo: None,
         }
     }
 }
@@ -304,16 +311,50 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
         }
     }
 
-    // Standalone sections (only when non-empty), in a stable order
+    // Standalone sections (only when non-empty), in a stable order.
+    // For "Skills", group leaves by their `source_repo` (set by the
+    // scanner from skills-lock.json) into per-repo sub-headers. Items
+    // without a source_repo stay as direct children of the section.
     for label in &["Skills", "Commands", "Agents"] {
         if let Some(nodes) = standalone.get(label) {
             if !nodes.is_empty() {
                 let mut section = TreeNode::section(label);
-                section.children = nodes.clone();
+                if *label == "Skills" {
+                    section.children = group_by_source_repo(nodes.clone());
+                } else {
+                    section.children = nodes.clone();
+                }
                 tree.push(section);
             }
         }
     }
 
     tree
+}
+
+/// Partition a flat list of skill leaves into per-source-repo subgroups.
+/// Items without `source_repo` stay as top-level children; items sharing
+/// the same `source_repo` collapse into a single sub-header. Order is
+/// preserved across both pools.
+fn group_by_source_repo(nodes: Vec<TreeNode>) -> Vec<TreeNode> {
+    use std::collections::BTreeMap;
+
+    let mut grouped: BTreeMap<String, Vec<TreeNode>> = BTreeMap::new();
+    let mut ungrouped: Vec<TreeNode> = Vec::new();
+
+    for node in nodes {
+        match &node.source_repo {
+            Some(repo) => grouped.entry(repo.clone()).or_default().push(node),
+            None => ungrouped.push(node),
+        }
+    }
+
+    let mut out = ungrouped;
+    for (repo, children) in grouped {
+        let mut header = TreeNode::section(&format!("skills from {} ({})", repo, children.len()));
+        header.expanded = true;
+        header.children = children;
+        out.push(header);
+    }
+    out
 }

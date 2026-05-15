@@ -136,6 +136,7 @@ fn managed_leaf(name: &str) -> TreeNode {
         hidden: false,
         drift: false,
         managed: true,
+        source_repo: None,
     }
 }
 
@@ -196,6 +197,7 @@ fn drift_leaf(name: &str) -> TreeNode {
         hidden: false,
         drift: true,
         managed: true,
+        source_repo: None,
     }
 }
 
@@ -357,6 +359,7 @@ fn reload_rebuilds_tree_and_preserves_selection_by_name() {
         hidden: false,
         drift: false,
         managed: false,
+        source_repo: None,
     };
     let leaf_b = TreeNode {
         name: "beta".to_string(),
