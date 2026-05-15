@@ -21,3 +21,12 @@ mod remove_test;
 
 #[path = "integration/inspect_test.rs"]
 mod inspect_test;
+
+#[path = "integration/install_all_via_operations_test.rs"]
+mod install_all_via_operations_test;
+
+#[path = "integration/install_one_test.rs"]
+mod install_one_test;
+
+#[path = "integration/add_cli_test.rs"]
+mod add_cli_test;

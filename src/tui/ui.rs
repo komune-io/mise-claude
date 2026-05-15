@@ -6,16 +6,20 @@ use crate::tui::tree::NodeKind;
 
 pub fn render(frame: &mut Frame, app: &App) {
     match app.mode {
-        Mode::ViewMarkdown => {
-            render_markdown_overlay(frame, app);
-        }
-        Mode::ConfirmDisable => {
+        Mode::ViewMarkdown => render_markdown_overlay(frame, app),
+        Mode::ScopePicker => {
             render_main(frame, app);
-            render_confirm_disable_popup(frame, app);
+            render_scope_picker(frame, app);
         }
-        _ => {
+        Mode::AddPrompt => {
             render_main(frame, app);
+            render_add_prompt(frame, app);
         }
+        Mode::ConfirmRemove => {
+            render_main(frame, app);
+            render_confirm_remove_popup(frame, app);
+        }
+        _ => render_main(frame, app),
     }
 }
 
@@ -106,9 +110,13 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
                 ""
             };
 
-            let label = format!("{}{}{}{}", indent, arrow, symbol, node.name);
+            let drift_marker = if node.drift { "⚠ " } else { "" };
 
-            let base_style = if node.kind == NodeKind::SectionHeader {
+            let label = format!("{}{}{}{}{}", indent, arrow, symbol, drift_marker, node.name);
+
+            let base_style = if node.drift {
+                Style::default().fg(Color::Red)
+            } else if node.kind == NodeKind::SectionHeader {
                 Style::default()
                     .fg(Color::Cyan)
                     .add_modifier(Modifier::BOLD)
@@ -270,6 +278,16 @@ fn build_metadata_lines(node: &crate::tui::tree::TreeNode) -> Vec<Line<'static>>
         Span::styled(status_str, Style::default().fg(status_color)),
     ]));
 
+    if node.drift {
+        lines.push(Line::from(vec![
+            Span::styled("        ", Style::default()),
+            Span::styled(
+                "⚠ drift (declared, not installed)",
+                Style::default().fg(Color::Red),
+            ),
+        ]));
+    }
+
     if let Some(path) = &node.path {
         lines.push(Line::from(vec![
             Span::styled("Path:   ", Style::default().add_modifier(Modifier::BOLD)),
@@ -305,11 +323,11 @@ fn keybind_hint_line(app: &App) -> Line<'static> {
             "[Tab/Esc] back  [j/k] scroll  [PgUp/PgDn] page  [v] fullscreen  [q] quit".to_string()
         }
         (crate::tui::app::Focus::Tree, true) => format!(
-            "[Tab] preview  [e] toggle  [v] full  [i] {}  [/] search  [q] quit",
+            "[a]dd [d]el [r]drift [R]econcile [e]scope  [Tab] preview  [v] full  [i] {}  [/] search  [q] quit",
             filter_label
         ),
         (crate::tui::app::Focus::Tree, false) => format!(
-            "[e] toggle  [v] view  [i] {}  [/] search  [q] quit",
+            "[a]dd [d]el [r]drift [R]econcile [e]scope  [v] view  [i] {}  [/] search  [q] quit",
             filter_label
         ),
     };
@@ -355,17 +373,131 @@ fn render_status(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(para, area);
 }
 
-fn render_confirm_disable_popup(frame: &mut Frame, app: &App) {
-    let area = centered_rect(60, 28, frame.area());
-
-    // Wipe the cells underneath so the main view doesn't bleed through.
+fn render_scope_picker(frame: &mut Frame, app: &App) {
+    let area = centered_rect(60, 36, frame.area());
     frame.render_widget(Clear, area);
 
-    let plugin_id = app.pending_disable.as_deref().unwrap_or("(unknown)");
+    let target = match app.scope_target.as_ref() {
+        Some(t) => t,
+        None => return,
+    };
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Confirm disable ")
+        .title(format!(" Plugin scope: {} ", target.plugin_id))
+        .title_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
+        .border_style(Style::default().fg(Color::Yellow));
+
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    fn fmt_state(b: bool) -> (&'static str, Color) {
+        if b {
+            ("● enabled ", Color::Green)
+        } else {
+            ("○ disabled", Color::DarkGray)
+        }
+    }
+
+    let (proj_text, proj_color) = fmt_state(target.staged.project);
+    let (glob_text, glob_color) = fmt_state(target.staged.global);
+
+    let lines = vec![
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("  Project:  "),
+            Span::styled(proj_text, Style::default().fg(proj_color)),
+        ]),
+        Line::from(vec![
+            Span::raw("  Global:   "),
+            Span::styled(glob_text, Style::default().fg(glob_color)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("  [p]", Style::default().fg(Color::Cyan)),
+            Span::raw(" toggle project    "),
+            Span::styled("[g]", Style::default().fg(Color::Cyan)),
+            Span::raw(" toggle global"),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(
+                "  [Enter] apply",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("         "),
+            Span::styled("[Esc] cancel", Style::default().fg(Color::Red)),
+        ]),
+    ];
+
+    let para = Paragraph::new(lines).wrap(Wrap { trim: false });
+    frame.render_widget(para, inner);
+}
+
+fn render_add_prompt(frame: &mut Frame, app: &App) {
+    let area = centered_rect(60, 26, frame.area());
+    frame.render_widget(Clear, area);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Add tool ")
+        .title_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
+        .border_style(Style::default().fg(Color::Yellow));
+
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let lines = vec![
+        Line::from("<section>:<name>@<version>").alignment(Alignment::Center),
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("> "),
+            Span::styled(
+                app.add_input.clone(),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("_", Style::default().fg(Color::Cyan)),
+        ]),
+        Line::from(""),
+        Line::from(Span::styled(
+            "section \u{2208} {mcp, cli, skills, plugins}",
+            Style::default().fg(Color::DarkGray),
+        )),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("[Enter]", Style::default().fg(Color::Green)),
+            Span::raw(" add    "),
+            Span::styled("[Esc]", Style::default().fg(Color::Red)),
+            Span::raw(" cancel"),
+        ])
+        .alignment(Alignment::Center),
+    ];
+
+    let para = Paragraph::new(lines).wrap(Wrap { trim: false });
+    frame.render_widget(para, inner);
+}
+
+fn render_confirm_remove_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(60, 30, frame.area());
+    frame.render_widget(Clear, area);
+
+    let name = app.pending_remove.as_deref().unwrap_or("(unknown)");
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Confirm remove ")
         .title_style(
             Style::default()
                 .fg(Color::Yellow)
@@ -378,15 +510,18 @@ fn render_confirm_disable_popup(frame: &mut Frame, app: &App) {
 
     let lines = vec![
         Line::from(""),
-        Line::from("Disable plugin?").alignment(Alignment::Center),
+        Line::from("Remove tool from chord.toml?").alignment(Alignment::Center),
         Line::from(""),
         Line::from(Span::styled(
-            plugin_id.to_string(),
+            name.to_string(),
             Style::default()
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         ))
         .alignment(Alignment::Center),
+        Line::from(""),
+        Line::from("Also deletes the package dir and .mcp.json entry.")
+            .alignment(Alignment::Center),
         Line::from(""),
         Line::from(vec![
             Span::styled(

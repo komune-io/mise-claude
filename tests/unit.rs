@@ -22,8 +22,8 @@ mod reconciler_test;
 #[path = "unit/tree_test.rs"]
 mod tree_test;
 
-#[path = "unit/actions_test.rs"]
-mod actions_test;
+#[path = "unit/operations_scope_test.rs"]
+mod operations_scope_test;
 
 #[path = "unit/reporter_test.rs"]
 mod reporter_test;
@@ -36,3 +36,6 @@ mod mcp_installer_test;
 
 #[path = "unit/tui_handler_test.rs"]
 mod tui_handler_test;
+
+#[path = "unit/operations_add_test.rs"]
+mod operations_add_test;

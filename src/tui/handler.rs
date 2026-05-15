@@ -3,41 +3,46 @@ use std::path::Path;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::tui::actions;
+use crate::operations::add::AddSpec;
 use crate::tui::app::{App, Mode};
+use crate::tui::OpRunner;
 
+/// Test-only entry point that constructs a [`DefaultOpRunner`] inline.
+///
+/// Production code uses `handle_key_with_runner` directly (called from
+/// `tui::run_loop` with a single runner shared across the loop). This
+/// shim exists only for unit tests that exercise focus / navigation /
+/// search / markdown paths — none of which touch the install or remove
+/// subprocess paths, so the placeholder `project_root` and `packages_dir`
+/// values below are inert in practice.
+#[cfg(test)]
 pub fn handle_key(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
+    use crate::tui::DefaultOpRunner;
+    let mut runner = DefaultOpRunner {
+        project_root: Path::new("."),
+        home_dir,
+        packages_dir: Path::new("."),
+        verbose: false,
+    };
+    handle_key_with_runner(app, key, &mut runner)
+}
+
+pub fn handle_key_with_runner<R: OpRunner>(
+    app: &mut App,
+    key: KeyEvent,
+    runner: &mut R,
+) -> io::Result<()> {
     match app.mode {
-        Mode::Normal => handle_normal(app, key, home_dir),
+        Mode::Normal => handle_normal(app, key, runner),
         Mode::Search => handle_search(app, key),
         Mode::ViewMarkdown => handle_markdown(app, key),
-        Mode::ConfirmDisable => handle_confirm_disable(app, key, home_dir),
+        Mode::ScopePicker => handle_scope_picker(app, key, runner),
+        Mode::AddPrompt => handle_add_prompt(app, key, runner),
+        Mode::ConfirmRemove => handle_confirm_remove(app, key, runner),
     }
 }
 
-/// Apply a plugin enable/disable, sync the tree, and write a status message.
-fn execute_toggle(app: &mut App, home_dir: &Path, plugin_id: &str, currently_enabled: bool) {
-    match actions::toggle_plugin(home_dir, plugin_id, currently_enabled) {
-        Ok(()) => {
-            if let Some(node_mut) = app.selected_node_mut() {
-                node_mut.enabled = !currently_enabled;
-            }
-            app.rebuild_flat();
-            app.update_preview();
-            let action = if currently_enabled {
-                "disabled"
-            } else {
-                "enabled"
-            };
-            app.set_status(format!("Plugin '{}' {}", plugin_id, action));
-        }
-        Err(e) => {
-            app.set_status(format!("Error toggling plugin: {}", e));
-        }
-    }
-}
-
-fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
+fn handle_normal<R: OpRunner>(app: &mut App, key: KeyEvent, _runner: &mut R) -> io::Result<()> {
     use crate::tui::app::Focus;
 
     // Focus-routed keys.
@@ -102,18 +107,58 @@ fn handle_normal(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()
         }
 
         KeyCode::Char('e') => {
+            use crate::tui::app::ScopeTarget;
             if let Some(node) = app.selected_node() {
-                if let Some(plugin_id) = node.plugin_id.clone() {
-                    if node.enabled {
-                        app.pending_disable = Some(plugin_id);
-                        app.mode = Mode::ConfirmDisable;
-                    } else {
-                        execute_toggle(app, home_dir, &plugin_id, false);
+                if node.kind != crate::tui::tree::NodeKind::Plugin {
+                    app.set_status("Not a plugin".to_string());
+                    return Ok(());
+                }
+                let plugin_id = match node.plugin_id.clone() {
+                    Some(id) => id,
+                    None => {
+                        app.set_status("Plugin id missing".to_string());
+                        return Ok(());
                     }
+                };
+                let current = read_scope_state(&plugin_id, app.home_dir.as_deref());
+                app.scope_target = Some(ScopeTarget {
+                    plugin_id,
+                    current: current.clone(),
+                    staged: current,
+                });
+                app.mode = Mode::ScopePicker;
+            }
+        }
+
+        KeyCode::Char('a') => {
+            app.mode = Mode::AddPrompt;
+            app.add_input.clear();
+        }
+
+        KeyCode::Char('d') => {
+            if let Some(node) = app.selected_node() {
+                if node.managed {
+                    app.pending_remove = Some(node.name.clone());
+                    app.mode = Mode::ConfirmRemove;
                 } else {
-                    app.set_status("No plugin selected".to_string());
+                    app.set_status("Not in chord.toml".to_string());
                 }
             }
+        }
+
+        KeyCode::Char('r') => {
+            if let Some(node) = app.selected_node() {
+                if node.drift {
+                    app.pending_inline_op =
+                        Some(crate::tui::app::InlineOp::InstallOne(node.name.clone()));
+                } else {
+                    app.set_status("Not a drift entry".to_string());
+                }
+            }
+        }
+
+        KeyCode::Char('R') => {
+            app.pending_inline_op = Some(crate::tui::app::InlineOp::InstallAll);
         }
 
         KeyCode::Char('i') => {
@@ -176,18 +221,147 @@ fn handle_search(app: &mut App, key: KeyEvent) -> io::Result<()> {
     Ok(())
 }
 
-fn handle_confirm_disable(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
+fn handle_scope_picker<R: OpRunner>(
+    app: &mut App,
+    key: KeyEvent,
+    runner: &mut R,
+) -> io::Result<()> {
+    use crate::inspect::Scope;
+
+    match key.code {
+        KeyCode::Char('p') => {
+            if let Some(t) = app.scope_target.as_mut() {
+                t.staged.project = !t.staged.project;
+            }
+        }
+        KeyCode::Char('g') => {
+            if let Some(t) = app.scope_target.as_mut() {
+                t.staged.global = !t.staged.global;
+            }
+        }
+        KeyCode::Enter => {
+            if let Some(t) = app.scope_target.take() {
+                let mut errors: Vec<String> = Vec::new();
+                if t.staged.project != t.current.project {
+                    if let Err(e) = runner.set_scope(&t.plugin_id, Scope::Project, t.staged.project)
+                    {
+                        errors.push(format!("project: {e}"));
+                    }
+                }
+                if t.staged.global != t.current.global {
+                    if let Err(e) = runner.set_scope(&t.plugin_id, Scope::Global, t.staged.global) {
+                        errors.push(format!("global: {e}"));
+                    }
+                }
+                if errors.is_empty() {
+                    app.set_status(format!("Scope updated for {}", t.plugin_id));
+                } else {
+                    app.set_status(format!("Scope errors: {}", errors.join("; ")));
+                }
+                app.dirty = true;
+            }
+            app.mode = Mode::Normal;
+        }
+        KeyCode::Esc => {
+            app.scope_target = None;
+            app.mode = Mode::Normal;
+            app.set_status("Scope edit cancelled".to_string());
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn read_scope_state(plugin_id: &str, home_dir: Option<&Path>) -> crate::tui::app::ScopeState {
+    use crate::tui::app::ScopeState;
+
+    fn is_enabled_in(settings_path: &Path, plugin_id: &str) -> bool {
+        let content = match std::fs::read_to_string(settings_path) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        let json: serde_json::Value = match serde_json::from_str(&content) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+        let cache_name = plugin_id.split('@').next().unwrap_or(plugin_id);
+        json.get("enabledPlugins")
+            .and_then(|v| v.as_object())
+            .map(|obj| {
+                obj.keys()
+                    .any(|k| k.split('@').next().unwrap_or(k) == cache_name)
+            })
+            .unwrap_or(false)
+    }
+
+    let project_settings = Path::new(".").join(".claude").join("settings.json");
+    let project = is_enabled_in(&project_settings, plugin_id);
+
+    let global = match home_dir {
+        Some(h) => is_enabled_in(&h.join(".claude").join("settings.json"), plugin_id),
+        None => false,
+    };
+
+    ScopeState { project, global }
+}
+
+fn handle_confirm_remove<R: OpRunner>(
+    app: &mut App,
+    key: KeyEvent,
+    runner: &mut R,
+) -> io::Result<()> {
     match key.code {
         KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
-            if let Some(plugin_id) = app.pending_disable.take() {
-                execute_toggle(app, home_dir, &plugin_id, true);
+            if let Some(name) = app.pending_remove.take() {
+                match runner.remove(&name) {
+                    Ok(()) => {
+                        app.set_status(format!("Removed {name}"));
+                        app.dirty = true;
+                    }
+                    Err(e) => app.set_status(format!("Remove failed: {e}")),
+                }
             }
             app.mode = Mode::Normal;
         }
         KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
-            app.pending_disable = None;
+            app.pending_remove = None;
             app.mode = Mode::Normal;
-            app.set_status("Disable cancelled".to_string());
+            app.set_status("Remove cancelled".to_string());
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn handle_add_prompt<R: OpRunner>(app: &mut App, key: KeyEvent, runner: &mut R) -> io::Result<()> {
+    match key.code {
+        KeyCode::Esc => {
+            app.mode = Mode::Normal;
+            app.add_input.clear();
+        }
+        KeyCode::Backspace => {
+            app.add_input.pop();
+        }
+        KeyCode::Enter => match AddSpec::parse(&app.add_input) {
+            Ok(spec) => match runner.add(&spec) {
+                Ok(()) => {
+                    app.set_status(format!("Added {}", spec.name));
+                    app.pending_inline_op =
+                        Some(crate::tui::app::InlineOp::InstallOne(spec.name.clone()));
+                    app.dirty = true;
+                    app.mode = Mode::Normal;
+                    app.add_input.clear();
+                }
+                Err(e) => {
+                    app.set_status(format!("Add failed: {e}"));
+                }
+            },
+            Err(e) => {
+                app.set_status(format!("Invalid spec: {e}"));
+            }
+        },
+        KeyCode::Char(c) => {
+            app.add_input.push(c);
         }
         _ => {}
     }
@@ -237,6 +411,8 @@ mod tests {
             children: Vec::new(),
             expanded: false,
             hidden: false,
+            drift: false,
+            managed: false,
         }
     }
 
@@ -320,34 +496,58 @@ mod tests {
     }
 
     #[test]
-    fn execute_toggle_refreshes_preview() {
-        // After a toggle, the tree is rebuilt — the selected node may now point
-        // to a different file (e.g., a previously-hidden plugin becomes visible).
-        // This is a smoke test that update_preview is called after execute_toggle,
-        // mirroring the same contract that move_*/expand/* satisfy.
-        let (_f, p) = tmp_path("# initial");
-        let mut node = leaf("a", Some(p.clone()));
-        node.plugin_id = Some("a".to_string());
-        let mut app = App::new(vec![node], None);
-        assert!(app
-            .markdown_content
-            .as_deref()
-            .unwrap_or("")
-            .contains("initial"));
+    fn scope_picker_enter_with_no_changes_marks_dirty_and_returns_to_normal() {
+        // Smoke test: opening and immediately confirming scope picker sets dirty
+        // and returns to Normal without calling the runner.
+        use crate::inspect::Scope;
+        use crate::operations::OperationError;
+        use crate::tui::app::{ScopeState, ScopeTarget};
+        use crate::tui::OpRunner;
 
-        // Overwrite the file mid-session.
-        std::fs::write(&p, "# changed").unwrap();
+        struct NoopRunner;
+        impl OpRunner for NoopRunner {
+            fn add(
+                &mut self,
+                _spec: &crate::operations::add::AddSpec,
+            ) -> Result<(), OperationError> {
+                Ok(())
+            }
+            fn remove(&mut self, _name: &str) -> Result<(), OperationError> {
+                Ok(())
+            }
+            fn install_one(&mut self, _name: &str) -> Result<(), OperationError> {
+                Ok(())
+            }
+            fn install_all(&mut self) -> Result<(), OperationError> {
+                Ok(())
+            }
+            fn set_scope(
+                &mut self,
+                _plugin_id: &str,
+                _scope: Scope,
+                _enabled: bool,
+            ) -> Result<(), OperationError> {
+                Ok(())
+            }
+        }
 
-        // Use a real tempdir for HOME so execute_toggle can write settings.json.
-        let home_tmp = tempfile::tempdir().unwrap();
-        let home = home_tmp.path().to_path_buf();
-        execute_toggle(&mut app, &home, "a", false);
+        let mut app = App::new(vec![leaf("a", None)], None);
+        let state = ScopeState {
+            project: false,
+            global: true,
+        };
+        app.scope_target = Some(ScopeTarget {
+            plugin_id: "a".to_string(),
+            current: state.clone(),
+            staged: state,
+        });
+        app.mode = Mode::ScopePicker;
 
-        assert!(app
-            .markdown_content
-            .as_deref()
-            .unwrap_or("")
-            .contains("changed"));
+        let mut runner = NoopRunner;
+        // Press Enter with staged == current → no runner calls, dirty set, mode Normal.
+        handle_key_with_runner(&mut app, key(KeyCode::Enter), &mut runner).unwrap();
+        assert_eq!(app.mode, Mode::Normal);
+        assert!(app.dirty);
     }
 
     #[test]

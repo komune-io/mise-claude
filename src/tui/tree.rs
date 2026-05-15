@@ -24,6 +24,8 @@ pub struct TreeNode {
     pub children: Vec<TreeNode>,
     pub expanded: bool,
     pub hidden: bool,
+    pub drift: bool,
+    pub managed: bool,
 }
 
 impl TreeNode {
@@ -39,11 +41,14 @@ impl TreeNode {
             children: Vec::new(),
             expanded: true,
             hidden: false,
+            drift: false,
+            managed: false,
         }
     }
 
     /// Create a leaf node from an AuditEntry.
     pub fn leaf(name: &str, kind: NodeKind, entry: &AuditEntry) -> Self {
+        use crate::inspect::Management;
         TreeNode {
             name: name.to_string(),
             kind,
@@ -54,6 +59,8 @@ impl TreeNode {
             children: Vec::new(),
             expanded: false,
             hidden: false,
+            drift: entry.drift,
+            managed: entry.management == Management::Managed,
         }
     }
 
@@ -69,6 +76,8 @@ impl TreeNode {
             children: Vec::new(),
             expanded: true,
             hidden: false,
+            drift: false,
+            managed: false,
         }
     }
 }
