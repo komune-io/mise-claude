@@ -30,7 +30,7 @@ pub struct LockedTool {
 ///
 /// Sections and entries within sections are kept sorted (via [`BTreeMap`]) so
 /// that serialization is deterministic.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Lockfile {
     sections: BTreeMap<String, BTreeMap<String, LockedTool>>,
 }

@@ -11,4 +11,5 @@ pub mod operations;
 pub mod output;
 pub mod registry;
 pub mod resolver;
+pub mod store;
 pub mod tui;
