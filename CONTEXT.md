@@ -33,8 +33,22 @@ An installable that `chord` manages — one of four kinds: MCP server, CLI binar
 _Avoid_: package (npm-specific), dependency (implies transitivity), item.
 
 **Entry**:
-A row in `chord.toml` that declares a Tool. The thing the user writes and edits. The section header (`[mcp]` / `[cli]` / `[skills]` / `[plugins]`) tells you which kind of Tool the Entry declares.
+A row in `chord.toml`. Usually declares one Tool; the section header (`[mcp]` / `[cli]` / `[skills]` / `[plugins]`) tells you which kind. The one exception is the Wildcard Skill entry — a 2-segment `[skills]` row that declares a whole Skill repo and expands to many Tools at install time.
 _Avoid_: declaration, line, key.
+
+### Skill nouns
+
+**Skill entry**:
+A 3-segment row in `[skills]` of `chord.toml` declaring one specific Skill — `"<owner>/<repo>/<skill-name>" = "<version>"`. Installs that one Skill via `npx skills add <owner>/<repo> --skill <skill-name>`.
+_Avoid_: skill declaration, single skill, named skill.
+
+**Wildcard Skill entry**:
+A 2-segment row in `[skills]` of `chord.toml` — `"<owner>/<repo>" = "<version>"`. Means "install every Skill the repo exposes" and runs `npx skills add <owner>/<repo> --skill '*'`. One row, many installed Skills. Distinct in shape and cardinality from a Skill entry.
+_Avoid_: bulk skill entry, glob skill entry, skill repo entry.
+
+**Skill repo**:
+A GitHub repository that exposes one or more Skills, installable via `npx skills add <owner>/<repo>`. Both Skill entries and Wildcard Skill entries point at a Skill repo. Each installed Skill carries the identity of its Skill repo so the reconciler can validate Wildcard Skill entries against actual disk state.
+_Avoid_: skill source (too generic), skill marketplace (Skills don't have a marketplace.json), skills package.
 
 ### Plugin nouns
 
@@ -108,11 +122,15 @@ _Avoid_: operation (reserved for `operations::*`), step.
 ### Lockfile nouns
 
 **Lockfile** (`chord.lock`):
-Records what was actually installed. One row per Entry, grouped by Tool kind. Written after every successful Install (all) or Install (one). Authoritative; the Resolver reads it to detect Upgrade.
+Records what was actually installed. One row per Entry, grouped by Tool kind. Written after every successful Install (all) or Install (one). Authoritative; the Resolver reads it to detect Upgrade. Chord owns this file end-to-end.
 _Avoid_: lock, manifest.
 
 **Locked Tool**:
 A row in the Lockfile — `{ package, version, integrity, resolved_at }`. Captures the state of one materialized Entry.
+
+**Skills lockfile** (`skills-lock.json`):
+A project-scoped JSON file written by the `npx skills` CLI, recording each installed Skill's upstream Skill repo, ref, and content hash. Chord *reads* this file (during the scan phase of Audit) to attach the Skill repo identity to each discovered Skill; chord never writes it. Distinct from the chord-owned Lockfile.
+_Avoid_: skills lock, skill manifest, lockfile (without qualifier).
 
 ### Hook nouns
 
@@ -135,12 +153,14 @@ _Avoid_: scope override (use Shadowed for that).
 
 ## Relationships
 
-- An **Entry** declares one **Tool**. The kind of Tool is determined by the Entry's section header.
+- An **Entry** declares one **Tool** — except a **Wildcard Skill entry**, which declares a **Skill repo** that expands to many Tools.
 - An **Install** (all) reads every Entry in `chord.toml`, builds a Plan, and Fetches each non-skipped Tool.
 - An **Add** writes an Entry, then Installs (one) that Tool.
 - A **Managed** Tool that is missing on disk is in **Drift**. The `r` key in the TUI runs Install (one) to clear the Drift.
 - A **Plugin** can be **Enabled** in Project scope, Global scope, or both. When both, the Global entry is **Shadowed** by the Project entry.
 - A **Marketplace** lists one or more **Plugins**; `chord` requires it upstream to materialize a `[plugins]` Entry.
+- A **Skill repo** exposes one or more **Skills**, each installable individually via a **Skill entry** or in bulk via a **Wildcard Skill entry**.
+- The **Skills lockfile** records each installed Skill's source **Skill repo**; chord reads it during Audit to validate Wildcard Skill entries against actual disk state.
 
 ## Example dialogue
 
@@ -159,3 +179,5 @@ _Avoid_: scope override (use Shadowed for that).
 - "plugin" was used for four distinct things (Claude Code plugin, mise backend plugin, chord.toml entry, marketplace) — resolved: bare "Plugin" = Claude Code plugin; "Mise backend plugin" is always qualified.
 - "tool" was used for both chord's umbrella concept and mise's binary-on-PATH concept — resolved: bare "Tool" = chord's umbrella; "mise tool" always qualified.
 - "override" was used for both `Registry::ToolOverride` (install-time customization) and `AuditEntry.overridden_by` (scope precedence) — resolved: "Override" means only the Registry concept. The scope-precedence field will be renamed `overridden_by` → `shadowed_by`, and prose uses "Shadowed".
+- A chord project can hold *two* lockfiles side by side: `chord.lock` (chord owns) and `skills-lock.json` (the `npx skills` CLI owns; chord reads). Resolved: bare "Lockfile" = `chord.lock`; the other is always "Skills lockfile". The `.gitignore` recommends excluding the latter since `chord.lock` is the authoritative source for chord-managed state.
+- `[skills]` rows have two distinct shapes (3-segment "Skill entry" and 2-segment "Wildcard Skill entry") with different cardinalities (1 Tool vs N Tools per row). Resolved: glossary treats them as distinct terms, not variants of one term.
