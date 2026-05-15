@@ -1,10 +1,19 @@
 use chord::operations::add::{AddSpec, Section};
 use chord::operations::{add, OpContext, OperationError};
+use chord::store::{ConfigStore, InMemoryConfigStore, InMemoryLockfileStore, LockfileStore};
 use std::fs;
 use tempfile::TempDir;
 
-fn make_ctx<'a>(project: &'a TempDir, home: &'a TempDir, packages: &'a TempDir) -> OpContext<'a> {
+fn make_ctx<'a>(
+    project: &'a TempDir,
+    home: &'a TempDir,
+    packages: &'a TempDir,
+    config_store: &'a dyn ConfigStore,
+    lockfile_store: &'a dyn LockfileStore,
+) -> OpContext<'a> {
     OpContext {
+        config_store,
+        lockfile_store,
         project_root: project.path(),
         home_dir: home.path(),
         packages_dir: packages.path(),
@@ -85,7 +94,9 @@ fn add_writes_entry_to_empty_chord_toml() {
     let packages = TempDir::new().unwrap();
     fs::write(project.path().join("chord.toml"), "").unwrap();
 
-    let ctx = make_ctx(&project, &home, &packages);
+    let config_store = chord::store::FileConfigStore::new(project.path());
+    let lockfile_store = chord::store::FileLockfileStore::new(project.path());
+    let ctx = make_ctx(&project, &home, &packages, &config_store, &lockfile_store);
     let spec = AddSpec::parse("mcp:context7@latest").unwrap();
 
     // Test chord.toml mutation only. Calling add() would also invoke
@@ -108,7 +119,9 @@ fn add_rejects_duplicate_in_same_section() {
     )
     .unwrap();
 
-    let ctx = make_ctx(&project, &home, &packages);
+    let config_store = chord::store::FileConfigStore::new(project.path());
+    let lockfile_store = chord::store::FileLockfileStore::new(project.path());
+    let ctx = make_ctx(&project, &home, &packages, &config_store, &lockfile_store);
     let spec = AddSpec::parse("mcp:context7@1.0.0").unwrap();
     let err = add::write_toml_entry(&spec, &ctx).unwrap_err();
     assert!(matches!(err, OperationError::Duplicate(_)));
@@ -125,7 +138,9 @@ fn add_rejects_duplicate_across_sections() {
     )
     .unwrap();
 
-    let ctx = make_ctx(&project, &home, &packages);
+    let config_store = chord::store::FileConfigStore::new(project.path());
+    let lockfile_store = chord::store::FileLockfileStore::new(project.path());
+    let ctx = make_ctx(&project, &home, &packages, &config_store, &lockfile_store);
     let spec = AddSpec::parse("mcp:foo@latest").unwrap();
     let err = add::write_toml_entry(&spec, &ctx).unwrap_err();
     assert!(matches!(err, OperationError::Duplicate(_)));

@@ -1,7 +1,5 @@
 //! `chord remove` core. Used by the CLI and the TUI.
 
-use crate::config::Config;
-use crate::lockfile::Lockfile;
 use crate::mcp_config;
 
 use super::{OpContext, OperationError};
@@ -15,14 +13,15 @@ pub struct RemoveOutcome {
 /// Remove a tool from chord.toml + lockfile + .mcp.json + filesystem.
 ///
 /// Returns [`OperationError::NotFound`] if the tool is not in any section.
-/// On `.mcp.json` write failure, chord.toml is restored from an in-memory
-/// backup so the user is not left in a half-state.
+/// On `.mcp.json` write failure, chord.toml is restored from an opaque
+/// snapshot held by the [`ConfigStore`](crate::store::ConfigStore) so the
+/// user is not left in a half-state.
 pub fn remove(name: &str, ctx: &OpContext) -> Result<RemoveOutcome, OperationError> {
-    let config_path = ctx.project_root.join("chord.toml");
-
-    let original_toml =
-        std::fs::read_to_string(&config_path).map_err(OperationError::ConfigRead)?;
-    let mut config: Config = toml::from_str(&original_toml)?;
+    // Capture the pre-mutation bytes before loading the parsed Config.
+    // The file adapter preserves byte-identity through restore; the
+    // in-memory adapter restores logical equivalence.
+    let snapshot = ctx.config_store.snapshot()?;
+    let mut config = ctx.config_store.load()?;
 
     let section: &'static str = if config.mcp.contains_key(name) {
         "mcp"
@@ -52,15 +51,13 @@ pub fn remove(name: &str, ctx: &OpContext) -> Result<RemoveOutcome, OperationErr
         _ => unreachable!(),
     }
 
-    let new_toml = toml::to_string_pretty(&config)
-        .map_err(|e| OperationError::ConfigWrite(std::io::Error::other(e)))?;
-    std::fs::write(&config_path, &new_toml).map_err(OperationError::ConfigWrite)?;
+    ctx.config_store.save(&config)?;
 
     // 2. .mcp.json (rollback-on-failure)
     if section == "mcp" {
         if let Err(e) = mcp_config::remove_server(ctx.project_root, name) {
             // Restore chord.toml before reporting the failure.
-            if let Err(rb_err) = std::fs::write(&config_path, &original_toml) {
+            if let Err(rb_err) = ctx.config_store.restore(&snapshot) {
                 eprintln!("warning: rollback of chord.toml also failed: {rb_err}");
                 eprintln!("         chord.toml may be missing '{name}' — manual restore required");
             }
@@ -77,10 +74,9 @@ pub fn remove(name: &str, ctx: &OpContext) -> Result<RemoveOutcome, OperationErr
     }
 
     // 4. Lockfile (best-effort write).
-    let lock_path = ctx.project_root.join("chord.lock");
-    let mut lockfile = Lockfile::from_file(&lock_path).unwrap_or_default();
+    let mut lockfile = ctx.lockfile_store.load().unwrap_or_default();
     lockfile.remove(section, name);
-    if let Err(e) = lockfile.write_to_file(&lock_path) {
+    if let Err(e) = ctx.lockfile_store.save(&lockfile) {
         eprintln!("warning: failed to write lockfile: {e}");
     }
 

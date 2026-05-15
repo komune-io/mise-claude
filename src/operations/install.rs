@@ -2,7 +2,6 @@
 
 use std::path::PathBuf;
 
-use crate::config::Config;
 use crate::installer::cli_tool::CliToolInstaller;
 use crate::installer::mcp::McpInstaller;
 use crate::installer::plugin::PluginInstaller;
@@ -35,14 +34,8 @@ impl InstallOutcome {
 /// Install every tool declared in chord.toml. Mirrors the previous
 /// `main.rs::run_install` behavior.
 pub fn install_all(ctx: &OpContext, quiet: bool) -> Result<InstallOutcome, OperationError> {
-    let config_path = ctx.project_root.join("chord.toml");
-    let config = Config::from_file(&config_path).map_err(|e| match e {
-        crate::error::ConfigError::Io(io) => OperationError::ConfigRead(io),
-        crate::error::ConfigError::Parse(p) => OperationError::ConfigParse(p),
-    })?;
-
-    let lock_path = ctx.project_root.join("chord.lock");
-    let mut lockfile = Lockfile::from_file(&lock_path).map_err(OperationError::LockfileParse)?;
+    let config = ctx.config_store.load()?;
+    let mut lockfile = ctx.lockfile_store.load()?;
 
     let packages_dir = ctx.packages_dir.to_path_buf();
     let is_installed = |section: &str, name: &str| -> bool {
@@ -72,9 +65,7 @@ pub fn install_all(ctx: &OpContext, quiet: bool) -> Result<InstallOutcome, Opera
     // that mutates `lockfile`. Skipping the write when nothing changed keeps
     // the file mtime stable.
     if reporter.installed > 0 {
-        lockfile
-            .write_to_file(&lock_path)
-            .map_err(OperationError::LockfileWrite)?;
+        ctx.lockfile_store.save(&lockfile)?;
     }
 
     reporter.summary();
@@ -166,11 +157,7 @@ pub fn install_one(
     ctx: &OpContext,
     quiet: bool,
 ) -> Result<InstallOutcome, OperationError> {
-    let config_path = ctx.project_root.join("chord.toml");
-    let config = Config::from_file(&config_path).map_err(|e| match e {
-        crate::error::ConfigError::Io(io) => OperationError::ConfigRead(io),
-        crate::error::ConfigError::Parse(p) => OperationError::ConfigParse(p),
-    })?;
+    let config = ctx.config_store.load()?;
 
     if !config.mcp.contains_key(name)
         && !config.cli.contains_key(name)
@@ -180,8 +167,7 @@ pub fn install_one(
         return Err(OperationError::NotFound(name.to_string()));
     }
 
-    let lock_path = ctx.project_root.join("chord.lock");
-    let mut lockfile = Lockfile::from_file(&lock_path).map_err(OperationError::LockfileParse)?;
+    let mut lockfile = ctx.lockfile_store.load()?;
 
     let packages_dir = ctx.packages_dir.to_path_buf();
     let is_installed = |section: &str, n: &str| -> bool {
@@ -209,9 +195,7 @@ pub fn install_one(
 
     // See `install_all` for the invariant rationale behind this guard.
     if reporter.installed > 0 {
-        lockfile
-            .write_to_file(&lock_path)
-            .map_err(OperationError::LockfileWrite)?;
+        ctx.lockfile_store.save(&lockfile)?;
     }
 
     reporter.summary();

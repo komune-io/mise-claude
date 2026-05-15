@@ -19,6 +19,7 @@ use crate::config::Config;
 use crate::inspect::{reconciler, scanner, AuditReport, Category, Scope};
 use crate::operations::add::AddSpec;
 use crate::operations::OperationError;
+use crate::store::{FileConfigStore, FileLockfileStore};
 use app::App;
 use tree::build_tree;
 
@@ -41,16 +42,42 @@ pub trait OpRunner {
 }
 
 /// Production [`OpRunner`] that calls `crate::operations::*`.
+///
+/// Owns the File* store adapters for the session so each `ctx()` call
+/// borrows the same instances. The trait methods are `&self`; the file
+/// adapters don't internally mutate, so this stays cheap.
 pub struct DefaultOpRunner<'a> {
     pub project_root: &'a std::path::Path,
     pub home_dir: &'a std::path::Path,
     pub packages_dir: &'a std::path::Path,
     pub verbose: bool,
+    config_store: FileConfigStore,
+    lockfile_store: FileLockfileStore,
 }
 
 impl<'a> DefaultOpRunner<'a> {
+    pub fn new(
+        project_root: &'a std::path::Path,
+        home_dir: &'a std::path::Path,
+        packages_dir: &'a std::path::Path,
+        verbose: bool,
+    ) -> Self {
+        let config_store = FileConfigStore::new(project_root);
+        let lockfile_store = FileLockfileStore::new(project_root);
+        Self {
+            project_root,
+            home_dir,
+            packages_dir,
+            verbose,
+            config_store,
+            lockfile_store,
+        }
+    }
+
     fn ctx(&self) -> crate::operations::OpContext<'_> {
         crate::operations::OpContext {
+            config_store: &self.config_store,
+            lockfile_store: &self.lockfile_store,
             project_root: self.project_root,
             home_dir: self.home_dir,
             packages_dir: self.packages_dir,
@@ -134,12 +161,7 @@ fn run_loop(
     packages_dir: &Path,
     _config: &Config,
 ) -> io::Result<()> {
-    let mut runner = DefaultOpRunner {
-        project_root,
-        home_dir,
-        packages_dir,
-        verbose: false,
-    };
+    let mut runner = DefaultOpRunner::new(project_root, home_dir, packages_dir, false);
 
     loop {
         terminal.draw(|frame| ui::render(frame, app))?;

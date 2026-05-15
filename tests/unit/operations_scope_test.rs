@@ -1,11 +1,20 @@
 use chord::inspect::Scope;
 use chord::operations::scope::set_plugin_enabled;
 use chord::operations::OpContext;
+use chord::store::{ConfigStore, InMemoryConfigStore, InMemoryLockfileStore, LockfileStore};
 use std::fs;
 use tempfile::TempDir;
 
-fn make_ctx<'a>(project: &'a TempDir, home: &'a TempDir, packages: &'a TempDir) -> OpContext<'a> {
+fn make_ctx<'a>(
+    project: &'a TempDir,
+    home: &'a TempDir,
+    packages: &'a TempDir,
+    config_store: &'a dyn ConfigStore,
+    lockfile_store: &'a dyn LockfileStore,
+) -> OpContext<'a> {
     OpContext {
+        config_store,
+        lockfile_store,
         project_root: project.path(),
         home_dir: home.path(),
         packages_dir: packages.path(),
@@ -19,7 +28,9 @@ fn set_plugin_enabled_writes_global_settings_when_scope_global() {
     let home = TempDir::new().unwrap();
     let packages = TempDir::new().unwrap();
 
-    let ctx = make_ctx(&project, &home, &packages);
+    let config_store = InMemoryConfigStore::empty();
+    let lockfile_store = InMemoryLockfileStore::empty();
+    let ctx = make_ctx(&project, &home, &packages, &config_store, &lockfile_store);
     set_plugin_enabled("demo@market", Scope::Global, true, &ctx).unwrap();
 
     let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();
@@ -33,7 +44,9 @@ fn set_plugin_enabled_writes_project_settings_when_scope_project() {
     let home = TempDir::new().unwrap();
     let packages = TempDir::new().unwrap();
 
-    let ctx = make_ctx(&project, &home, &packages);
+    let config_store = InMemoryConfigStore::empty();
+    let lockfile_store = InMemoryLockfileStore::empty();
+    let ctx = make_ctx(&project, &home, &packages, &config_store, &lockfile_store);
     set_plugin_enabled("demo@market", Scope::Project, true, &ctx).unwrap();
 
     let project_settings = project.path().join(".claude/settings.json");
@@ -55,7 +68,9 @@ fn set_plugin_enabled_false_removes_key() {
     )
     .unwrap();
 
-    let ctx = make_ctx(&project, &home, &packages);
+    let config_store = InMemoryConfigStore::empty();
+    let lockfile_store = InMemoryLockfileStore::empty();
+    let ctx = make_ctx(&project, &home, &packages, &config_store, &lockfile_store);
     set_plugin_enabled("demo@market", Scope::Global, false, &ctx).unwrap();
 
     let content = fs::read_to_string(home.path().join(".claude/settings.json")).unwrap();

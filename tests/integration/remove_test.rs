@@ -102,6 +102,7 @@ fn remove_mcp_tool() {
 #[test]
 fn remove_restores_chord_toml_when_mcp_json_operation_fails() {
     use chord::operations::{remove, OpContext, OperationError};
+    use chord::store::{FileConfigStore, FileLockfileStore};
 
     let project = TempDir::new().unwrap();
     let packages = TempDir::new().unwrap();
@@ -116,7 +117,11 @@ fn remove_restores_chord_toml_when_mcp_json_operation_fails() {
     // the chord.toml restore.)
     fs::create_dir_all(project.path().join(".mcp.json")).unwrap();
 
+    let config_store = FileConfigStore::new(project.path());
+    let lockfile_store = FileLockfileStore::new(project.path());
     let ctx = OpContext {
+        config_store: &config_store,
+        lockfile_store: &lockfile_store,
         project_root: project.path(),
         home_dir: home.path(),
         packages_dir: packages.path(),

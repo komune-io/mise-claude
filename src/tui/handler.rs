@@ -18,12 +18,7 @@ use crate::tui::OpRunner;
 #[cfg(test)]
 pub fn handle_key(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
     use crate::tui::DefaultOpRunner;
-    let mut runner = DefaultOpRunner {
-        project_root: Path::new("."),
-        home_dir,
-        packages_dir: Path::new("."),
-        verbose: false,
-    };
+    let mut runner = DefaultOpRunner::new(Path::new("."), home_dir, Path::new("."), false);
     handle_key_with_runner(app, key, &mut runner)
 }
 
