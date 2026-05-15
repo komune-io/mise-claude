@@ -2,11 +2,13 @@
 # Usage:
 #   mise plugin link chord ./   # register the bundled mise plugin
 #   mise install                # builtin: install tools from [tools] (rust)
-#   mise run build:install      # task below: build:release + cargo-install chord
+#   mise run build:link         # task below: build:release + link the local chord onto PATH
 #
-# Note: the dev install task is `build:install`, not `install`. `mise install`
-# is reserved by mise itself for the [tools] installer — naming the task
-# `install` would let the built-in shadow it.
+# Note: the dev task is `build:link`, not `install`. `mise install` is reserved
+# by mise itself for the [tools] installer, and the chord glossary reserves
+# "install" for the chord CLI verb that materializes chord.toml. "link" matches
+# cargo's idiom for `cargo install --path .` — registering a local binary
+# under ~/.cargo/bin.
 
 [tools]
 rust = "latest"
@@ -21,8 +23,8 @@ run = "cargo build"
 description = "Build optimized release binary"
 run = "cargo build --release"
 
-[tasks."build:install"]
-description = "Build release + cargo-install chord to ~/.cargo/bin from local source"
+[tasks."build:link"]
+description = "Build release + link the local chord onto PATH (cargo install --path . into ~/.cargo/bin)"
 depends = ["build:release"]
 run = "cargo install --path . --locked --force"
 
@@ -39,7 +41,7 @@ description = "Run inspect TUI"
 run = "cargo run -- inspect --tui"
 
 [tasks."run:install"]
-description = "cargo run -- install (debug build, in-place; see 'build:install' task for release install)"
+description = "cargo run -- install (debug build, in-place; see 'build:link' task to put a release binary on PATH)"
 run = "cargo run -- install"
 
 [tasks.lint]
