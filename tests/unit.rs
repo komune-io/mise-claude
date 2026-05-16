@@ -45,3 +45,6 @@ mod store_test;
 
 #[path = "unit/operations_install_test.rs"]
 mod operations_install_test;
+
+#[path = "unit/process_test.rs"]
+mod process_test;
