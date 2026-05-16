@@ -17,6 +17,7 @@ use ratatui::prelude::*;
 
 use crate::config::Config;
 use crate::inspect::{reconciler, scanner, AuditReport, Category, Scope};
+use crate::installer::DefaultInstallers;
 use crate::operations::add::AddSpec;
 use crate::operations::OperationError;
 use crate::store::{FileConfigStore, FileLockfileStore};
@@ -43,9 +44,10 @@ pub trait OpRunner {
 
 /// Production [`OpRunner`] that calls `crate::operations::*`.
 ///
-/// Owns the File* store adapters for the session so each `ctx()` call
-/// borrows the same instances. The trait methods are `&self`; the file
-/// adapters don't internally mutate, so this stays cheap.
+/// Owns the File* store adapters and the default installer set for the
+/// session so each `ctx()` call borrows the same instances. The trait
+/// methods are `&self`; the file adapters and Installer impls don't
+/// internally mutate, so this stays cheap.
 pub struct DefaultOpRunner<'a> {
     pub project_root: &'a std::path::Path,
     pub home_dir: &'a std::path::Path,
@@ -53,6 +55,7 @@ pub struct DefaultOpRunner<'a> {
     pub verbose: bool,
     config_store: FileConfigStore,
     lockfile_store: FileLockfileStore,
+    installers: DefaultInstallers,
 }
 
 impl<'a> DefaultOpRunner<'a> {
@@ -64,6 +67,7 @@ impl<'a> DefaultOpRunner<'a> {
     ) -> Self {
         let config_store = FileConfigStore::new(project_root);
         let lockfile_store = FileLockfileStore::new(project_root);
+        let installers = DefaultInstallers::new();
         Self {
             project_root,
             home_dir,
@@ -71,13 +75,23 @@ impl<'a> DefaultOpRunner<'a> {
             verbose,
             config_store,
             lockfile_store,
+            installers,
         }
     }
 
-    fn ctx(&self) -> crate::operations::OpContext<'_> {
+    /// Build an `OpContext` for a single operation. The returned context
+    /// borrows from `self` plus the local `installer_set` the caller
+    /// provides. `OpRunner` methods below pass a stack-allocated set
+    /// derived from `self.installers` — Rust can't return a struct that
+    /// borrows from a local, so each method builds the set inline.
+    fn ctx<'b>(
+        &'b self,
+        installer_set: &'b crate::installer::InstallerSet<'b>,
+    ) -> crate::operations::OpContext<'b> {
         crate::operations::OpContext {
             config_store: &self.config_store,
             lockfile_store: &self.lockfile_store,
+            installers: installer_set,
             project_root: self.project_root,
             home_dir: self.home_dir,
             packages_dir: self.packages_dir,
@@ -88,16 +102,20 @@ impl<'a> DefaultOpRunner<'a> {
 
 impl<'a> OpRunner for DefaultOpRunner<'a> {
     fn add(&mut self, spec: &AddSpec) -> Result<(), OperationError> {
-        crate::operations::add::write_toml_entry(spec, &self.ctx())
+        let set = self.installers.as_set();
+        crate::operations::add::write_toml_entry(spec, &self.ctx(&set))
     }
     fn remove(&mut self, name: &str) -> Result<(), OperationError> {
-        crate::operations::remove::remove(name, &self.ctx()).map(|_| ())
+        let set = self.installers.as_set();
+        crate::operations::remove::remove(name, &self.ctx(&set)).map(|_| ())
     }
     fn install_one(&mut self, name: &str) -> Result<(), OperationError> {
-        crate::operations::install::install_one(name, &self.ctx(), false).map(|_| ())
+        let set = self.installers.as_set();
+        crate::operations::install::install_one(name, &self.ctx(&set), false).map(|_| ())
     }
     fn install_all(&mut self) -> Result<(), OperationError> {
-        crate::operations::install::install_all(&self.ctx(), false).map(|_| ())
+        let set = self.installers.as_set();
+        crate::operations::install::install_all(&self.ctx(&set), false).map(|_| ())
     }
     fn set_scope(
         &mut self,
@@ -105,7 +123,8 @@ impl<'a> OpRunner for DefaultOpRunner<'a> {
         scope: Scope,
         enabled: bool,
     ) -> Result<(), OperationError> {
-        crate::operations::scope::set_plugin_enabled(plugin_id, scope, enabled, &self.ctx())
+        let set = self.installers.as_set();
+        crate::operations::scope::set_plugin_enabled(plugin_id, scope, enabled, &self.ctx(&set))
     }
 }
 
