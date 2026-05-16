@@ -23,6 +23,7 @@ pub trait Installer {
     ) -> Result<InstallResult, InstallError>;
 }
 
+#[derive(Debug)]
 pub struct InstallResult {
     pub integrity: Option<String>,
 }
