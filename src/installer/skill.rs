@@ -1,5 +1,3 @@
-use std::process::Command;
-
 use crate::error::InstallError;
 use crate::resolver::PlannedAction;
 
@@ -89,22 +87,9 @@ impl Installer for SkillInstaller {
             "-y",
         ];
 
-        if ctx.verbose {
-            eprintln!("[verbose] npx {}", args.join(" "));
-        }
-
-        let status = Command::new("npx")
-            .args(&args)
-            .current_dir(ctx.project_root)
-            .status()
-            .map_err(|e| InstallError::Command("npx".to_string(), e.to_string()))?;
-
-        if !status.success() {
-            return Err(InstallError::Command(
-                "npx skills add".to_string(),
-                format!("exited with status {}", status),
-            ));
-        }
+        ctx.runner
+            .run("npx", &args, ctx.project_root, &[])
+            .map_err(|e| InstallError::Command("npx skills add".to_string(), e.to_string()))?;
 
         Ok(InstallResult { integrity: None })
     }

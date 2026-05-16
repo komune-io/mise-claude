@@ -9,6 +9,7 @@ pub mod migrate;
 pub mod npm;
 pub mod operations;
 pub mod output;
+pub mod process;
 pub mod registry;
 pub mod resolver;
 pub mod store;
