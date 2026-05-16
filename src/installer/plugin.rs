@@ -1,5 +1,3 @@
-use std::process::Command;
-
 use crate::error::InstallError;
 use crate::resolver::PlannedAction;
 
@@ -60,44 +58,20 @@ impl Installer for PluginInstaller {
 
         // Step 1: claude plugin marketplace add <owner_repo>
         let marketplace_args = ["plugin", "marketplace", "add", &parts.owner_repo];
-
-        if ctx.verbose {
-            eprintln!("[verbose] claude {}", marketplace_args.join(" "));
-        }
-
-        let status = Command::new("claude")
-            .args(&marketplace_args)
-            .current_dir(ctx.project_root)
-            .status()
-            .map_err(|e| InstallError::Command("claude".to_string(), e.to_string()))?;
-
-        if !status.success() {
-            return Err(InstallError::Command(
-                "claude plugin marketplace add".to_string(),
-                format!("exited with status {}", status),
-            ));
-        }
+        ctx.runner
+            .run("claude", &marketplace_args, ctx.project_root, &[])
+            .map_err(|e| {
+                InstallError::Command("claude plugin marketplace add".to_string(), e.to_string())
+            })?;
 
         // Step 2: claude plugin install <plugin>@<marketplace> --scope project
         let plugin_id = format!("{}@{}", parts.plugin, parts.marketplace);
         let install_args = ["plugin", "install", &plugin_id, "--scope", "project"];
-
-        if ctx.verbose {
-            eprintln!("[verbose] claude {}", install_args.join(" "));
-        }
-
-        let status = Command::new("claude")
-            .args(&install_args)
-            .current_dir(ctx.project_root)
-            .status()
-            .map_err(|e| InstallError::Command("claude".to_string(), e.to_string()))?;
-
-        if !status.success() {
-            return Err(InstallError::Command(
-                "claude plugin install".to_string(),
-                format!("exited with status {}", status),
-            ));
-        }
+        ctx.runner
+            .run("claude", &install_args, ctx.project_root, &[])
+            .map_err(|e| {
+                InstallError::Command("claude plugin install".to_string(), e.to_string())
+            })?;
 
         Ok(InstallResult { integrity: None })
     }

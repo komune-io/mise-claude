@@ -4,15 +4,15 @@ pub mod plugin;
 pub mod skill;
 
 use crate::error::InstallError;
+use crate::process::CommandRunner;
 use crate::registry::Registry;
 use crate::resolver::PlannedAction;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 pub struct InstallContext<'a> {
     pub project_root: &'a Path,
     pub packages_dir: &'a Path,
-    pub verbose: bool,
+    pub runner: &'a dyn CommandRunner,
 }
 
 pub trait Installer {
@@ -37,35 +37,24 @@ pub fn run_npm_install(
     let install_dir = ctx.packages_dir.join(&action.name);
     let pkg_version = format!("{}@{}", action.package, action.version);
 
-    let mut args = vec![
-        "install".to_string(),
-        pkg_version,
-        "--prefix".to_string(),
-        install_dir.to_string_lossy().into_owned(),
-        "--no-save".to_string(),
+    let install_dir_str = install_dir.to_string_lossy().into_owned();
+    let mut args: Vec<&str> = vec![
+        "install",
+        &pkg_version,
+        "--prefix",
+        &install_dir_str,
+        "--no-save",
     ];
 
-    if let Some(ov) = registry.get_override(&action.package) {
-        for dep in &ov.extra_deps {
-            args.push(dep.clone());
-        }
-    }
+    let override_deps: Vec<&str> = registry
+        .get_override(&action.package)
+        .map(|ov| ov.extra_deps.iter().map(String::as_str).collect())
+        .unwrap_or_default();
+    args.extend(override_deps);
 
-    if ctx.verbose {
-        eprintln!("[verbose] npm {}", args.join(" "));
-    }
-
-    let status = Command::new("npm")
-        .args(&args)
-        .status()
-        .map_err(|e| InstallError::Command("npm".to_string(), e.to_string()))?;
-
-    if !status.success() {
-        return Err(InstallError::Command(
-            "npm install".to_string(),
-            format!("exited with status {}", status),
-        ));
-    }
+    ctx.runner
+        .run("npm", &args, ctx.project_root, &[])
+        .map_err(|e| InstallError::Command("npm install".to_string(), e.to_string()))?;
 
     Ok(install_dir)
 }

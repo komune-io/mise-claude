@@ -9,6 +9,7 @@ use crate::installer::skill::SkillInstaller;
 use crate::installer::{InstallContext, Installer};
 use crate::lockfile::{LockedTool, Lockfile};
 use crate::output::Reporter;
+use crate::process::SystemCommandRunner;
 use crate::resolver::{self, Action, PlannedAction, ToolType};
 
 use super::{OpContext, OperationError};
@@ -50,10 +51,11 @@ pub fn install_all(ctx: &OpContext, quiet: bool) -> Result<InstallOutcome, Opera
         Reporter::new()
     };
 
+    let runner = SystemCommandRunner::new(ctx.verbose);
     let install_ctx = InstallContext {
         project_root: ctx.project_root,
         packages_dir: &packages_dir,
-        verbose: ctx.verbose,
+        runner: &runner,
     };
 
     for action in &plan.actions {
@@ -180,10 +182,11 @@ pub fn install_one(
     } else {
         Reporter::new()
     };
+    let runner = SystemCommandRunner::new(ctx.verbose);
     let install_ctx = InstallContext {
         project_root: ctx.project_root,
         packages_dir: &packages_dir,
-        verbose: ctx.verbose,
+        runner: &runner,
     };
 
     // Execute only the first plan action matching `name`. A chord.toml can
