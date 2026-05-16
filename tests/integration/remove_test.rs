@@ -119,9 +119,12 @@ fn remove_restores_chord_toml_when_mcp_json_operation_fails() {
 
     let config_store = FileConfigStore::new(project.path());
     let lockfile_store = FileLockfileStore::new(project.path());
+    let installers = chord::installer::DefaultInstallers::new();
+    let installer_set = installers.as_set();
     let ctx = OpContext {
         config_store: &config_store,
         lockfile_store: &lockfile_store,
+        installers: &installer_set,
         project_root: project.path(),
         home_dir: home.path(),
         packages_dir: packages.path(),

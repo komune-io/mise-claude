@@ -9,6 +9,7 @@ use std::path::Path;
 use thiserror::Error;
 
 use crate::error::InstallError;
+use crate::installer::InstallerSet;
 use crate::store::{ConfigStore, ConfigStoreError, LockfileStore, LockfileStoreError};
 
 pub mod add;
@@ -17,9 +18,9 @@ pub mod remove;
 pub mod scope;
 
 /// Shared context for all operations. Carries trait-object references to
-/// the persistent-state stores plus the path bag that the remaining
-/// non-store operations (settings.json, .mcp.json, packages dir) still
-/// need.
+/// the persistent-state stores, the installer set used by Install (all)
+/// and Install (one), plus the path bag the remaining non-store
+/// operations (settings.json, .mcp.json, packages dir) still need.
 ///
 /// Construct one per top-level entry point (CLI command arm, TUI runner)
 /// from concrete adapters and pass `&OpContext` into each operation. The
@@ -29,6 +30,7 @@ pub mod scope;
 pub struct OpContext<'a> {
     pub config_store: &'a dyn ConfigStore,
     pub lockfile_store: &'a dyn LockfileStore,
+    pub installers: &'a InstallerSet<'a>,
     pub project_root: &'a Path,
     pub home_dir: &'a Path,
     pub packages_dir: &'a Path,

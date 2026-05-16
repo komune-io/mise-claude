@@ -2,11 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::installer::cli_tool::CliToolInstaller;
-use crate::installer::mcp::McpInstaller;
-use crate::installer::plugin::PluginInstaller;
-use crate::installer::skill::SkillInstaller;
-use crate::installer::{InstallContext, Installer};
+use crate::installer::{InstallContext, InstallerSet};
 use crate::lockfile::{LockedTool, Lockfile};
 use crate::output::Reporter;
 use crate::process::SystemCommandRunner;
@@ -59,7 +55,13 @@ pub fn install_all(ctx: &OpContext, quiet: bool) -> Result<InstallOutcome, Opera
     };
 
     for action in &plan.actions {
-        execute_action(action, &install_ctx, &mut lockfile, &mut reporter);
+        execute_action(
+            action,
+            &install_ctx,
+            ctx.installers,
+            &mut lockfile,
+            &mut reporter,
+        );
     }
 
     // Only persist the lockfile when at least one action succeeded:
@@ -83,14 +85,10 @@ pub fn install_all(ctx: &OpContext, quiet: bool) -> Result<InstallOutcome, Opera
 fn execute_action(
     action: &PlannedAction,
     ctx: &InstallContext,
+    installers: &InstallerSet,
     lockfile: &mut Lockfile,
     reporter: &mut Reporter,
 ) {
-    let mcp_installer = McpInstaller::default();
-    let cli_installer = CliToolInstaller::default();
-    let skill_installer = SkillInstaller;
-    let plugin_installer = PluginInstaller;
-
     match &action.action {
         Action::Skip => {
             reporter.skip(&action.name, &action.version);
@@ -102,12 +100,7 @@ fn execute_action(
                 _ => unreachable!(),
             };
 
-            let result = match action.tool_type {
-                ToolType::Mcp => mcp_installer.install(action, ctx),
-                ToolType::Cli => cli_installer.install(action, ctx),
-                ToolType::Skill => skill_installer.install(action, ctx),
-                ToolType::Plugin => plugin_installer.install(action, ctx),
-            };
+            let result = installers.for_tool(&action.tool_type).install(action, ctx);
 
             match result {
                 Ok(install_result) => {
@@ -193,7 +186,13 @@ pub fn install_one(
     // legally declare the same name in two sections, but `install_one` is a
     // per-name surgical operation — we install the first match and stop.
     if let Some(action) = plan.actions.iter().find(|a| a.name == name) {
-        execute_action(action, &install_ctx, &mut lockfile, &mut reporter);
+        execute_action(
+            action,
+            &install_ctx,
+            ctx.installers,
+            &mut lockfile,
+            &mut reporter,
+        );
     }
 
     // See `install_all` for the invariant rationale behind this guard.

@@ -1,3 +1,4 @@
+use chord::installer::DefaultInstallers;
 use chord::operations::{install, OpContext};
 use chord::store::{FileConfigStore, FileLockfileStore};
 use std::fs;
@@ -13,9 +14,12 @@ fn install_all_with_empty_config_succeeds() {
 
     let config_store = FileConfigStore::new(project.path());
     let lockfile_store = FileLockfileStore::new(project.path());
+    let installers = DefaultInstallers::new();
+    let installer_set = installers.as_set();
     let ctx = OpContext {
         config_store: &config_store,
         lockfile_store: &lockfile_store,
+        installers: &installer_set,
         project_root: project.path(),
         home_dir: home.path(),
         packages_dir: packages.path(),

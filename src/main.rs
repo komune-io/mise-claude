@@ -1,5 +1,6 @@
 use chord::cli::{Cli, Command};
 use chord::config::Config;
+use chord::installer::DefaultInstallers;
 use chord::lockfile::Lockfile;
 use chord::migrate;
 use chord::store::{FileConfigStore, FileLockfileStore};
@@ -29,9 +30,12 @@ fn main() {
             let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
             let packages_dir = chord::operations::install::default_packages_dir();
             let (config_store, lockfile_store) = file_stores(&project_root);
+            let installers = DefaultInstallers::new();
+            let installer_set = installers.as_set();
             let ctx = chord::operations::OpContext {
                 config_store: &config_store,
                 lockfile_store: &lockfile_store,
+                installers: &installer_set,
                 project_root: &project_root,
                 home_dir: &home_dir,
                 packages_dir: &packages_dir,
@@ -90,9 +94,12 @@ fn main() {
             let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
             let packages_dir = chord::operations::install::default_packages_dir();
             let (config_store, lockfile_store) = file_stores(&project_root);
+            let installers = DefaultInstallers::new();
+            let installer_set = installers.as_set();
             let ctx = chord::operations::OpContext {
                 config_store: &config_store,
                 lockfile_store: &lockfile_store,
+                installers: &installer_set,
                 project_root: &project_root,
                 home_dir: &home_dir,
                 packages_dir: &packages_dir,
@@ -120,9 +127,12 @@ fn main() {
             let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
             let packages_dir = chord::operations::install::default_packages_dir();
             let (config_store, lockfile_store) = file_stores(&project_root);
+            let installers = DefaultInstallers::new();
+            let installer_set = installers.as_set();
             let ctx = chord::operations::OpContext {
                 config_store: &config_store,
                 lockfile_store: &lockfile_store,
+                installers: &installer_set,
                 project_root: &project_root,
                 home_dir: &home_dir,
                 packages_dir: &packages_dir,
