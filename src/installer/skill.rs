@@ -33,6 +33,33 @@ impl SkillInstaller {
     }
 }
 
+impl Installer for SkillInstaller {
+    fn install(
+        &self,
+        action: &PlannedAction,
+        ctx: &InstallContext,
+    ) -> Result<InstallResult, InstallError> {
+        let (owner_repo, skill) = self.parse_skill_path(&action.name)?;
+
+        let args = [
+            "skills",
+            "add",
+            owner_repo,
+            "--skill",
+            skill,
+            "-a",
+            "claude-code",
+            "-y",
+        ];
+
+        ctx.runner
+            .run("npx", &args, ctx.project_root, &[])
+            .map_err(|e| InstallError::Command("npx skills add".to_string(), e.to_string()))?;
+
+        Ok(InstallResult { integrity: None })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -65,32 +92,5 @@ mod tests {
     fn rejects_four_segments() {
         let installer = SkillInstaller;
         assert!(installer.parse_skill_path("a/b/c/d").is_err());
-    }
-}
-
-impl Installer for SkillInstaller {
-    fn install(
-        &self,
-        action: &PlannedAction,
-        ctx: &InstallContext,
-    ) -> Result<InstallResult, InstallError> {
-        let (owner_repo, skill) = self.parse_skill_path(&action.name)?;
-
-        let args = [
-            "skills",
-            "add",
-            owner_repo,
-            "--skill",
-            skill,
-            "-a",
-            "claude-code",
-            "-y",
-        ];
-
-        ctx.runner
-            .run("npx", &args, ctx.project_root, &[])
-            .map_err(|e| InstallError::Command("npx skills add".to_string(), e.to_string()))?;
-
-        Ok(InstallResult { integrity: None })
     }
 }

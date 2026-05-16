@@ -5,7 +5,6 @@ use chord::tui::app::{App, Mode};
 use chord::tui::tree::{NodeKind, TreeNode};
 use chord::tui::{handler, OpRunner};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use serde_json;
 use std::fs;
 use tempfile::TempDir;
 

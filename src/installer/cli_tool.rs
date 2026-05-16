@@ -4,16 +4,9 @@ use crate::resolver::PlannedAction;
 
 use super::{run_npm_install, InstallContext, InstallResult, Installer};
 
+#[derive(Default)]
 pub struct CliToolInstaller {
     registry: Registry,
-}
-
-impl Default for CliToolInstaller {
-    fn default() -> Self {
-        Self {
-            registry: Registry::default(),
-        }
-    }
 }
 
 impl Installer for CliToolInstaller {

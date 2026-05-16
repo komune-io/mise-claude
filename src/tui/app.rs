@@ -390,11 +390,15 @@ fn unhide_all(node: &mut TreeNode) {
 fn filter_node(node: &mut TreeNode, query: &str) -> bool {
     let self_matches = node.name.to_lowercase().contains(query);
 
-    let any_child_matches = node
-        .children
-        .iter_mut()
-        .map(|child| filter_node(child, query))
-        .fold(false, |acc, m| acc || m);
+    // Visit every child unconditionally (no short-circuit) — `filter_node`
+    // mutates each subtree's `hidden`/`expanded` flags, so we can't bail
+    // out after the first match like `.any` would.
+    let mut any_child_matches = false;
+    for child in node.children.iter_mut() {
+        if filter_node(child, query) {
+            any_child_matches = true;
+        }
+    }
 
     if self_matches || any_child_matches {
         node.hidden = false;

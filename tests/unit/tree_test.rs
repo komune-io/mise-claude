@@ -297,7 +297,7 @@ fn standalone_skills_collapse_by_source_repo() {
         names
     );
     assert!(
-        names.iter().any(|n| *n == "hand-written"),
+        names.contains(&"hand-written"),
         "expected ungrouped orphan as direct child, got: {:?}",
         names
     );

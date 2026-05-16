@@ -7,16 +7,9 @@ use crate::resolver::PlannedAction;
 
 use super::{run_npm_install, InstallContext, InstallResult, Installer};
 
+#[derive(Default)]
 pub struct McpInstaller {
     registry: Registry,
-}
-
-impl Default for McpInstaller {
-    fn default() -> Self {
-        Self {
-            registry: Registry::default(),
-        }
-    }
 }
 
 impl Installer for McpInstaller {

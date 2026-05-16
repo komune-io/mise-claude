@@ -507,7 +507,7 @@ fn extract_hooks(json: &Value, scope: Scope, source: &str, items: &mut Vec<Disco
 
                 let cmd_short = command
                     .split('/')
-                    .last()
+                    .next_back()
                     .unwrap_or(command)
                     .trim_matches('\'');
 
@@ -534,7 +534,7 @@ fn extract_hooks(json: &Value, scope: Scope, source: &str, items: &mut Vec<Disco
 fn derive_hook_plugin(command: &str) -> String {
     let basename = command
         .split('/')
-        .last()
+        .next_back()
         .unwrap_or(command)
         .trim_matches('\'')
         .trim();

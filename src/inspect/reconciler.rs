@@ -221,19 +221,3 @@ pub fn reconcile(
 
     entries
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn make_item(name: &str, scope: Scope) -> DiscoveredItem {
-        DiscoveredItem {
-            name: name.to_string(),
-            version: Some("1.0.0".to_string()),
-            scope,
-            source_path: "/some/path".to_string(),
-            from_plugin: None,
-            source_repo: None,
-        }
-    }
-}

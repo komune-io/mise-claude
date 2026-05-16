@@ -65,7 +65,7 @@ fn main() {
 
             let packages_dir = chord::operations::install::default_packages_dir();
 
-            println!("  {:<25} {:<12} {}", "TOOL", "VERSION", "STATUS");
+            println!("  {:<25} {:<12} STATUS", "TOOL", "VERSION");
             println!("  {}", "─".repeat(50));
 
             for (section, tools) in [
@@ -74,7 +74,7 @@ fn main() {
                 ("skills", &config.skills),
                 ("plugins", &config.plugins),
             ] {
-                for (name, _requested) in tools {
+                for name in tools.keys() {
                     let locked_ver = lockfile
                         .get(section, name)
                         .map(|l| l.version.as_str())
