@@ -38,6 +38,7 @@ The mise plugin implements three of mise's Lua backend hooks. All hooks live in 
 
 - **Rust:** `cargo fmt` + `cargo clippy -- -D warnings`. Run via `mise run fmt` / `mise run lint`.
 - **Lua:** LDoc-style annotations (`--- @param`, `--- @return`); format with [StyLua](https://github.com/JohnnyMorganz/StyLua) (config in `stylua.toml`); all shell interpolation goes through `shell_quote()`.
+- **Module seam:** `src/core/` is pure domain logic and must not import `ratatui`, `crossterm`, or `clap`; `src/shell/` holds the CLI + TUI. `tests/architecture.rs` enforces this — a UI import from `core` fails the test suite.
 
 ## Project Layout
 
