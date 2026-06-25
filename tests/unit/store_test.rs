@@ -1,8 +1,8 @@
-use chord::config::Config;
-use chord::lockfile::{LockedTool, Lockfile};
-use chord::store::file::{FileConfigStore, FileLockfileStore};
-use chord::store::memory::{InMemoryConfigStore, InMemoryLockfileStore};
-use chord::store::{ConfigStore, LockfileStore};
+use chord::core::config::Config;
+use chord::core::lockfile::{LockedTool, Lockfile};
+use chord::core::store::file::{FileConfigStore, FileLockfileStore};
+use chord::core::store::memory::{InMemoryConfigStore, InMemoryLockfileStore};
+use chord::core::store::{ConfigStore, LockfileStore};
 use std::fs;
 use tempfile::TempDir;
 

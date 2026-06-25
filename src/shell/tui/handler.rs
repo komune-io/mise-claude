@@ -3,9 +3,9 @@ use std::path::Path;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::operations::add::AddSpec;
-use crate::tui::app::{App, Mode};
-use crate::tui::OpRunner;
+use crate::core::operations::add::AddSpec;
+use crate::shell::tui::app::{App, Mode};
+use crate::shell::tui::OpRunner;
 
 /// Test-only entry point that constructs a [`DefaultOpRunner`] inline.
 ///
@@ -17,7 +17,7 @@ use crate::tui::OpRunner;
 /// values below are inert in practice.
 #[cfg(test)]
 pub fn handle_key(app: &mut App, key: KeyEvent, home_dir: &Path) -> io::Result<()> {
-    use crate::tui::DefaultOpRunner;
+    use crate::shell::tui::DefaultOpRunner;
     let mut runner = DefaultOpRunner::new(Path::new("."), home_dir, Path::new("."), false);
     handle_key_with_runner(app, key, &mut runner)
 }
@@ -38,7 +38,7 @@ pub fn handle_key_with_runner<R: OpRunner>(
 }
 
 fn handle_normal<R: OpRunner>(app: &mut App, key: KeyEvent, _runner: &mut R) -> io::Result<()> {
-    use crate::tui::app::Focus;
+    use crate::shell::tui::app::Focus;
 
     // Focus-routed keys.
     match (app.focus, key.code) {
@@ -102,9 +102,9 @@ fn handle_normal<R: OpRunner>(app: &mut App, key: KeyEvent, _runner: &mut R) -> 
         }
 
         KeyCode::Char('e') => {
-            use crate::tui::app::ScopeTarget;
+            use crate::shell::tui::app::ScopeTarget;
             if let Some(node) = app.selected_node() {
-                if node.kind != crate::tui::tree::NodeKind::Plugin {
+                if node.kind != crate::shell::tui::tree::NodeKind::Plugin {
                     app.set_status("Not a plugin".to_string());
                     return Ok(());
                 }
@@ -144,8 +144,9 @@ fn handle_normal<R: OpRunner>(app: &mut App, key: KeyEvent, _runner: &mut R) -> 
         KeyCode::Char('r') => {
             if let Some(node) = app.selected_node() {
                 if node.drift {
-                    app.pending_inline_op =
-                        Some(crate::tui::app::InlineOp::InstallOne(node.name.clone()));
+                    app.pending_inline_op = Some(crate::shell::tui::app::InlineOp::InstallOne(
+                        node.name.clone(),
+                    ));
                 } else {
                     app.set_status("Not a drift entry".to_string());
                 }
@@ -153,7 +154,7 @@ fn handle_normal<R: OpRunner>(app: &mut App, key: KeyEvent, _runner: &mut R) -> 
         }
 
         KeyCode::Char('R') => {
-            app.pending_inline_op = Some(crate::tui::app::InlineOp::InstallAll);
+            app.pending_inline_op = Some(crate::shell::tui::app::InlineOp::InstallAll);
         }
 
         KeyCode::Char('i') => {
@@ -171,7 +172,8 @@ fn handle_normal<R: OpRunner>(app: &mut App, key: KeyEvent, _runner: &mut R) -> 
                         app.set_status(format!("Cannot read: '{}' is not a file path", p));
                     }
                     Some(ref p) => {
-                        let expanded = crate::tui::app::expand_tilde(p, app.home_dir.as_deref());
+                        let expanded =
+                            crate::shell::tui::app::expand_tilde(p, app.home_dir.as_deref());
                         match std::fs::read_to_string(&expanded) {
                             Ok(content) => {
                                 app.markdown_content = Some(content);
@@ -221,7 +223,7 @@ fn handle_scope_picker<R: OpRunner>(
     key: KeyEvent,
     runner: &mut R,
 ) -> io::Result<()> {
-    use crate::inspect::Scope;
+    use crate::core::inspect::Scope;
 
     match key.code {
         KeyCode::Char('p') => {
@@ -267,8 +269,11 @@ fn handle_scope_picker<R: OpRunner>(
     Ok(())
 }
 
-fn read_scope_state(plugin_id: &str, home_dir: Option<&Path>) -> crate::tui::app::ScopeState {
-    use crate::tui::app::ScopeState;
+fn read_scope_state(
+    plugin_id: &str,
+    home_dir: Option<&Path>,
+) -> crate::shell::tui::app::ScopeState {
+    use crate::shell::tui::app::ScopeState;
 
     fn is_enabled_in(settings_path: &Path, plugin_id: &str) -> bool {
         let content = match std::fs::read_to_string(settings_path) {
@@ -341,8 +346,9 @@ fn handle_add_prompt<R: OpRunner>(app: &mut App, key: KeyEvent, runner: &mut R) 
             Ok(spec) => match runner.add(&spec) {
                 Ok(()) => {
                     app.set_status(format!("Added {}", spec.name));
-                    app.pending_inline_op =
-                        Some(crate::tui::app::InlineOp::InstallOne(spec.name.clone()));
+                    app.pending_inline_op = Some(crate::shell::tui::app::InlineOp::InstallOne(
+                        spec.name.clone(),
+                    ));
                     app.dirty = true;
                     app.mode = Mode::Normal;
                     app.add_input.clear();
@@ -389,8 +395,8 @@ fn handle_markdown(app: &mut App, key: KeyEvent) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tui::app::Focus;
-    use crate::tui::tree::{NodeKind, TreeNode};
+    use crate::shell::tui::app::Focus;
+    use crate::shell::tui::tree::{NodeKind, TreeNode};
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use std::io::Write;
     use std::path::PathBuf;
@@ -495,16 +501,16 @@ mod tests {
     fn scope_picker_enter_with_no_changes_marks_dirty_and_returns_to_normal() {
         // Smoke test: opening and immediately confirming scope picker sets dirty
         // and returns to Normal without calling the runner.
-        use crate::inspect::Scope;
-        use crate::operations::OperationError;
-        use crate::tui::app::{ScopeState, ScopeTarget};
-        use crate::tui::OpRunner;
+        use crate::core::inspect::Scope;
+        use crate::core::operations::OperationError;
+        use crate::shell::tui::app::{ScopeState, ScopeTarget};
+        use crate::shell::tui::OpRunner;
 
         struct NoopRunner;
         impl OpRunner for NoopRunner {
             fn add(
                 &mut self,
-                _spec: &crate::operations::add::AddSpec,
+                _spec: &crate::core::operations::add::AddSpec,
             ) -> Result<(), OperationError> {
                 Ok(())
             }
@@ -561,11 +567,11 @@ mod tests {
 
         // Open fullscreen overlay via 'v'.
         handle_key(&mut app, key(KeyCode::Char('v')), &home).unwrap();
-        assert_eq!(app.mode, crate::tui::app::Mode::ViewMarkdown);
+        assert_eq!(app.mode, crate::shell::tui::app::Mode::ViewMarkdown);
 
         // Close overlay via Esc.
         handle_key(&mut app, key(KeyCode::Esc), &home).unwrap();
-        assert_eq!(app.mode, crate::tui::app::Mode::Normal);
+        assert_eq!(app.mode, crate::shell::tui::app::Mode::Normal);
 
         // Inline preview must still be loaded (not wiped to None).
         assert!(app

@@ -1,6 +1,6 @@
 // Renderer: formats the AuditReport for terminal or JSON output.
 
-use crate::inspect::{AuditReport, Management, Scope};
+use crate::core::inspect::{AuditReport, Management, Scope};
 
 const DIM: &str = "\x1b[90m";
 const GREEN: &str = "\x1b[32m";

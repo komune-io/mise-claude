@@ -4,9 +4,9 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::config::Config;
-use crate::error::ConfigError;
-use crate::lockfile::Lockfile;
+use crate::core::config::Config;
+use crate::core::error::ConfigError;
+use crate::core::lockfile::Lockfile;
 
 use super::{ConfigStore, ConfigStoreError, LockfileStore, LockfileStoreError, Snapshot};
 

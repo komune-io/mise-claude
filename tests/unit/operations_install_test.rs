@@ -4,10 +4,10 @@
 //! adapter; this file covers the same logic via `InMemoryConfigStore` /
 //! `InMemoryLockfileStore` for speed.
 
-use chord::config::Config;
-use chord::installer::InstallerSet;
-use chord::operations::{install, OpContext, OperationError};
-use chord::store::{InMemoryConfigStore, InMemoryLockfileStore};
+use chord::core::config::Config;
+use chord::core::installer::InstallerSet;
+use chord::core::operations::{install, OpContext, OperationError};
+use chord::core::store::{InMemoryConfigStore, InMemoryLockfileStore};
 use std::path::Path;
 use tempfile::TempDir;
 
@@ -32,7 +32,7 @@ fn ctx_with<'a>(
 fn install_all_with_empty_config_succeeds() {
     let config_store = InMemoryConfigStore::empty();
     let lockfile_store = InMemoryLockfileStore::empty();
-    let installers = chord::installer::DefaultInstallers::new();
+    let installers = chord::core::installer::DefaultInstallers::new();
     let installer_set = installers.as_set();
     // packages_dir is consulted by the `is_installed` closure but never
     // reached with an empty plan, so a placeholder is fine.
@@ -58,7 +58,7 @@ fn install_one_missing_tool_returns_not_found() {
         .insert("context7".to_string(), "latest".to_string());
     let config_store = InMemoryConfigStore::new(seeded);
     let lockfile_store = InMemoryLockfileStore::empty();
-    let installers = chord::installer::DefaultInstallers::new();
+    let installers = chord::core::installer::DefaultInstallers::new();
     let installer_set = installers.as_set();
     let packages = TempDir::new().unwrap();
     let ctx = ctx_with(

@@ -1,6 +1,6 @@
-use chord::config::Config;
-use chord::lockfile::{LockedTool, Lockfile};
-use chord::resolver::{resolve, Action};
+use chord::core::config::Config;
+use chord::core::lockfile::{LockedTool, Lockfile};
+use chord::core::resolver::{resolve, Action};
 
 #[test]
 fn fresh_install_no_lockfile() {

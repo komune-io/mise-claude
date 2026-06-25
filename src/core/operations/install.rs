@@ -2,11 +2,11 @@
 
 use std::path::PathBuf;
 
-use crate::installer::{InstallContext, InstallerSet};
-use crate::lockfile::{LockedTool, Lockfile};
-use crate::output::Reporter;
-use crate::process::SystemCommandRunner;
-use crate::resolver::{self, Action, PlannedAction, ToolType};
+use crate::core::installer::{InstallContext, InstallerSet};
+use crate::core::lockfile::{LockedTool, Lockfile};
+use crate::core::output::Reporter;
+use crate::core::process::SystemCommandRunner;
+use crate::core::resolver::{self, Action, PlannedAction, ToolType};
 
 use super::{OpContext, OperationError};
 

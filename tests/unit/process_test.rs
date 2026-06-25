@@ -1,4 +1,6 @@
-use chord::process::{CommandError, CommandRunner, RecordingCommandRunner, SystemCommandRunner};
+use chord::core::process::{
+    CommandError, CommandRunner, RecordingCommandRunner, SystemCommandRunner,
+};
 use std::path::Path;
 
 // ── SystemCommandRunner ────────────────────────────────────────────────────

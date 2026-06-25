@@ -101,8 +101,8 @@ fn remove_mcp_tool() {
 
 #[test]
 fn remove_restores_chord_toml_when_mcp_json_operation_fails() {
-    use chord::operations::{remove, OpContext, OperationError};
-    use chord::store::{FileConfigStore, FileLockfileStore};
+    use chord::core::operations::{remove, OpContext, OperationError};
+    use chord::core::store::{FileConfigStore, FileLockfileStore};
 
     let project = TempDir::new().unwrap();
     let packages = TempDir::new().unwrap();
@@ -119,7 +119,7 @@ fn remove_restores_chord_toml_when_mcp_json_operation_fails() {
 
     let config_store = FileConfigStore::new(project.path());
     let lockfile_store = FileLockfileStore::new(project.path());
-    let installers = chord::installer::DefaultInstallers::new();
+    let installers = chord::core::installer::DefaultInstallers::new();
     let installer_set = installers.as_set();
     let ctx = OpContext {
         config_store: &config_store,

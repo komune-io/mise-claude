@@ -1,6 +1,6 @@
-use chord::config::Config;
-use chord::inspect::reconciler::reconcile;
-use chord::inspect::{Category, DiscoveredItem, Management, Scope};
+use chord::core::config::Config;
+use chord::core::inspect::reconciler::reconcile;
+use chord::core::inspect::{Category, DiscoveredItem, Management, Scope};
 use std::collections::HashSet;
 
 fn make_item(name: &str, scope: Scope) -> DiscoveredItem {

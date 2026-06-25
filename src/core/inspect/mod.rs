@@ -98,7 +98,7 @@ pub struct AuditReport {
     pub entries: Vec<(Category, Vec<AuditEntry>)>,
 }
 
-use crate::config::Config;
+use crate::core::config::Config;
 use std::path::Path;
 
 pub fn run_inspect(

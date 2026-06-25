@@ -1,4 +1,4 @@
-use chord::installer::mcp::pick_first_binary;
+use chord::core::installer::mcp::pick_first_binary;
 
 #[test]
 fn pick_first_binary_returns_lexically_first_name() {

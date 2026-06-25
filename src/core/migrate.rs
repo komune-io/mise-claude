@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::config::Config;
+use crate::core::config::Config;
 
 /// Parse `.mise.toml` `claude:*` tool entries and produce a `Config`
 /// suitable for writing as `chord.toml`.

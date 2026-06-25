@@ -1,8 +1,8 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap};
 
-use crate::tui::app::{App, Mode};
-use crate::tui::tree::NodeKind;
+use crate::shell::tui::app::{App, Mode};
+use crate::shell::tui::tree::NodeKind;
 
 pub fn render(frame: &mut Frame, app: &App) {
     match app.mode {
@@ -58,7 +58,7 @@ fn render_tree(frame: &mut Frame, app: &App, area: Rect) {
         " chord ".to_string()
     };
 
-    let border_color = if app.focus == crate::tui::app::Focus::Tree {
+    let border_color = if app.focus == crate::shell::tui::app::Focus::Tree {
         Color::Cyan
     } else {
         Color::DarkGray
@@ -209,7 +209,7 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
     let meta_para = Paragraph::new(metadata).wrap(Wrap { trim: false });
     frame.render_widget(meta_para, chunks[0]);
 
-    let preview_border_color = if app.focus == crate::tui::app::Focus::Preview {
+    let preview_border_color = if app.focus == crate::shell::tui::app::Focus::Preview {
         Color::Cyan
     } else {
         Color::DarkGray
@@ -224,14 +224,14 @@ fn render_detail(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(preview_block, chunks[1]);
 
     let content = app.markdown_content.as_deref().unwrap_or("");
-    let rendered = crate::tui::markdown::render(content);
+    let rendered = crate::shell::tui::markdown::render(content);
     let preview_para = Paragraph::new(rendered)
         .wrap(Wrap { trim: false })
         .scroll((app.markdown_scroll, 0));
     frame.render_widget(preview_para, preview_inner);
 }
 
-fn build_metadata_lines(node: &crate::tui::tree::TreeNode) -> Vec<Line<'static>> {
+fn build_metadata_lines(node: &crate::shell::tui::tree::TreeNode) -> Vec<Line<'static>> {
     let mut lines: Vec<Line> = Vec::new();
 
     lines.push(Line::from(vec![
@@ -245,13 +245,13 @@ fn build_metadata_lines(node: &crate::tui::tree::TreeNode) -> Vec<Line<'static>>
     ]));
 
     let kind_str = match node.kind {
-        crate::tui::tree::NodeKind::SectionHeader => "Section",
-        crate::tui::tree::NodeKind::Plugin => "Plugin",
-        crate::tui::tree::NodeKind::Skill => "Skill",
-        crate::tui::tree::NodeKind::Command => "Command",
-        crate::tui::tree::NodeKind::Agent => "Agent",
-        crate::tui::tree::NodeKind::McpServer => "MCP Server",
-        crate::tui::tree::NodeKind::Hook => "Hook",
+        crate::shell::tui::tree::NodeKind::SectionHeader => "Section",
+        crate::shell::tui::tree::NodeKind::Plugin => "Plugin",
+        crate::shell::tui::tree::NodeKind::Skill => "Skill",
+        crate::shell::tui::tree::NodeKind::Command => "Command",
+        crate::shell::tui::tree::NodeKind::Agent => "Agent",
+        crate::shell::tui::tree::NodeKind::McpServer => "MCP Server",
+        crate::shell::tui::tree::NodeKind::Hook => "Hook",
     };
     lines.push(Line::from(vec![
         Span::styled("Type:   ", Style::default().add_modifier(Modifier::BOLD)),
@@ -259,8 +259,8 @@ fn build_metadata_lines(node: &crate::tui::tree::TreeNode) -> Vec<Line<'static>>
     ]));
 
     let scope_str = match &node.scope {
-        Some(crate::inspect::Scope::Project) => "Project",
-        Some(crate::inspect::Scope::Global) => "Global",
+        Some(crate::core::inspect::Scope::Project) => "Project",
+        Some(crate::core::inspect::Scope::Global) => "Global",
         None => "—",
     };
     lines.push(Line::from(vec![
@@ -319,14 +319,14 @@ fn keybind_hint_line(app: &App) -> Line<'static> {
         "enabled"
     };
     let text = match (app.focus, app.markdown_content.is_some()) {
-        (crate::tui::app::Focus::Preview, _) => {
+        (crate::shell::tui::app::Focus::Preview, _) => {
             "[Tab/Esc] back  [j/k] scroll  [PgUp/PgDn] page  [v] fullscreen  [q] quit".to_string()
         }
-        (crate::tui::app::Focus::Tree, true) => format!(
+        (crate::shell::tui::app::Focus::Tree, true) => format!(
             "[a]dd [d]el [r]drift [R]econcile [e]scope  [Tab] preview  [v] full  [i] {}  [/] search  [q] quit",
             filter_label
         ),
-        (crate::tui::app::Focus::Tree, false) => format!(
+        (crate::shell::tui::app::Focus::Tree, false) => format!(
             "[a]dd [d]el [r]drift [R]econcile [e]scope  [v] view  [i] {}  [/] search  [q] quit",
             filter_label
         ),
@@ -572,7 +572,7 @@ fn render_markdown_overlay(frame: &mut Frame, app: &App) {
     let metadata = app.selected_node().map(build_metadata_lines);
 
     let content = app.markdown_content.as_deref().unwrap_or("");
-    let rendered = crate::tui::markdown::render(content);
+    let rendered = crate::shell::tui::markdown::render(content);
 
     let body_para = Paragraph::new(rendered)
         .wrap(Wrap { trim: false })

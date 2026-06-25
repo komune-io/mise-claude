@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::tui::tree::TreeNode;
+use crate::shell::tui::tree::TreeNode;
 
 /// Slow operations the handler queues for execution outside raw mode.
 ///
@@ -240,10 +240,10 @@ impl App {
         &mut self,
         project_root: &std::path::Path,
         home_dir: &std::path::Path,
-        config: &crate::config::Config,
+        config: &crate::core::config::Config,
     ) {
-        use crate::inspect::{reconciler, scanner, AuditReport, Category};
-        use crate::tui::tree::build_tree;
+        use crate::core::inspect::{reconciler, scanner, AuditReport, Category};
+        use crate::shell::tui::tree::build_tree;
 
         let enabled_plugins = scanner::collect_enabled_plugins(project_root, home_dir);
         let mut report_entries = Vec::new();
@@ -347,7 +347,7 @@ fn flatten_node(
     enabled_only: bool,
     flat: &mut Vec<FlatEntry>,
 ) {
-    use crate::tui::tree::NodeKind;
+    use crate::shell::tui::tree::NodeKind;
 
     if node.hidden {
         return;
@@ -415,7 +415,7 @@ fn filter_node(node: &mut TreeNode, query: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tui::tree::{NodeKind, TreeNode};
+    use crate::shell::tui::tree::{NodeKind, TreeNode};
     use std::io::Write;
 
     fn leaf_with_path(name: &str, path: Option<String>) -> TreeNode {

@@ -1,5 +1,5 @@
-use chord::inspect::scanner;
-use chord::inspect::Scope;
+use chord::core::inspect::scanner;
+use chord::core::inspect::Scope;
 use std::fs;
 use tempfile::TempDir;
 

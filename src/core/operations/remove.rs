@@ -1,6 +1,6 @@
 //! `chord remove` core. Used by the CLI and the TUI.
 
-use crate::mcp_config;
+use crate::core::mcp_config;
 
 use super::{OpContext, OperationError};
 
@@ -14,7 +14,7 @@ pub struct RemoveOutcome {
 ///
 /// Returns [`OperationError::NotFound`] if the tool is not in any section.
 /// On `.mcp.json` write failure, chord.toml is restored from an opaque
-/// snapshot held by the [`ConfigStore`](crate::store::ConfigStore) so the
+/// snapshot held by the [`ConfigStore`](crate::core::store::ConfigStore) so the
 /// user is not left in a half-state.
 pub fn remove(name: &str, ctx: &OpContext) -> Result<RemoveOutcome, OperationError> {
     // Capture the pre-mutation bytes before loading the parsed Config.

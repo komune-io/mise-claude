@@ -3,10 +3,10 @@ pub mod mcp;
 pub mod plugin;
 pub mod skill;
 
-use crate::error::InstallError;
-use crate::process::CommandRunner;
-use crate::registry::Registry;
-use crate::resolver::{PlannedAction, ToolType};
+use crate::core::error::InstallError;
+use crate::core::process::CommandRunner;
+use crate::core::registry::Registry;
+use crate::core::resolver::{PlannedAction, ToolType};
 use std::path::{Path, PathBuf};
 
 pub struct InstallContext<'a> {

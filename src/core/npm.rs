@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use crate::error::NpmError;
+use crate::core::error::NpmError;
 
 const DEFAULT_REGISTRY: &str = "https://registry.npmjs.org";
 

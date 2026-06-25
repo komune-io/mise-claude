@@ -1,9 +1,9 @@
-use chord::cli::{Cli, Command};
-use chord::config::Config;
-use chord::installer::DefaultInstallers;
-use chord::lockfile::Lockfile;
-use chord::migrate;
-use chord::store::{FileConfigStore, FileLockfileStore};
+use chord::core::config::Config;
+use chord::core::installer::DefaultInstallers;
+use chord::core::lockfile::Lockfile;
+use chord::core::migrate;
+use chord::core::store::{FileConfigStore, FileLockfileStore};
+use chord::shell::cli::{Cli, Command};
 use clap::Parser;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -28,11 +28,11 @@ fn main() {
         Command::Install { quiet, idempotent } => {
             let project_root = PathBuf::from(".");
             let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-            let packages_dir = chord::operations::install::default_packages_dir();
+            let packages_dir = chord::core::operations::install::default_packages_dir();
             let (config_store, lockfile_store) = file_stores(&project_root);
             let installers = DefaultInstallers::new();
             let installer_set = installers.as_set();
-            let ctx = chord::operations::OpContext {
+            let ctx = chord::core::operations::OpContext {
                 config_store: &config_store,
                 lockfile_store: &lockfile_store,
                 installers: &installer_set,
@@ -41,7 +41,7 @@ fn main() {
                 packages_dir: &packages_dir,
                 verbose: cli.verbose,
             };
-            match chord::operations::install::install_all(&ctx, quiet || idempotent) {
+            match chord::core::operations::install::install_all(&ctx, quiet || idempotent) {
                 Ok(outcome) => process::exit(outcome.exit_code()),
                 Err(e) => {
                     eprintln!("error: {e}");
@@ -63,7 +63,7 @@ fn main() {
             let config = Config::from_file(&config_path).unwrap_or_default();
             let lockfile = Lockfile::from_file(&lock_path).unwrap_or_default();
 
-            let packages_dir = chord::operations::install::default_packages_dir();
+            let packages_dir = chord::core::operations::install::default_packages_dir();
 
             println!("  {:<25} {:<12} STATUS", "TOOL", "VERSION");
             println!("  {}", "─".repeat(50));
@@ -92,11 +92,11 @@ fn main() {
         Command::Add { tool } => {
             let project_root = PathBuf::from(".");
             let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-            let packages_dir = chord::operations::install::default_packages_dir();
+            let packages_dir = chord::core::operations::install::default_packages_dir();
             let (config_store, lockfile_store) = file_stores(&project_root);
             let installers = DefaultInstallers::new();
             let installer_set = installers.as_set();
-            let ctx = chord::operations::OpContext {
+            let ctx = chord::core::operations::OpContext {
                 config_store: &config_store,
                 lockfile_store: &lockfile_store,
                 installers: &installer_set,
@@ -106,7 +106,7 @@ fn main() {
                 verbose: cli.verbose,
             };
 
-            let spec = match chord::operations::add::AddSpec::parse(&tool) {
+            let spec = match chord::core::operations::add::AddSpec::parse(&tool) {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("error: {e}");
@@ -114,7 +114,7 @@ fn main() {
                 }
             };
 
-            match chord::operations::add::add(&spec, &ctx) {
+            match chord::core::operations::add::add(&spec, &ctx) {
                 Ok(outcome) => process::exit(outcome.exit_code()),
                 Err(e) => {
                     eprintln!("error: {e}");
@@ -125,11 +125,11 @@ fn main() {
         Command::Remove { tool } => {
             let project_root = PathBuf::from(".");
             let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-            let packages_dir = chord::operations::install::default_packages_dir();
+            let packages_dir = chord::core::operations::install::default_packages_dir();
             let (config_store, lockfile_store) = file_stores(&project_root);
             let installers = DefaultInstallers::new();
             let installer_set = installers.as_set();
-            let ctx = chord::operations::OpContext {
+            let ctx = chord::core::operations::OpContext {
                 config_store: &config_store,
                 lockfile_store: &lockfile_store,
                 installers: &installer_set,
@@ -138,7 +138,7 @@ fn main() {
                 packages_dir: &packages_dir,
                 verbose: cli.verbose,
             };
-            match chord::operations::remove::remove(&tool, &ctx) {
+            match chord::core::operations::remove::remove(&tool, &ctx) {
                 Ok(outcome) => {
                     println!("removed {tool} (from [{}])", outcome.section);
                 }
@@ -181,12 +181,12 @@ fn main() {
             let config = Config::from_file(&config_path).unwrap_or_default();
 
             if tui {
-                if let Err(e) = chord::tui::run_tui(&project_root, &home_dir, &config) {
+                if let Err(e) = chord::shell::tui::run_tui(&project_root, &home_dir, &config) {
                     eprintln!("TUI error: {e}");
                     process::exit(1);
                 }
             } else {
-                chord::inspect::run_inspect(
+                chord::core::inspect::run_inspect(
                     &project_root,
                     &home_dir,
                     &config,

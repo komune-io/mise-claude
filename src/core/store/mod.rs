@@ -10,8 +10,8 @@
 
 use thiserror::Error;
 
-use crate::config::Config;
-use crate::lockfile::Lockfile;
+use crate::core::config::Config;
+use crate::core::lockfile::Lockfile;
 
 pub mod file;
 pub mod memory;

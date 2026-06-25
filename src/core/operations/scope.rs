@@ -3,7 +3,7 @@
 
 use serde_json::{json, Value};
 
-use crate::inspect::Scope;
+use crate::core::inspect::Scope;
 
 use super::{OpContext, OperationError};
 

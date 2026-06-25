@@ -1,9 +1,9 @@
-use chord::inspect::Scope;
-use chord::operations::add::AddSpec;
-use chord::operations::OperationError;
-use chord::tui::app::{App, Mode};
-use chord::tui::tree::{NodeKind, TreeNode};
-use chord::tui::{handler, OpRunner};
+use chord::core::inspect::Scope;
+use chord::core::operations::add::AddSpec;
+use chord::core::operations::OperationError;
+use chord::shell::tui::app::{App, Mode};
+use chord::shell::tui::tree::{NodeKind, TreeNode};
+use chord::shell::tui::{handler, OpRunner};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::fs;
 use tempfile::TempDir;
@@ -181,7 +181,7 @@ fn n_in_confirm_remove_cancels() {
 
 // ── InlineOp queue tests (Task 15) ────────────────────────────────────────
 
-use chord::tui::app::InlineOp;
+use chord::shell::tui::app::InlineOp;
 
 fn drift_leaf(name: &str) -> TreeNode {
     TreeNode {
@@ -343,8 +343,8 @@ fn esc_in_scope_picker_discards() {
 
 #[test]
 fn reload_rebuilds_tree_and_preserves_selection_by_name() {
-    use chord::config::Config;
-    use chord::tui::tree::{NodeKind, TreeNode};
+    use chord::core::config::Config;
+    use chord::shell::tui::tree::{NodeKind, TreeNode};
 
     let leaf_a = TreeNode {
         name: "alpha".to_string(),

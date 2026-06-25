@@ -1,5 +1,5 @@
-use chord::config::Config;
-use chord::error::ConfigError;
+use chord::core::config::Config;
+use chord::core::error::ConfigError;
 use std::io::Write;
 use tempfile::NamedTempFile;
 

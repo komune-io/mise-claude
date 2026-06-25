@@ -1,0 +1,14 @@
+pub mod config;
+pub mod error;
+pub mod inspect;
+pub mod installer;
+pub mod lockfile;
+pub mod mcp_config;
+pub mod migrate;
+pub mod npm;
+pub mod operations;
+pub mod output;
+pub mod process;
+pub mod registry;
+pub mod resolver;
+pub mod store;

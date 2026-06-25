@@ -15,18 +15,18 @@ use crossterm::terminal::{
 };
 use ratatui::prelude::*;
 
-use crate::config::Config;
-use crate::inspect::{reconciler, scanner, AuditReport, Category, Scope};
-use crate::installer::DefaultInstallers;
-use crate::operations::add::AddSpec;
-use crate::operations::OperationError;
-use crate::store::{FileConfigStore, FileLockfileStore};
+use crate::core::config::Config;
+use crate::core::inspect::{reconciler, scanner, AuditReport, Category, Scope};
+use crate::core::installer::DefaultInstallers;
+use crate::core::operations::add::AddSpec;
+use crate::core::operations::OperationError;
+use crate::core::store::{FileConfigStore, FileLockfileStore};
 use app::App;
 use tree::build_tree;
 
 /// Indirection for operations called from the TUI handler.
 ///
-/// The production impl forwards to `crate::operations::*`. Tests use a
+/// The production impl forwards to `crate::core::operations::*`. Tests use a
 /// recording mock to verify which calls the handler made without running
 /// real subprocesses.
 pub trait OpRunner {
@@ -42,7 +42,7 @@ pub trait OpRunner {
     ) -> Result<(), OperationError>;
 }
 
-/// Production [`OpRunner`] that calls `crate::operations::*`.
+/// Production [`OpRunner`] that calls `crate::core::operations::*`.
 ///
 /// Owns the File* store adapters and the default installer set for the
 /// session so each `ctx()` call borrows the same instances. The trait
@@ -86,9 +86,9 @@ impl<'a> DefaultOpRunner<'a> {
     /// borrows from a local, so each method builds the set inline.
     fn ctx<'b>(
         &'b self,
-        installer_set: &'b crate::installer::InstallerSet<'b>,
-    ) -> crate::operations::OpContext<'b> {
-        crate::operations::OpContext {
+        installer_set: &'b crate::core::installer::InstallerSet<'b>,
+    ) -> crate::core::operations::OpContext<'b> {
+        crate::core::operations::OpContext {
             config_store: &self.config_store,
             lockfile_store: &self.lockfile_store,
             installers: installer_set,
@@ -103,19 +103,19 @@ impl<'a> DefaultOpRunner<'a> {
 impl<'a> OpRunner for DefaultOpRunner<'a> {
     fn add(&mut self, spec: &AddSpec) -> Result<(), OperationError> {
         let set = self.installers.as_set();
-        crate::operations::add::write_toml_entry(spec, &self.ctx(&set))
+        crate::core::operations::add::write_toml_entry(spec, &self.ctx(&set))
     }
     fn remove(&mut self, name: &str) -> Result<(), OperationError> {
         let set = self.installers.as_set();
-        crate::operations::remove::remove(name, &self.ctx(&set)).map(|_| ())
+        crate::core::operations::remove::remove(name, &self.ctx(&set)).map(|_| ())
     }
     fn install_one(&mut self, name: &str) -> Result<(), OperationError> {
         let set = self.installers.as_set();
-        crate::operations::install::install_one(name, &self.ctx(&set), false).map(|_| ())
+        crate::core::operations::install::install_one(name, &self.ctx(&set), false).map(|_| ())
     }
     fn install_all(&mut self) -> Result<(), OperationError> {
         let set = self.installers.as_set();
-        crate::operations::install::install_all(&self.ctx(&set), false).map(|_| ())
+        crate::core::operations::install::install_all(&self.ctx(&set), false).map(|_| ())
     }
     fn set_scope(
         &mut self,
@@ -124,7 +124,12 @@ impl<'a> OpRunner for DefaultOpRunner<'a> {
         enabled: bool,
     ) -> Result<(), OperationError> {
         let set = self.installers.as_set();
-        crate::operations::scope::set_plugin_enabled(plugin_id, scope, enabled, &self.ctx(&set))
+        crate::core::operations::scope::set_plugin_enabled(
+            plugin_id,
+            scope,
+            enabled,
+            &self.ctx(&set),
+        )
     }
 }
 
@@ -156,7 +161,7 @@ pub fn run_tui(project_root: &Path, home_dir: &Path, config: &Config) -> io::Res
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let packages_dir = crate::operations::install::default_packages_dir();
+    let packages_dir = crate::core::operations::install::default_packages_dir();
     let result = run_loop(
         &mut terminal,
         &mut app,
@@ -192,7 +197,7 @@ fn run_loop(
                 // to show subprocess output, run the op via the runner, then mark
                 // dirty so the tree refreshes below.
                 if let Some(op) = app.pending_inline_op.take() {
-                    use crate::tui::app::InlineOp;
+                    use crate::shell::tui::app::InlineOp;
                     let result = match &op {
                         InlineOp::InstallOne(name) => {
                             let header = format!("chord install {name}");
@@ -213,7 +218,7 @@ fn run_loop(
                 if app.dirty {
                     let cfg_path = project_root.join("chord.toml");
                     let fresh_config =
-                        crate::config::Config::from_file(&cfg_path).unwrap_or_default();
+                        crate::core::config::Config::from_file(&cfg_path).unwrap_or_default();
                     app.reload(project_root, home_dir, &fresh_config);
                     app.dirty = false;
                 }

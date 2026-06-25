@@ -1,5 +1,5 @@
-use chord::inspect::{AuditEntry, AuditReport, Category, Management, Scope};
-use chord::tui::tree::{build_tree, NodeKind};
+use chord::core::inspect::{AuditEntry, AuditReport, Category, Management, Scope};
+use chord::shell::tui::tree::{build_tree, NodeKind};
 
 fn make_entry(name: &str, scope: Option<Scope>, enabled: bool, path: Option<&str>) -> AuditEntry {
     AuditEntry {
@@ -169,8 +169,8 @@ fn build_tree_mcp_section() {
 
 #[test]
 fn drift_node_visible_under_enabled_only_filter() {
-    use chord::tui::app::App;
-    use chord::tui::tree::{NodeKind, TreeNode};
+    use chord::shell::tui::app::App;
+    use chord::shell::tui::tree::{NodeKind, TreeNode};
 
     let drift_leaf = TreeNode {
         name: "context7".to_string(),
@@ -274,7 +274,7 @@ fn standalone_skills_collapse_by_source_repo() {
         )],
     };
 
-    let tree = chord::tui::tree::build_tree(&report);
+    let tree = chord::shell::tui::tree::build_tree(&report);
 
     // Find the "Skills" section in the top-level tree.
     let skills_section = tree

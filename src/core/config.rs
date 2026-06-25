@@ -3,7 +3,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::ConfigError;
+use crate::core::error::ConfigError;
 
 /// Top-level `chord.toml` configuration.
 ///

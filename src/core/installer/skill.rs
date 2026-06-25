@@ -1,5 +1,5 @@
-use crate::error::InstallError;
-use crate::resolver::PlannedAction;
+use crate::core::error::InstallError;
+use crate::core::resolver::PlannedAction;
 
 use super::{InstallContext, InstallResult, Installer};
 

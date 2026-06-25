@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::inspect::{AuditEntry, AuditReport, Category, Scope};
+use crate::core::inspect::{AuditEntry, AuditReport, Category, Scope};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind {
@@ -18,7 +18,7 @@ pub struct TreeNode {
     pub name: String,
     pub kind: NodeKind,
     pub enabled: bool,
-    pub scope: Option<crate::inspect::Scope>,
+    pub scope: Option<crate::core::inspect::Scope>,
     pub path: Option<String>,
     pub plugin_id: Option<String>,
     pub children: Vec<TreeNode>,
@@ -53,7 +53,7 @@ impl TreeNode {
 
     /// Create a leaf node from an AuditEntry.
     pub fn leaf(name: &str, kind: NodeKind, entry: &AuditEntry) -> Self {
-        use crate::inspect::Management;
+        use crate::core::inspect::Management;
         TreeNode {
             name: name.to_string(),
             kind,

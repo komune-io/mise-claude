@@ -8,11 +8,11 @@
 //! the recording runner can't simulate. Those two stay covered by the
 //! existing PATH-shim integration tests under tests/integration/.
 
-use chord::installer::plugin::PluginInstaller;
-use chord::installer::skill::SkillInstaller;
-use chord::installer::{InstallContext, Installer};
-use chord::process::RecordingCommandRunner;
-use chord::resolver::{Action, PlannedAction, ToolType};
+use chord::core::installer::plugin::PluginInstaller;
+use chord::core::installer::skill::SkillInstaller;
+use chord::core::installer::{InstallContext, Installer};
+use chord::core::process::RecordingCommandRunner;
+use chord::core::resolver::{Action, PlannedAction, ToolType};
 use std::path::Path;
 
 fn skill_action(name: &str) -> PlannedAction {
@@ -94,7 +94,7 @@ fn skill_installer_passes_wildcard_for_two_segment_key() {
 
 #[test]
 fn skill_installer_propagates_non_zero_exit_as_install_error() {
-    use chord::process::CommandError;
+    use chord::core::process::CommandError;
     use std::process::Command;
 
     // Build a real non-zero ExitStatus by running `false`.
@@ -157,7 +157,7 @@ fn plugin_installer_runs_marketplace_add_then_install() {
 
 #[test]
 fn plugin_installer_fails_fast_when_marketplace_add_fails() {
-    use chord::process::CommandError;
+    use chord::core::process::CommandError;
     use std::process::Command;
 
     let bad_status = Command::new("false").status().unwrap();

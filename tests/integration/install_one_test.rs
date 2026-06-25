@@ -1,6 +1,6 @@
-use chord::installer::DefaultInstallers;
-use chord::operations::{install, OpContext, OperationError};
-use chord::store::{FileConfigStore, FileLockfileStore};
+use chord::core::installer::DefaultInstallers;
+use chord::core::operations::{install, OpContext, OperationError};
+use chord::core::store::{FileConfigStore, FileLockfileStore};
 use std::fs;
 use tempfile::TempDir;
 

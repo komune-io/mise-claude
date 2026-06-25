@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use crate::config::Config;
-use crate::lockfile::Lockfile;
-use crate::registry::Registry;
+use crate::core::config::Config;
+use crate::core::lockfile::Lockfile;
+use crate::core::registry::Registry;
 
 /// The action to take for a single tool.
 #[derive(Debug, PartialEq)]

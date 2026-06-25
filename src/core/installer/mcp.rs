@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use crate::error::InstallError;
-use crate::mcp_config::{self, McpEntry};
-use crate::registry::Registry;
-use crate::resolver::PlannedAction;
+use crate::core::error::InstallError;
+use crate::core::mcp_config::{self, McpEntry};
+use crate::core::registry::Registry;
+use crate::core::resolver::PlannedAction;
 
 use super::{run_npm_install, InstallContext, InstallResult, Installer};
 

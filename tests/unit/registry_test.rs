@@ -1,4 +1,4 @@
-use chord::registry::Registry;
+use chord::core::registry::Registry;
 
 #[test]
 fn resolve_known_alias() {

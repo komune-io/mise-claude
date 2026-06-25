@@ -1,8 +1,8 @@
-use chord::config::Config;
-use chord::installer::InstallerSet;
-use chord::operations::add::{AddSpec, Section};
-use chord::operations::{add, OpContext, OperationError};
-use chord::store::{ConfigStore, InMemoryConfigStore, InMemoryLockfileStore, LockfileStore};
+use chord::core::config::Config;
+use chord::core::installer::InstallerSet;
+use chord::core::operations::add::{AddSpec, Section};
+use chord::core::operations::{add, OpContext, OperationError};
+use chord::core::store::{ConfigStore, InMemoryConfigStore, InMemoryLockfileStore, LockfileStore};
 use std::path::Path;
 
 /// Build a minimal OpContext backed by in-memory stores. No TempDir,
@@ -94,7 +94,7 @@ fn rejects_trailing_at() {
 fn add_writes_entry_to_empty_chord_toml() {
     let config_store = InMemoryConfigStore::empty();
     let lockfile_store = InMemoryLockfileStore::empty();
-    let installers = chord::installer::DefaultInstallers::new();
+    let installers = chord::core::installer::DefaultInstallers::new();
     let installer_set = installers.as_set();
     let ctx = ctx_with(&config_store, &lockfile_store, &installer_set);
     let spec = AddSpec::parse("mcp:context7@latest").unwrap();
@@ -116,7 +116,7 @@ fn add_rejects_duplicate_in_same_section() {
         .insert("context7".to_string(), "latest".to_string());
     let config_store = InMemoryConfigStore::new(seeded.clone());
     let lockfile_store = InMemoryLockfileStore::empty();
-    let installers = chord::installer::DefaultInstallers::new();
+    let installers = chord::core::installer::DefaultInstallers::new();
     let installer_set = installers.as_set();
     let ctx = ctx_with(&config_store, &lockfile_store, &installer_set);
     let spec = AddSpec::parse("mcp:context7@1.0.0").unwrap();
@@ -134,7 +134,7 @@ fn add_rejects_duplicate_across_sections() {
     seeded.cli.insert("foo".to_string(), "latest".to_string());
     let config_store = InMemoryConfigStore::new(seeded);
     let lockfile_store = InMemoryLockfileStore::empty();
-    let installers = chord::installer::DefaultInstallers::new();
+    let installers = chord::core::installer::DefaultInstallers::new();
     let installer_set = installers.as_set();
     let ctx = ctx_with(&config_store, &lockfile_store, &installer_set);
     let spec = AddSpec::parse("mcp:foo@latest").unwrap();

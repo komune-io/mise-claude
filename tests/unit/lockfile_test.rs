@@ -1,4 +1,4 @@
-use chord::lockfile::{LockedTool, Lockfile};
+use chord::core::lockfile::{LockedTool, Lockfile};
 
 // ---------------------------------------------------------------------------
 // Parsing

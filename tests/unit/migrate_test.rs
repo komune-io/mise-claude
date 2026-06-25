@@ -1,4 +1,4 @@
-use chord::migrate::migrate;
+use chord::core::migrate::migrate;
 use std::fs;
 use tempfile::TempDir;
 

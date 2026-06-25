@@ -6,8 +6,8 @@
 
 use std::cell::RefCell;
 
-use crate::config::Config;
-use crate::lockfile::Lockfile;
+use crate::core::config::Config;
+use crate::core::lockfile::Lockfile;
 
 use super::{ConfigStore, ConfigStoreError, LockfileStore, LockfileStoreError, Snapshot};
 

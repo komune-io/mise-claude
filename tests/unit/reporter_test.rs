@@ -1,4 +1,4 @@
-use chord::output::Reporter;
+use chord::core::output::Reporter;
 
 #[test]
 fn quiet_reporter_skip_increments_counter_without_panic() {

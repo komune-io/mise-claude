@@ -2,9 +2,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::config::Config;
-use crate::inspect::{AuditEntry, Category, DiscoveredItem, Management, Scope};
-use crate::registry::Registry;
+use crate::core::config::Config;
+use crate::core::inspect::{AuditEntry, Category, DiscoveredItem, Management, Scope};
+use crate::core::registry::Registry;
 
 /// Derive the set of names that a config key can match against discovered item names.
 ///

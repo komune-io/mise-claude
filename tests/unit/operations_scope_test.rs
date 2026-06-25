@@ -1,8 +1,8 @@
-use chord::inspect::Scope;
-use chord::installer::InstallerSet;
-use chord::operations::scope::set_plugin_enabled;
-use chord::operations::OpContext;
-use chord::store::{ConfigStore, InMemoryConfigStore, InMemoryLockfileStore, LockfileStore};
+use chord::core::inspect::Scope;
+use chord::core::installer::InstallerSet;
+use chord::core::operations::scope::set_plugin_enabled;
+use chord::core::operations::OpContext;
+use chord::core::store::{ConfigStore, InMemoryConfigStore, InMemoryLockfileStore, LockfileStore};
 use std::fs;
 use tempfile::TempDir;
 
@@ -33,7 +33,7 @@ fn set_plugin_enabled_writes_global_settings_when_scope_global() {
 
     let config_store = InMemoryConfigStore::empty();
     let lockfile_store = InMemoryLockfileStore::empty();
-    let installers = chord::installer::DefaultInstallers::new();
+    let installers = chord::core::installer::DefaultInstallers::new();
     let installer_set = installers.as_set();
     let ctx = make_ctx(
         &project,
@@ -58,7 +58,7 @@ fn set_plugin_enabled_writes_project_settings_when_scope_project() {
 
     let config_store = InMemoryConfigStore::empty();
     let lockfile_store = InMemoryLockfileStore::empty();
-    let installers = chord::installer::DefaultInstallers::new();
+    let installers = chord::core::installer::DefaultInstallers::new();
     let installer_set = installers.as_set();
     let ctx = make_ctx(
         &project,
@@ -91,7 +91,7 @@ fn set_plugin_enabled_false_removes_key() {
 
     let config_store = InMemoryConfigStore::empty();
     let lockfile_store = InMemoryLockfileStore::empty();
-    let installers = chord::installer::DefaultInstallers::new();
+    let installers = chord::core::installer::DefaultInstallers::new();
     let installer_set = installers.as_set();
     let ctx = make_ctx(
         &project,

@@ -8,9 +8,9 @@ use std::path::Path;
 
 use thiserror::Error;
 
-use crate::error::InstallError;
-use crate::installer::InstallerSet;
-use crate::store::{ConfigStore, ConfigStoreError, LockfileStore, LockfileStoreError};
+use crate::core::error::InstallError;
+use crate::core::installer::InstallerSet;
+use crate::core::store::{ConfigStore, ConfigStoreError, LockfileStore, LockfileStoreError};
 
 pub mod add;
 pub mod install;

@@ -1,4 +1,4 @@
-use chord::npm::PackageMetadata;
+use chord::core::npm::PackageMetadata;
 use serde_json::json;
 
 fn registry_json_with_versions(versions: &[(&str, Option<&str>)]) -> serde_json::Value {
