@@ -76,42 +76,12 @@ fn fetch_commit_issues_init_remote_fetch_checkout() {
             v
         })
         .collect();
-    assert_eq!(argvs[0], vec!["git", "init", dir.to_str().unwrap()]);
-    assert_eq!(
-        argvs[1],
-        vec![
-            "git",
-            "-C",
-            dir.to_str().unwrap(),
-            "remote",
-            "add",
-            "origin",
-            "https://github.com/o/r.git"
-        ]
-    );
-    assert_eq!(
-        argvs[2],
-        vec![
-            "git",
-            "-C",
-            dir.to_str().unwrap(),
-            "fetch",
-            "--depth",
-            "1",
-            "origin",
-            sha
-        ]
-    );
-    assert_eq!(
-        argvs[3],
-        vec![
-            "git",
-            "-C",
-            dir.to_str().unwrap(),
-            "checkout",
-            "--detach",
-            "FETCH_HEAD"
-        ]
-    );
+    assert_eq!(argvs[0], vec!["git", "init"]);
+    assert_eq!(argvs[1], vec!["git", "remote", "add", "origin", "https://github.com/o/r.git"]);
+    assert_eq!(argvs[2], vec!["git", "fetch", "--depth", "1", "origin", sha]);
+    assert_eq!(argvs[3], vec!["git", "checkout", "--detach", "FETCH_HEAD"]);
+    for c in &calls {
+        assert_eq!(c.cwd, dir);
+    }
     let _ = std::fs::remove_dir_all(&tmp);
 }

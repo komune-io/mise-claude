@@ -51,7 +51,6 @@ pub fn fetch_commit(
     }
     std::fs::create_dir_all(&dir)
         .map_err(|e| SkillError::Io(dir.display().to_string(), e.to_string()))?;
-    let dir_str = dir.to_string_lossy().into_owned();
 
     let run = |args: &[&str]| -> Result<(), SkillError> {
         runner
@@ -59,9 +58,9 @@ pub fn fetch_commit(
             .map_err(|e| SkillError::Git(e.to_string()))
     };
 
-    run(&["init", &dir_str])?;
-    run(&["-C", &dir_str, "remote", "add", "origin", url])?;
-    run(&["-C", &dir_str, "fetch", "--depth", "1", "origin", sha])?;
-    run(&["-C", &dir_str, "checkout", "--detach", "FETCH_HEAD"])?;
+    run(&["init"])?;
+    run(&["remote", "add", "origin", url])?;
+    run(&["fetch", "--depth", "1", "origin", sha])?;
+    run(&["checkout", "--detach", "FETCH_HEAD"])?;
     Ok(dir)
 }
