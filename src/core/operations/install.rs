@@ -113,6 +113,36 @@ fn execute_action(
 
                     match action.tool_type {
                         ToolType::Skill => {
+                            // Prune skills that disappeared from the source repo since
+                            // last install (wildcard shrink case).
+                            let owner_repo: String = if action.name.matches('/').count() >= 2 {
+                                let idx = action.name.rfind('/').unwrap();
+                                action.name[..idx].to_string()
+                            } else {
+                                action.name.clone()
+                            };
+                            let new_flat: std::collections::HashSet<String> = install_result
+                                .materialized
+                                .iter()
+                                .map(|m| m.flat_name.clone())
+                                .collect();
+                            if let Some(prior) = lockfile.get("skills", &action.name) {
+                                let prior_names: Vec<String> = match &prior.skills {
+                                    Some(subs) => subs.iter().map(|s| s.name.clone()).collect(),
+                                    None => vec![action
+                                        .name
+                                        .rsplit('/')
+                                        .next()
+                                        .unwrap_or(&action.name)
+                                        .to_string()],
+                                };
+                                prune_orphan_skills(
+                                    ctx.project_root,
+                                    &owner_repo,
+                                    &prior_names,
+                                    &new_flat,
+                                );
+                            }
                             // Clear the entry and any prior expansion, then rewrite
                             // using the RESOLVED sha (install_result.commit), not the
                             // toml ref.
@@ -227,6 +257,26 @@ fn write_skill_lock(
                 skills: None,
             },
         );
+    }
+}
+
+/// Delete the `.chord` store dir and `.claude/skills` symlink for each skill
+/// that was in the prior lock entry but is NOT in `new_flat_names` (i.e. it
+/// vanished from a wildcard repo between installs). `owner_repo` is the
+/// store namespace; `prior_names` are the flat skill names recorded before.
+pub fn prune_orphan_skills(
+    project_root: &std::path::Path,
+    owner_repo: &str,
+    prior_names: &[String],
+    new_flat_names: &std::collections::HashSet<String>,
+) {
+    for old in prior_names {
+        if new_flat_names.contains(old) {
+            continue;
+        }
+        let store = crate::core::skills::materialize::store_path(project_root, owner_repo, old);
+        let _ = std::fs::remove_dir_all(&store);
+        let _ = std::fs::remove_file(project_root.join(".claude").join("skills").join(old));
     }
 }
 

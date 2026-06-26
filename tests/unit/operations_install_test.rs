@@ -71,3 +71,51 @@ fn install_one_missing_tool_returns_not_found() {
     let err = install::install_one("nope", &ctx, false).unwrap_err();
     assert!(matches!(err, OperationError::NotFound(_)));
 }
+
+#[test]
+fn prune_orphan_skills_removes_vanished_skills_only() {
+    use chord::core::operations::install::prune_orphan_skills;
+    use std::collections::HashSet;
+
+    let proj = TempDir::new().unwrap();
+
+    // Create store dirs + symlinks for both "foo" and "bar".
+    for s in ["foo", "bar"] {
+        let store = proj.path().join(".chord/o/r").join(s);
+        std::fs::create_dir_all(&store).unwrap();
+        std::fs::write(store.join("SKILL.md"), "x").unwrap();
+        let linkdir = proj.path().join(".claude/skills");
+        std::fs::create_dir_all(&linkdir).unwrap();
+        std::os::unix::fs::symlink(format!("../../.chord/o/r/{s}"), linkdir.join(s)).unwrap();
+    }
+
+    // "foo" stays; "bar" vanished from upstream.
+    let mut keep = HashSet::new();
+    keep.insert("foo".to_string());
+    prune_orphan_skills(
+        proj.path(),
+        "o/r",
+        &["foo".to_string(), "bar".to_string()],
+        &keep,
+    );
+
+    assert!(
+        proj.path().join(".chord/o/r/foo").exists(),
+        "kept skill store survives"
+    );
+    assert!(
+        proj.path().join(".claude/skills/foo").exists(),
+        "kept skill symlink survives"
+    );
+    assert!(
+        !proj.path().join(".chord/o/r/bar").exists(),
+        "vanished skill store removed"
+    );
+    assert!(
+        proj.path()
+            .join(".claude/skills/bar")
+            .symlink_metadata()
+            .is_err(),
+        "vanished skill symlink removed"
+    );
+}

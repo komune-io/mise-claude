@@ -312,8 +312,8 @@ pub fn build_tree(report: &AuditReport) -> Vec<TreeNode> {
     }
 
     // Standalone sections (only when non-empty), in a stable order.
-    // For "Skills", group leaves by their `source_repo` (set by the
-    // scanner from skills-lock.json) into per-repo sub-headers. Items
+    // For "Skills", group leaves by their `source_repo` (set by
+    // `run_inspect` from chord.lock) into per-repo sub-headers. Items
     // without a source_repo stay as direct children of the section.
     for label in &["Skills", "Commands", "Agents"] {
         if let Some(nodes) = standalone.get(label) {
