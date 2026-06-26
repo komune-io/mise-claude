@@ -57,3 +57,6 @@ mod skills_git_test;
 
 #[path = "unit/skills_discover_test.rs"]
 mod skills_discover_test;
+
+#[path = "unit/skills_materialize_test.rs"]
+mod skills_materialize_test;

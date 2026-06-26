@@ -4,6 +4,7 @@
 
 pub mod git;
 pub mod discover;
+pub mod materialize;
 
 use thiserror::Error;
 
