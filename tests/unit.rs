@@ -54,3 +54,6 @@ mod installer_argv_test;
 
 #[path = "unit/skills_git_test.rs"]
 mod skills_git_test;
+
+#[path = "unit/skills_discover_test.rs"]
+mod skills_discover_test;

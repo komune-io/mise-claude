@@ -3,6 +3,7 @@
 //! chord-owned `.chord/` store with a symlink into `.claude/skills/`.
 
 pub mod git;
+pub mod discover;
 
 use thiserror::Error;
 
