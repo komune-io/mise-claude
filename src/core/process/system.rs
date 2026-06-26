@@ -47,4 +47,30 @@ impl CommandRunner for SystemCommandRunner {
         }
         Ok(())
     }
+
+    fn run_capture(
+        &self,
+        cmd: &str,
+        args: &[&str],
+        cwd: &Path,
+        env: &[(&str, &str)],
+    ) -> Result<String, CommandError> {
+        if self.verbose {
+            eprintln!("[verbose] {} {}", cmd, args.join(" "));
+        }
+
+        let mut command = Command::new(cmd);
+        command.args(args).current_dir(cwd);
+        for (k, v) in env {
+            command.env(k, v);
+        }
+
+        let output = command
+            .output()
+            .map_err(|e| CommandError::Spawn(cmd.to_string(), e))?;
+        if !output.status.success() {
+            return Err(CommandError::NonZeroExit(cmd.to_string(), output.status));
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    }
 }

@@ -26,6 +26,7 @@ pub struct RecordedCall {
 pub struct RecordingCommandRunner {
     calls: RefCell<Vec<RecordedCall>>,
     results: RefCell<VecDeque<Result<(), CommandError>>>,
+    stdout_results: RefCell<VecDeque<Result<String, CommandError>>>,
 }
 
 impl RecordingCommandRunner {
@@ -34,6 +35,7 @@ impl RecordingCommandRunner {
         Self {
             calls: RefCell::new(Vec::new()),
             results: RefCell::new(VecDeque::new()),
+            stdout_results: RefCell::new(VecDeque::new()),
         }
     }
 
@@ -43,6 +45,17 @@ impl RecordingCommandRunner {
         Self {
             calls: RefCell::new(Vec::new()),
             results: RefCell::new(results.into()),
+            stdout_results: RefCell::new(VecDeque::new()),
+        }
+    }
+
+    /// Construct with a queue of scripted stdout results for `run_capture`.
+    /// Once drained, subsequent captures return `Ok(String::new())`.
+    pub fn with_stdout(stdout_results: Vec<Result<String, CommandError>>) -> Self {
+        Self {
+            calls: RefCell::new(Vec::new()),
+            results: RefCell::new(VecDeque::new()),
+            stdout_results: RefCell::new(stdout_results.into()),
         }
     }
 
@@ -76,5 +89,27 @@ impl CommandRunner for RecordingCommandRunner {
                 .collect(),
         });
         self.results.borrow_mut().pop_front().unwrap_or(Ok(()))
+    }
+
+    fn run_capture(
+        &self,
+        cmd: &str,
+        args: &[&str],
+        cwd: &Path,
+        env: &[(&str, &str)],
+    ) -> Result<String, CommandError> {
+        self.calls.borrow_mut().push(RecordedCall {
+            cmd: cmd.to_string(),
+            args: args.iter().map(|s| s.to_string()).collect(),
+            cwd: cwd.to_path_buf(),
+            env: env
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+        });
+        self.stdout_results
+            .borrow_mut()
+            .pop_front()
+            .unwrap_or_else(|| Ok(String::new()))
     }
 }

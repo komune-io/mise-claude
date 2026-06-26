@@ -119,3 +119,32 @@ fn recording_runner_captures_env_overrides() {
         ]
     );
 }
+
+#[test]
+fn recording_run_capture_returns_scripted_stdout_and_records_call() {
+    use chord::core::process::{CommandRunner, RecordingCommandRunner};
+    use std::path::Path;
+
+    let runner = RecordingCommandRunner::with_stdout(vec![Ok("deadbeef\trefs/heads/main\n".to_string())]);
+    let out = runner
+        .run_capture("git", &["ls-remote", "url", "main"], Path::new("/tmp"), &[])
+        .unwrap();
+    assert_eq!(out, "deadbeef\trefs/heads/main\n");
+
+    let calls = runner.calls();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].cmd, "git");
+    assert_eq!(calls[0].args, vec!["ls-remote", "url", "main"]);
+}
+
+#[test]
+fn system_run_capture_captures_stdout() {
+    use chord::core::process::{CommandRunner, SystemCommandRunner};
+    use std::path::Path;
+
+    let runner = SystemCommandRunner::new(false);
+    let out = runner
+        .run_capture("printf", &["hello"], Path::new("."), &[])
+        .unwrap();
+    assert_eq!(out, "hello");
+}

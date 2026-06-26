@@ -39,6 +39,17 @@ pub trait CommandRunner {
         cwd: &Path,
         env: &[(&str, &str)],
     ) -> Result<(), CommandError>;
+
+    /// Like [`run`], but captures and returns the child's stdout (utf-8,
+    /// lossy). stderr is inherited. Non-zero exit is an error. Used for
+    /// commands whose output chord must parse (e.g. `git ls-remote`).
+    fn run_capture(
+        &self,
+        cmd: &str,
+        args: &[&str],
+        cwd: &Path,
+        env: &[(&str, &str)],
+    ) -> Result<String, CommandError>;
 }
 
 /// Error returned by [`CommandRunner::run`].
