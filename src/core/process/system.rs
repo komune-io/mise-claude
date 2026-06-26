@@ -1,7 +1,7 @@
 //! Production [`CommandRunner`] — forks real subprocesses.
 
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use super::{CommandError, CommandRunner};
 
@@ -60,13 +60,19 @@ impl CommandRunner for SystemCommandRunner {
         }
 
         let mut command = Command::new(cmd);
-        command.args(args).current_dir(cwd);
+        command
+            .args(args)
+            .current_dir(cwd)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit());
         for (k, v) in env {
             command.env(k, v);
         }
 
         let output = command
-            .output()
+            .spawn()
+            .map_err(|e| CommandError::Spawn(cmd.to_string(), e))?
+            .wait_with_output()
             .map_err(|e| CommandError::Spawn(cmd.to_string(), e))?;
         if !output.status.success() {
             return Err(CommandError::NonZeroExit(cmd.to_string(), output.status));
