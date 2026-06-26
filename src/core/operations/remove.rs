@@ -73,9 +73,44 @@ pub fn remove(name: &str, ctx: &OpContext) -> Result<RemoveOutcome, OperationErr
         Err(e) => eprintln!("warning: failed to remove package directory: {e}"),
     }
 
+    // 3b. Skills: remove the .chord store(s) + .claude/skills symlinks.
+    if section == "skills" {
+        let lf = ctx.lockfile_store.load().unwrap_or_default();
+        if let Some(entry) = lf.get("skills", name) {
+            let owner_repo = if entry.skills.is_some() {
+                name.to_string() // wildcard key is owner/repo
+            } else {
+                name.rsplit_once('/')
+                    .map(|(owner_repo, _)| owner_repo)
+                    .unwrap_or(name)
+                    .to_string()
+            };
+            let store_root = {
+                let mut p = ctx.project_root.join(".chord");
+                for seg in owner_repo.split('/') {
+                    p = p.join(seg);
+                }
+                p
+            };
+            let flat_names: Vec<String> = match &entry.skills {
+                Some(subs) => subs.iter().map(|s| s.name.clone()).collect(),
+                None => vec![name.rsplit('/').next().unwrap_or(name).to_string()],
+            };
+            for flat in &flat_names {
+                let link = ctx.project_root.join(".claude").join("skills").join(flat);
+                let _ = std::fs::remove_file(&link);
+                let _ = std::fs::remove_dir_all(store_root.join(flat));
+            }
+        }
+    }
+
     // 4. Lockfile (best-effort write).
     let mut lockfile = ctx.lockfile_store.load().unwrap_or_default();
-    lockfile.remove(section, name);
+    if section == "skills" {
+        lockfile.remove_prefix("skills", name);
+    } else {
+        lockfile.remove(section, name);
+    }
     if let Err(e) = ctx.lockfile_store.save(&lockfile) {
         eprintln!("warning: failed to write lockfile: {e}");
     }

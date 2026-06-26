@@ -13,13 +13,22 @@ fn src_skill(name: &str) -> (tempfile::TempDir, SkillDir) {
     let p = dir.path().join(name);
     write(&p.join("SKILL.md"), "---\nname: x\n---\nbody\n");
     write(&p.join("scripts/run.py"), "print(1)\n");
-    (dir, SkillDir { name: name.to_string(), path: p })
+    (
+        dir,
+        SkillDir {
+            name: name.to_string(),
+            path: p,
+        },
+    )
 }
 
 #[test]
 fn store_path_is_chord_owner_repo_name() {
     let pr = Path::new("/proj");
-    assert_eq!(store_path(pr, "anthropics/skills", "pdf"), Path::new("/proj/.chord/anthropics/skills/pdf"));
+    assert_eq!(
+        store_path(pr, "anthropics/skills", "pdf"),
+        Path::new("/proj/.chord/anthropics/skills/pdf")
+    );
 }
 
 #[test]
@@ -62,7 +71,10 @@ fn materialize_is_idempotent_for_same_target() {
     let h2 = materialize(proj.path(), "anthropics/skills", &skill).unwrap();
     assert_eq!(h1, h2);
     let link = proj.path().join(".claude/skills/pdf");
-    assert_eq!(std::fs::read_link(&link).unwrap(), std::path::Path::new("../../.chord/anthropics/skills/pdf"));
+    assert_eq!(
+        std::fs::read_link(&link).unwrap(),
+        std::path::Path::new("../../.chord/anthropics/skills/pdf")
+    );
     assert!(link.join("SKILL.md").is_file());
     drop(src);
 }
@@ -77,6 +89,9 @@ fn materialize_errors_on_foreign_symlink_collision() {
 
     let (src, skill) = src_skill("pdf");
     let err = materialize(proj.path(), "anthropics/skills", &skill);
-    assert!(matches!(err, Err(chord::core::skills::SkillError::NameCollision(..))));
+    assert!(matches!(
+        err,
+        Err(chord::core::skills::SkillError::NameCollision(..))
+    ));
     drop(src);
 }

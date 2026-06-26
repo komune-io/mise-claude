@@ -5,7 +5,10 @@ use std::path::Path;
 
 #[test]
 fn github_url_builds_https_dot_git() {
-    assert_eq!(github_url("anthropics/skills"), "https://github.com/anthropics/skills.git");
+    assert_eq!(
+        github_url("anthropics/skills"),
+        "https://github.com/anthropics/skills.git"
+    );
 }
 
 #[test]
@@ -14,7 +17,10 @@ fn resolve_ref_passes_through_a_full_sha_without_ls_remote() {
     let runner = RecordingCommandRunner::new();
     let out = resolve_ref(&runner, "url", sha, Path::new("/tmp")).unwrap();
     assert_eq!(out, sha);
-    assert!(runner.calls().is_empty(), "a full SHA must not trigger ls-remote");
+    assert!(
+        runner.calls().is_empty(),
+        "a full SHA must not trigger ls-remote"
+    );
 }
 
 #[test]
@@ -22,11 +28,20 @@ fn resolve_ref_runs_ls_remote_and_parses_first_column() {
     let runner = RecordingCommandRunner::with_stdout(vec![Ok(
         "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef\trefs/heads/main\n".to_string(),
     )]);
-    let out = resolve_ref(&runner, "https://github.com/o/r.git", "main", Path::new("/tmp")).unwrap();
+    let out = resolve_ref(
+        &runner,
+        "https://github.com/o/r.git",
+        "main",
+        Path::new("/tmp"),
+    )
+    .unwrap();
     assert_eq!(out, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
     let calls = runner.calls();
     assert_eq!(calls[0].cmd, "git");
-    assert_eq!(calls[0].args, vec!["ls-remote", "https://github.com/o/r.git", "main"]);
+    assert_eq!(
+        calls[0].args,
+        vec!["ls-remote", "https://github.com/o/r.git", "main"]
+    );
 }
 
 #[test]
@@ -53,14 +68,50 @@ fn fetch_commit_issues_init_remote_fetch_checkout() {
     let _ = std::fs::remove_dir_all(&tmp);
     let dir = fetch_commit(&runner, "https://github.com/o/r.git", sha, &tmp).unwrap();
     let calls = runner.calls();
-    let argvs: Vec<Vec<String>> = calls.iter().map(|c| {
-        let mut v = vec![c.cmd.clone()];
-        v.extend(c.args.clone());
-        v
-    }).collect();
+    let argvs: Vec<Vec<String>> = calls
+        .iter()
+        .map(|c| {
+            let mut v = vec![c.cmd.clone()];
+            v.extend(c.args.clone());
+            v
+        })
+        .collect();
     assert_eq!(argvs[0], vec!["git", "init", dir.to_str().unwrap()]);
-    assert_eq!(argvs[1], vec!["git", "-C", dir.to_str().unwrap(), "remote", "add", "origin", "https://github.com/o/r.git"]);
-    assert_eq!(argvs[2], vec!["git", "-C", dir.to_str().unwrap(), "fetch", "--depth", "1", "origin", sha]);
-    assert_eq!(argvs[3], vec!["git", "-C", dir.to_str().unwrap(), "checkout", "--detach", "FETCH_HEAD"]);
+    assert_eq!(
+        argvs[1],
+        vec![
+            "git",
+            "-C",
+            dir.to_str().unwrap(),
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/o/r.git"
+        ]
+    );
+    assert_eq!(
+        argvs[2],
+        vec![
+            "git",
+            "-C",
+            dir.to_str().unwrap(),
+            "fetch",
+            "--depth",
+            "1",
+            "origin",
+            sha
+        ]
+    );
+    assert_eq!(
+        argvs[3],
+        vec![
+            "git",
+            "-C",
+            dir.to_str().unwrap(),
+            "checkout",
+            "--detach",
+            "FETCH_HEAD"
+        ]
+    );
     let _ = std::fs::remove_dir_all(&tmp);
 }

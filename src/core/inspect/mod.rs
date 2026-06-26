@@ -22,11 +22,10 @@ pub struct DiscoveredItem {
     pub source_path: String,
     /// For plugin-cache items: "plugin@marketplace" identifier
     pub from_plugin: Option<String>,
-    /// For skills installed via `npx skills add`: the upstream
-    /// `owner/repo` recorded in `skills-lock.json`. Used by the
-    /// reconciler to match 2-segment wildcard entries in chord.toml
-    /// (`"mattpocock/skills" = "latest"`) against the individual
-    /// SKILL.md directories on disk.
+    /// For project-scoped skills: the upstream `owner/repo` recorded in
+    /// chord.lock. Used by the reconciler to match 2-segment wildcard
+    /// entries in chord.toml (`"mattpocock/skills" = "latest"`) against
+    /// the individual SKILL.md directories on disk.
     pub source_repo: Option<String>,
 }
 
@@ -43,9 +42,8 @@ pub struct AuditEntry {
     pub enabled: bool,
     /// For plugin-cache items: "plugin@marketplace". For hooks: "hook:EventName".
     pub from_plugin: Option<String>,
-    /// For skills installed via `npx skills add`: the upstream `owner/repo`
-    /// recorded in `skills-lock.json`. Drives source-repo grouping in the
-    /// renderer and the TUI tree.
+    /// For project-scoped skills: the upstream `owner/repo` from chord.lock.
+    /// Drives source-repo grouping in the renderer and the TUI tree.
     pub source_repo: Option<String>,
 }
 
@@ -125,7 +123,21 @@ pub fn run_inspect(
         let discovered = match category {
             Category::Mcp => scanner::scan_mcp(project_root, home_dir),
             Category::Plugins => scanner::scan_plugins(project_root, home_dir),
-            Category::Skills => scanner::scan_skills(project_root, home_dir),
+            Category::Skills => {
+                let mut items = scanner::scan_skills(project_root, home_dir);
+                let lockfile =
+                    crate::core::lockfile::Lockfile::from_file(&project_root.join("chord.lock"))
+                        .unwrap_or_default();
+                let sources = scanner::skill_sources_from_lock(&lockfile);
+                for item in &mut items {
+                    if item.scope == Scope::Project {
+                        if let Some(src) = sources.get(&item.name) {
+                            item.source_repo = Some(src.clone());
+                        }
+                    }
+                }
+                items
+            }
             Category::Commands => scanner::scan_commands(project_root, home_dir),
             Category::Agents => scanner::scan_agents(project_root, home_dir),
             Category::Hooks => scanner::scan_hooks(project_root, home_dir),

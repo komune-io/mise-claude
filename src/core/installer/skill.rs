@@ -1,7 +1,8 @@
 use crate::core::error::InstallError;
 use crate::core::resolver::PlannedAction;
+use crate::core::skills::{discover, git, github_url, materialize, SkillError};
 
-use super::{InstallContext, InstallResult, Installer};
+use super::{InstallContext, InstallResult, Installer, MaterializedSkill};
 
 pub struct SkillInstaller;
 
@@ -10,7 +11,7 @@ impl SkillInstaller {
     ///
     /// - `"owner/repo/skill-name"` → install one named skill.
     /// - `"owner/repo"` → install every skill exposed by the repo
-    ///   (the underlying `skills` CLI receives `--skill '*'`).
+    ///   (wildcard: selector is `"*"`).
     ///
     /// Returns `(owner_repo, skill)`. The wildcard form returns
     /// `(name, "*")` so the caller can pass it through verbatim.
@@ -39,25 +40,59 @@ impl Installer for SkillInstaller {
         action: &PlannedAction,
         ctx: &InstallContext,
     ) -> Result<InstallResult, InstallError> {
-        let (owner_repo, skill) = self.parse_skill_path(&action.name)?;
+        let (owner_repo, selector) = self
+            .parse_skill_path(&action.name)
+            .map_err(|e| InstallError::Command("parse skill".into(), e.to_string()))?;
 
-        let args = [
-            "skills",
-            "add",
-            owner_repo,
-            "--skill",
-            skill,
-            "-a",
-            "claude-code",
-            "-y",
-        ];
+        let url = github_url(owner_repo);
+        // action.version is the chord.toml ref (latest/tag/branch/sha).
+        let sha = git::resolve_ref(ctx.runner, &url, &action.version, ctx.project_root)
+            .map_err(skill_err)?;
 
-        ctx.runner
-            .run("npx", &args, ctx.project_root, &[])
-            .map_err(|e| InstallError::Command("npx skills add".to_string(), e.to_string()))?;
+        let cache_dir = ctx.project_root.join(".chord").join(".cache").join(&sha);
+        let checkout = git::fetch_commit(ctx.runner, &url, &sha, &cache_dir).map_err(skill_err)?;
 
-        Ok(InstallResult { integrity: None })
+        let repo_name = owner_repo.rsplit('/').next().unwrap_or(owner_repo);
+        let skills = if selector == "*" {
+            discover::discover_all(&checkout, repo_name)
+        } else {
+            match discover::find_one(&checkout, repo_name, selector) {
+                Some(s) => vec![s],
+                None => {
+                    return Err(skill_err(SkillError::SkillNotFound(
+                        selector.to_string(),
+                        checkout.display().to_string(),
+                    )))
+                }
+            }
+        };
+        if skills.is_empty() {
+            return Err(skill_err(SkillError::SkillNotFound(
+                selector.to_string(),
+                checkout.display().to_string(),
+            )));
+        }
+
+        let mut materialized = Vec::new();
+        for skill in &skills {
+            let integrity =
+                materialize::materialize(ctx.project_root, owner_repo, skill).map_err(skill_err)?;
+            materialized.push(MaterializedSkill {
+                flat_name: skill.name.clone(),
+                integrity,
+            });
+        }
+
+        Ok(InstallResult {
+            integrity: None,
+            commit: sha.clone(),
+            materialized,
+        })
     }
+}
+
+fn skill_err(e: SkillError) -> InstallError {
+    InstallError::Command("skill install".into(), e.to_string())
 }
 
 #[cfg(test)]

@@ -67,7 +67,7 @@ pub fn render_terminal(report: &AuditReport) {
             // Show source group header when it changes. Three group keys,
             // in priority order:
             //   1. plugin-cache items group under "plugin <name>@<marketplace>"
-            //   2. skill repos installed via `npx skills add` group under
+            //   2. skill repos installed via the git-native installer group under
             //      "skills from <owner>/<repo>"
             //   3. everything else groups under its own file path
             let current_source = entry

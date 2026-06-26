@@ -49,14 +49,18 @@ pub fn integrity(dir: &Path) -> Result<String, SkillError> {
     for rel in &files {
         hasher.update(rel.as_bytes());
         hasher.update([0u8]);
-        let bytes = std::fs::read(dir.join(rel))
-            .map_err(|e| SkillError::Io(rel.clone(), e.to_string()))?;
+        let bytes =
+            std::fs::read(dir.join(rel)).map_err(|e| SkillError::Io(rel.clone(), e.to_string()))?;
         hasher.update(&bytes);
     }
     Ok(format!("sha256:{:x}", hasher.finalize()))
 }
 
-fn create_symlink(project_root: &Path, owner_repo: &str, skill_name: &str) -> Result<(), SkillError> {
+fn create_symlink(
+    project_root: &Path,
+    owner_repo: &str,
+    skill_name: &str,
+) -> Result<(), SkillError> {
     let link_dir = project_root.join(".claude").join("skills");
     let link = link_dir.join(skill_name);
     // depth of .claude/skills/<name> below project root is 2 dirs up to root.

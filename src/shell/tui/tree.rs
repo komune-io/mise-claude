@@ -26,7 +26,7 @@ pub struct TreeNode {
     pub hidden: bool,
     pub drift: bool,
     pub managed: bool,
-    /// For skills installed via `npx skills add`: the upstream `owner/repo`.
+    /// For project-scoped skills: the upstream `owner/repo` from chord.lock.
     /// Drives source-repo grouping in `build_tree` so standalone skills from
     /// the same repo collapse under one sub-header.
     pub source_repo: Option<String>,

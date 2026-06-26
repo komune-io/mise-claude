@@ -348,11 +348,6 @@ pub fn scan_plugins(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem>
 }
 
 /// Scan for skills from `.claude/skills/*/SKILL.md` (project) and `~/.claude/skills/*/SKILL.md` (global).
-///
-/// For project-scoped skills, also reads `<project_root>/skills-lock.json` (written
-/// by `npx skills add`) to attach the upstream `owner/repo` to each discovered
-/// item's `source_repo`. The reconciler uses that to match 2-segment wildcard
-/// entries in chord.toml.
 pub fn scan_skills(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> {
     let mut items = Vec::new();
 
@@ -374,41 +369,31 @@ pub fn scan_skills(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> 
         &mut items,
     );
 
-    // Enrich project-scoped items with their upstream source from skills-lock.json.
-    // The map is empty when the file is absent, which makes the lookup a no-op.
-    let project_sources = read_skills_lock_sources(project_root);
-    for item in &mut items {
-        if item.scope == Scope::Project {
-            if let Some(source) = project_sources.get(&item.name) {
-                item.source_repo = Some(source.clone());
-            }
-        }
-    }
-
     // Plugin cache: ~/.claude/plugins/cache/<mp>/<plugin>/<ver>/skills/
     scan_plugin_cache(home_dir, "skills", ScanMode::SkillMarker, &mut items);
 
     items
 }
 
-/// Read `<project_root>/skills-lock.json` and build a map of skill name →
-/// upstream `owner/repo`. Returns an empty map on any failure (missing file,
-/// malformed JSON, etc).
-fn read_skills_lock_sources(project_root: &Path) -> std::collections::HashMap<String, String> {
-    let mut sources = std::collections::HashMap::new();
-    let lock_path = project_root.join("skills-lock.json");
-    let Some(json) = read_json(&lock_path) else {
-        return sources;
-    };
-    let Some(skills) = json.get("skills").and_then(|v| v.as_object()) else {
-        return sources;
-    };
-    for (name, entry) in skills {
-        if let Some(source) = entry.get("source").and_then(|v| v.as_str()) {
-            sources.insert(name.clone(), source.to_string());
+/// Build a map of flat skill name → `owner/repo` from chord.lock's `[skills]`
+/// section. Named rows (`owner/repo/name`) map `name → owner/repo`; wildcard
+/// anchor rows (`owner/repo` with a `skills` sub-list) map each listed skill.
+pub fn skill_sources_from_lock(
+    lockfile: &crate::core::lockfile::Lockfile,
+) -> std::collections::HashMap<String, String> {
+    use std::collections::HashMap;
+    let mut map = HashMap::new();
+    for (key, tool) in lockfile.section_entries("skills") {
+        if let Some(subs) = &tool.skills {
+            for s in subs {
+                map.insert(s.name.clone(), key.clone());
+            }
+        } else if let Some(idx) = key.rfind('/') {
+            let (owner_repo, flat) = key.split_at(idx);
+            map.insert(flat[1..].to_string(), owner_repo.to_string());
         }
     }
-    sources
+    map
 }
 
 /// Scan for commands from `.claude/commands/**/*.md` (project) and `~/.claude/commands/**/*.md` (global).

@@ -1,6 +1,8 @@
 use assert_cmd::Command;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
+use std::process::Command as StdCommand;
 use tempfile::TempDir;
 
 fn shims_dir() -> std::path::PathBuf {
@@ -19,11 +21,46 @@ fn fixtures_dir() -> std::path::PathBuf {
         .join("fixtures")
 }
 
+fn git(args: &[&str], cwd: &Path) {
+    let ok = StdCommand::new("git")
+        .args(args)
+        .current_dir(cwd)
+        .status()
+        .unwrap()
+        .success();
+    assert!(ok, "git {args:?} failed");
+}
+
+/// Create a local git fixture for vercel-labs/next-skills containing
+/// a `next-best-practices` skill. The repo is placed at
+/// `base_dir/vercel-labs/next-skills.git` so that
+/// `github_url("vercel-labs/next-skills")` → `{base}/vercel-labs/next-skills.git`
+/// resolves to it.
+fn make_next_skills_fixture(base_dir: &Path) {
+    let repo = base_dir.join("vercel-labs").join("next-skills.git");
+    fs::create_dir_all(repo.join("skills/next-best-practices")).unwrap();
+    fs::write(
+        repo.join("skills/next-best-practices/SKILL.md"),
+        "---\nname: next-best-practices\n---\n",
+    )
+    .unwrap();
+    git(&["init"], &repo);
+    git(&["config", "user.email", "t@t"], &repo);
+    git(&["config", "user.name", "t"], &repo);
+    git(&["add", "."], &repo);
+    git(&["commit", "-m", "init"], &repo);
+}
+
 #[test]
 fn full_install_all_tool_types() {
     let project_dir = TempDir::new().unwrap();
     let packages_dir = TempDir::new().unwrap();
     let log_dir = TempDir::new().unwrap();
+    let skill_base = TempDir::new().unwrap();
+
+    // Set up local git fixture for the skill entry in full_config.toml.
+    make_next_skills_fixture(skill_base.path());
+    let base_url = format!("file://{}", skill_base.path().display());
 
     // Read fixture and write to project dir.
     let fixture = fs::read_to_string(fixtures_dir().join("full_config.toml")).unwrap();
@@ -39,6 +76,7 @@ fn full_install_all_tool_types() {
         .env("PATH", &new_path)
         .env("CHORD_HOME", packages_dir.path())
         .env("CLAUDE_ENV_TEST_LOG", log_dir.path())
+        .env("CHORD_SKILLS_BASE_URL", &base_url)
         .output()
         .unwrap();
 
@@ -65,11 +103,13 @@ fn full_install_all_tool_types() {
         ".mcp.json should exist after full install"
     );
 
-    // Assert npx was called with 'skills add' (skill tool).
-    let npx_log = fs::read_to_string(log_dir.path().join("npx_calls.log")).unwrap();
+    // Assert skill was materialized in the .chord store (git-native installer).
+    let skill_store = project_dir
+        .path()
+        .join(".chord/vercel-labs/next-skills/next-best-practices/SKILL.md");
     assert!(
-        npx_log.contains("skills add"),
-        "npx_calls.log should contain 'skills add', got: {npx_log}"
+        skill_store.is_file(),
+        "skill SKILL.md should be in .chord store at {skill_store:?}"
     );
 
     // Assert claude was called for plugin marketplace add and plugin install.

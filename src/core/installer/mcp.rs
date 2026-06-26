@@ -32,7 +32,11 @@ impl Installer for McpInstaller {
         mcp_config::ensure_server(ctx.project_root, &action.name, &entry)
             .map_err(|e| InstallError::Config(".mcp.json".to_string(), e.to_string()))?;
 
-        Ok(InstallResult { integrity: None })
+        Ok(InstallResult {
+            integrity: None,
+            commit: String::new(),
+            materialized: Vec::new(),
+        })
     }
 }
 

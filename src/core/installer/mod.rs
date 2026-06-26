@@ -25,7 +25,20 @@ pub trait Installer {
 
 #[derive(Debug)]
 pub struct InstallResult {
+    /// Content integrity for npm-backed kinds (mcp/cli). `None` for skills.
     pub integrity: Option<String>,
+    /// The resolved commit SHA for a skill install. Empty for non-skill kinds.
+    pub commit: String,
+    /// Skills materialized by a `SkillInstaller` run (named ⇒ one entry,
+    /// wildcard ⇒ many). Empty for non-skill installers.
+    pub materialized: Vec<MaterializedSkill>,
+}
+
+/// One skill materialized during install: its flat name and content hash.
+#[derive(Debug)]
+pub struct MaterializedSkill {
+    pub flat_name: String,
+    pub integrity: String,
 }
 
 /// A complete set of Installers, one per `ToolType`. Pure dispatch

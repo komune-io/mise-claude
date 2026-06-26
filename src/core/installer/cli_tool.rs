@@ -37,6 +37,10 @@ impl Installer for CliToolInstaller {
             }
         }
 
-        Ok(InstallResult { integrity: None })
+        Ok(InstallResult {
+            integrity: None,
+            commit: String::new(),
+            materialized: Vec::new(),
+        })
     }
 }

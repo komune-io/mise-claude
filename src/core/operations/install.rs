@@ -110,26 +110,49 @@ fn execute_action(
                 Ok(install_result) => {
                     reporter.success(&action.name, &action.version, detail);
                     let section = section_name(&action.tool_type);
-                    let locked = if action.tool_type == ToolType::Skill
-                        || action.tool_type == ToolType::Plugin
-                    {
-                        LockedTool {
-                            package: None,
-                            version: action.version.clone(),
-                            integrity: None,
-                            resolved_at: Some(chrono::Utc::now().format("%Y-%m-%d").to_string()),
-                            skills: None,
+
+                    match action.tool_type {
+                        ToolType::Skill => {
+                            // Clear the entry and any prior expansion, then rewrite
+                            // using the RESOLVED sha (install_result.commit), not the
+                            // toml ref.
+                            lockfile.remove_prefix("skills", &action.name);
+                            write_skill_lock(
+                                lockfile,
+                                action,
+                                &install_result,
+                                &install_result.commit,
+                            );
                         }
-                    } else {
-                        LockedTool {
-                            package: Some(action.package.clone()),
-                            version: action.version.clone(),
-                            integrity: install_result.integrity,
-                            resolved_at: None,
-                            skills: None,
+                        ToolType::Plugin => {
+                            lockfile.set(
+                                section,
+                                &action.name,
+                                LockedTool {
+                                    package: None,
+                                    version: action.version.clone(),
+                                    integrity: None,
+                                    resolved_at: Some(
+                                        chrono::Utc::now().format("%Y-%m-%d").to_string(),
+                                    ),
+                                    skills: None,
+                                },
+                            );
                         }
-                    };
-                    lockfile.set(section, &action.name, locked);
+                        _ => {
+                            lockfile.set(
+                                section,
+                                &action.name,
+                                LockedTool {
+                                    package: Some(action.package.clone()),
+                                    version: action.version.clone(),
+                                    integrity: install_result.integrity,
+                                    resolved_at: None,
+                                    skills: None,
+                                },
+                            );
+                        }
+                    }
                 }
                 Err(e) => {
                     reporter.failure(&action.name, &action.version, &e.to_string());
@@ -146,7 +169,13 @@ fn skill_installed(project_root: &std::path::Path, lockfile: &Lockfile, name: &s
     let Some(entry) = lockfile.get("skills", name) else {
         return false;
     };
-    let link_exists = |skill: &str| project_root.join(".claude").join("skills").join(skill).exists();
+    let link_exists = |skill: &str| {
+        project_root
+            .join(".claude")
+            .join("skills")
+            .join(skill)
+            .exists()
+    };
     match &entry.skills {
         Some(subs) => !subs.is_empty() && subs.iter().all(|s| link_exists(&s.name)),
         None => {
@@ -154,6 +183,50 @@ fn skill_installed(project_root: &std::path::Path, lockfile: &Lockfile, name: &s
             let leaf = name.rsplit('/').next().unwrap_or(name);
             link_exists(leaf)
         }
+    }
+}
+
+fn write_skill_lock(
+    lockfile: &mut Lockfile,
+    action: &PlannedAction,
+    result: &crate::core::installer::InstallResult,
+    resolved_sha: &str,
+) {
+    let now = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    let is_wildcard = action.name.matches('/').count() == 1; // owner/repo
+    if is_wildcard {
+        let subs = result
+            .materialized
+            .iter()
+            .map(|m| crate::core::lockfile::LockedSkill {
+                name: m.flat_name.clone(),
+                integrity: m.integrity.clone(),
+            })
+            .collect();
+        lockfile.set(
+            "skills",
+            &action.name,
+            LockedTool {
+                package: None,
+                version: resolved_sha.to_string(),
+                integrity: None,
+                resolved_at: Some(now),
+                skills: Some(subs),
+            },
+        );
+    } else {
+        let integrity = result.materialized.first().map(|m| m.integrity.clone());
+        lockfile.set(
+            "skills",
+            &action.name,
+            LockedTool {
+                package: None,
+                version: resolved_sha.to_string(),
+                integrity,
+                resolved_at: Some(now),
+                skills: None,
+            },
+        );
     }
 }
 

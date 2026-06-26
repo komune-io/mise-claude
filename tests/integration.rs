@@ -30,3 +30,6 @@ mod install_one_test;
 
 #[path = "integration/add_cli_test.rs"]
 mod add_cli_test;
+
+#[path = "integration/skill_install_test.rs"]
+mod skill_install_test;

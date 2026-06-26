@@ -73,6 +73,10 @@ impl Installer for PluginInstaller {
                 InstallError::Command("claude plugin install".to_string(), e.to_string())
             })?;
 
-        Ok(InstallResult { integrity: None })
+        Ok(InstallResult {
+            integrity: None,
+            commit: String::new(),
+            materialized: Vec::new(),
+        })
     }
 }

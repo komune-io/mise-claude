@@ -15,6 +15,7 @@ sample/skillssh/.claude/skills/
 /chord.lock
 /skills-lock.json
 /.agents/
+/.chord/
 /.claude/skills/
 /.claude/settings.json
 

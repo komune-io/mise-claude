@@ -61,15 +61,23 @@ fn recording_runner_captures_calls() {
         .run("npm", &["install", "foo@1.0"], &cwd, &[])
         .unwrap();
     runner
-        .run("npx", &["skills", "add", "vercel-labs/skills"], &cwd, &[])
+        .run(
+            "git",
+            &["ls-remote", "https://github.com/o/r.git", "HEAD"],
+            &cwd,
+            &[],
+        )
         .unwrap();
 
     let calls = runner.calls();
     assert_eq!(calls.len(), 2);
     assert_eq!(calls[0].cmd, "npm");
     assert_eq!(calls[0].args, vec!["install", "foo@1.0"]);
-    assert_eq!(calls[1].cmd, "npx");
-    assert_eq!(calls[1].args, vec!["skills", "add", "vercel-labs/skills"]);
+    assert_eq!(calls[1].cmd, "git");
+    assert_eq!(
+        calls[1].args,
+        vec!["ls-remote", "https://github.com/o/r.git", "HEAD"]
+    );
 }
 
 #[test]
@@ -125,7 +133,8 @@ fn recording_run_capture_returns_scripted_stdout_and_records_call() {
     use chord::core::process::{CommandRunner, RecordingCommandRunner};
     use std::path::Path;
 
-    let runner = RecordingCommandRunner::with_stdout(vec![Ok("deadbeef\trefs/heads/main\n".to_string())]);
+    let runner =
+        RecordingCommandRunner::with_stdout(vec![Ok("deadbeef\trefs/heads/main\n".to_string())]);
     let out = runner
         .run_capture("git", &["ls-remote", "url", "main"], Path::new("/tmp"), &[])
         .unwrap();

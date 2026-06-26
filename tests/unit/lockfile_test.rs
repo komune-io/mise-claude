@@ -142,8 +142,14 @@ fn wildcard_anchor_row_roundtrips_with_skills_sublist() {
             integrity: None,
             resolved_at: Some("2026-06-25".to_string()),
             skills: Some(vec![
-                LockedSkill { name: "foo".to_string(), integrity: "sha256:11".to_string() },
-                LockedSkill { name: "bar".to_string(), integrity: "sha256:22".to_string() },
+                LockedSkill {
+                    name: "foo".to_string(),
+                    integrity: "sha256:11".to_string(),
+                },
+                LockedSkill {
+                    name: "bar".to_string(),
+                    integrity: "sha256:22".to_string(),
+                },
             ]),
         },
     );
@@ -160,7 +166,11 @@ fn wildcard_anchor_row_roundtrips_with_skills_sublist() {
 fn remove_prefix_drops_entry_and_descendants_only() {
     use chord::core::lockfile::{LockedTool, Lockfile};
     let mk = |v: &str| LockedTool {
-        package: None, version: v.to_string(), integrity: None, resolved_at: None, skills: None,
+        package: None,
+        version: v.to_string(),
+        integrity: None,
+        resolved_at: None,
+        skills: None,
     };
     let mut lf = Lockfile::new();
     lf.set("skills", "o/r", mk("1"));
@@ -169,5 +179,8 @@ fn remove_prefix_drops_entry_and_descendants_only() {
     lf.remove_prefix("skills", "o/r");
     assert!(lf.get("skills", "o/r").is_none());
     assert!(lf.get("skills", "o/r/foo").is_none());
-    assert!(lf.get("skills", "o/repo2/x").is_some(), "sibling repo must survive");
+    assert!(
+        lf.get("skills", "o/repo2/x").is_some(),
+        "sibling repo must survive"
+    );
 }
