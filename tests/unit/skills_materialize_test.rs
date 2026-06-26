@@ -55,6 +55,19 @@ fn materialize_copies_store_and_makes_relative_symlink() {
 }
 
 #[test]
+fn materialize_is_idempotent_for_same_target() {
+    let proj = tempfile::tempdir().unwrap();
+    let (src, skill) = src_skill("pdf");
+    let h1 = materialize(proj.path(), "anthropics/skills", &skill).unwrap();
+    let h2 = materialize(proj.path(), "anthropics/skills", &skill).unwrap();
+    assert_eq!(h1, h2);
+    let link = proj.path().join(".claude/skills/pdf");
+    assert_eq!(std::fs::read_link(&link).unwrap(), std::path::Path::new("../../.chord/anthropics/skills/pdf"));
+    assert!(link.join("SKILL.md").is_file());
+    drop(src);
+}
+
+#[test]
 fn materialize_errors_on_foreign_symlink_collision() {
     let proj = tempfile::tempdir().unwrap();
     // Pre-create a .claude/skills/pdf symlink pointing somewhere else.
@@ -64,6 +77,6 @@ fn materialize_errors_on_foreign_symlink_collision() {
 
     let (src, skill) = src_skill("pdf");
     let err = materialize(proj.path(), "anthropics/skills", &skill);
-    assert!(err.is_err());
+    assert!(matches!(err, Err(chord::core::skills::SkillError::NameCollision(..))));
     drop(src);
 }

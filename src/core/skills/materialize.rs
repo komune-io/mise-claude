@@ -98,7 +98,8 @@ fn copy_dir(src: &Path, dst: &Path) -> Result<(), SkillError> {
         .map_err(|e| SkillError::Io(dst.display().to_string(), e.to_string()))?;
     let entries = std::fs::read_dir(src)
         .map_err(|e| SkillError::Io(src.display().to_string(), e.to_string()))?;
-    for entry in entries.flatten() {
+    for entry in entries {
+        let entry = entry.map_err(|e| SkillError::Io(src.display().to_string(), e.to_string()))?;
         let from = entry.path();
         let to = dst.join(entry.file_name());
         if from.is_dir() {
@@ -114,7 +115,8 @@ fn copy_dir(src: &Path, dst: &Path) -> Result<(), SkillError> {
 fn walk_files(root: &Path, dir: &Path, out: &mut Vec<String>) -> Result<(), SkillError> {
     let entries = std::fs::read_dir(dir)
         .map_err(|e| SkillError::Io(dir.display().to_string(), e.to_string()))?;
-    for entry in entries.flatten() {
+    for entry in entries {
+        let entry = entry.map_err(|e| SkillError::Io(dir.display().to_string(), e.to_string()))?;
         let path = entry.path();
         if path.is_dir() {
             walk_files(root, &path, out)?;
