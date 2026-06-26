@@ -1,5 +1,4 @@
 [skills]
-"vercel-labs/next-skills/next-best-practices" = "latest"
-"vercel-labs/next-skills/next-cache-components" = "latest"
-"vercel-labs/next-skills/next-upgrade" = "latest"
 "vercel-labs/agent-skills/web-design-guidelines" = "latest"
+"vercel-labs/agent-skills/react-best-practices" = "latest"
+"vercel-labs/agent-skills/writing-guidelines" = "latest"

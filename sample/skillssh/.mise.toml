@@ -10,5 +10,5 @@ run = "bash test.sh"
 description = "Remove install artifacts and uninstall tools"
 run = """
 mise ls -c 2>/dev/null | awk '{print $1"@"$2}' | xargs -I{} mise uninstall {} || true
-rm -rfv .agents/ .claude/skills/ skills-lock.json
+rm -rfv .agents/ .claude/skills/ .chord/ chord.lock skills-lock.json
 """
