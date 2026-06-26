@@ -10,9 +10,9 @@ fn write(path: &Path, contents: &str) {
 fn collection_repo() -> tempfile::TempDir {
     let dir = tempfile::tempdir().unwrap();
     let r = dir.path();
-    write(&r.join("skills/foo/SKILL.md"), "---\nname: foo\n---\n");
-    write(&r.join("skills/bar/SKILL.md"), "---\nname: bar\n---\n");
-    write(&r.join("template/SKILL.md"), "---\nname: template\n---\n");
+    write(&r.join("skills/foo/SKILL.md"), "# foo\n");
+    write(&r.join("skills/bar/SKILL.md"), "# bar\n");
+    write(&r.join("template/SKILL.md"), "# template\n");
     write(&r.join("README.md"), "x");
     dir
 }
@@ -20,7 +20,7 @@ fn collection_repo() -> tempfile::TempDir {
 #[test]
 fn discover_all_finds_collection_skills_sorted_excluding_template() {
     let dir = collection_repo();
-    let skills = discover_all(dir.path());
+    let skills = discover_all(dir.path(), "repo");
     let names: Vec<&str> = skills.iter().map(|s| s.name.as_str()).collect();
     assert_eq!(names, vec!["bar", "foo"]);
 }
@@ -28,8 +28,8 @@ fn discover_all_finds_collection_skills_sorted_excluding_template() {
 #[test]
 fn discover_all_treats_root_skill_md_as_single_skill() {
     let dir = tempfile::tempdir().unwrap();
-    write(&dir.path().join("SKILL.md"), "---\nname: solo\n---\n");
-    let skills = discover_all(dir.path());
+    write(&dir.path().join("SKILL.md"), "# solo\n");
+    let skills = discover_all(dir.path(), "solo");
     assert_eq!(skills.len(), 1);
     assert_eq!(skills[0].name, "solo");
 }
@@ -37,7 +37,7 @@ fn discover_all_treats_root_skill_md_as_single_skill() {
 #[test]
 fn find_one_returns_named_skill() {
     let dir = collection_repo();
-    let s = find_one(dir.path(), "foo").unwrap();
+    let s = find_one(dir.path(), "repo", "foo").unwrap();
     assert_eq!(s.name, "foo");
     assert!(s.path.join("SKILL.md").exists());
 }
@@ -45,6 +45,6 @@ fn find_one_returns_named_skill() {
 #[test]
 fn find_one_none_for_missing() {
     let dir = collection_repo();
-    assert!(find_one(dir.path(), "template").is_none());
-    assert!(find_one(dir.path(), "nope").is_none());
+    assert!(find_one(dir.path(), "repo", "template").is_none());
+    assert!(find_one(dir.path(), "repo", "nope").is_none());
 }

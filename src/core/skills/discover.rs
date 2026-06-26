@@ -13,25 +13,19 @@ pub struct SkillDir {
 /// Discover every skill in `root`.
 ///
 /// Rules:
-/// - A root `SKILL.md` means the whole repo is one skill (named after the
-///   repo directory). Returned as a single entry.
-/// - Otherwise, every directory containing a `SKILL.md` is a skill (the
-///   whole directory is its payload). A top-level `template/` directory is
-///   excluded — it is scaffolding, not an installable skill.
+/// - A root `SKILL.md` means the whole repo is one skill. The skill is named
+///   after `repo_name` (the caller supplies the repository name, because the
+///   checkout directory is typically a commit SHA and therefore meaningless).
+/// - Otherwise, every directory containing a `SKILL.md` is a skill named
+///   after its directory basename. A top-level `template/` directory is
+///   excluded — it is scaffolding, not an installable skill. Discovery does
+///   not descend into a directory once its own `SKILL.md` is found.
 ///
 /// Result is sorted by name for determinism.
-pub fn discover_all(root: &Path) -> Vec<SkillDir> {
+pub fn discover_all(root: &Path, repo_name: &str) -> Vec<SkillDir> {
     if root.join("SKILL.md").is_file() {
-        let skill_md_path = root.join("SKILL.md");
-        let name = extract_name_from_skill_md(&skill_md_path)
-            .unwrap_or_else(|| {
-                root
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "skill".to_string())
-            });
         return vec![SkillDir {
-            name,
+            name: repo_name.to_string(),
             path: root.to_path_buf(),
         }];
     }
@@ -42,20 +36,14 @@ pub fn discover_all(root: &Path) -> Vec<SkillDir> {
     found
 }
 
-/// Find a single skill by name (directory basename). Returns None if no
-/// skill directory with that basename exists.
-pub fn find_one(root: &Path, name: &str) -> Option<SkillDir> {
-    discover_all(root).into_iter().find(|s| s.name == name)
-}
-
-fn extract_name_from_skill_md(path: &Path) -> Option<String> {
-    let content = std::fs::read_to_string(path).ok()?;
-    for line in content.lines() {
-        if let Some(rest) = line.strip_prefix("name:") {
-            return Some(rest.trim().to_string());
-        }
-    }
-    None
+/// Find a single skill by name. The name is matched against the directory
+/// basename of each skill directory; for single-skill repos the name matches
+/// the repository name (`repo_name`). Returns `None` if no matching skill
+/// exists.
+pub fn find_one(root: &Path, repo_name: &str, name: &str) -> Option<SkillDir> {
+    discover_all(root, repo_name)
+        .into_iter()
+        .find(|s| s.name == name)
 }
 
 fn collect(root: &Path, dir: &Path, out: &mut Vec<SkillDir>) {
@@ -72,14 +60,10 @@ fn collect(root: &Path, dir: &Path, out: &mut Vec<SkillDir>) {
             continue;
         }
         if path.join("SKILL.md").is_file() {
-            let skill_md_path = path.join("SKILL.md");
-            let name = extract_name_from_skill_md(&skill_md_path)
-                .unwrap_or_else(|| {
-                    path
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_default()
-                });
+            let name = path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
             out.push(SkillDir { name, path });
             // A skill dir is a leaf for discovery — do not descend into it.
             continue;
