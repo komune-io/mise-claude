@@ -257,3 +257,50 @@ fn concrete_version_mismatch_still_upgrades() {
 
     assert_eq!(plan.actions[0].action, Action::Upgrade);
 }
+
+#[test]
+fn skill_non_sha_ref_skips_when_installed() {
+    let mut config = Config::default();
+    config.skills.insert("o/r/foo".to_string(), "latest".to_string());
+    let mut lock = Lockfile::new();
+    lock.set("skills", "o/r/foo", LockedTool {
+        package: None, version: "abc".to_string(), integrity: Some("sha256:1".into()),
+        resolved_at: None, skills: None,
+    });
+    let installed = |_s: &str, _n: &str| true;
+    let plan = resolve(&config, &lock, &installed);
+    let a = plan.actions.iter().find(|a| a.name == "o/r/foo").unwrap();
+    assert_eq!(a.action, Action::Skip);
+}
+
+#[test]
+fn skill_sha_ref_upgrades_when_locked_sha_differs() {
+    let sha_new = "1111111111111111111111111111111111111111";
+    let mut config = Config::default();
+    config.skills.insert("o/r/foo".to_string(), sha_new.to_string());
+    let mut lock = Lockfile::new();
+    lock.set("skills", "o/r/foo", LockedTool {
+        package: None, version: "2222222222222222222222222222222222222222".to_string(),
+        integrity: Some("sha256:1".into()), resolved_at: None, skills: None,
+    });
+    let installed = |_s: &str, _n: &str| true;
+    let plan = resolve(&config, &lock, &installed);
+    let a = plan.actions.iter().find(|a| a.name == "o/r/foo").unwrap();
+    assert_eq!(a.action, Action::Upgrade);
+}
+
+#[test]
+fn skill_sha_ref_skips_when_locked_sha_matches_and_installed() {
+    let sha = "1111111111111111111111111111111111111111";
+    let mut config = Config::default();
+    config.skills.insert("o/r/foo".to_string(), sha.to_string());
+    let mut lock = Lockfile::new();
+    lock.set("skills", "o/r/foo", LockedTool {
+        package: None, version: sha.to_string(),
+        integrity: Some("sha256:1".into()), resolved_at: None, skills: None,
+    });
+    let installed = |_s: &str, _n: &str| true;
+    let plan = resolve(&config, &lock, &installed);
+    let a = plan.actions.iter().find(|a| a.name == "o/r/foo").unwrap();
+    assert_eq!(a.action, Action::Skip);
+}

@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use crate::core::config::Config;
 use crate::core::lockfile::Lockfile;
 use crate::core::registry::Registry;
+use crate::core::skills::looks_like_sha;
 
 /// The action to take for a single tool.
 #[derive(Debug, PartialEq)]
@@ -67,18 +68,22 @@ pub fn resolve(
             let installed = is_installed(section, name);
             let is_wildcard = requested_version == "latest" || requested_version == "*";
 
-            let action = match locked {
-                None => Action::Install,
-                Some(_) if is_wildcard => {
-                    if installed {
-                        Action::Skip
-                    } else {
-                        Action::Install
+            let action = if *section == "skills" {
+                skill_action(locked, requested_version, installed)
+            } else {
+                match locked {
+                    None => Action::Install,
+                    Some(_) if is_wildcard => {
+                        if installed {
+                            Action::Skip
+                        } else {
+                            Action::Install
+                        }
                     }
+                    Some(entry) if entry.version != *requested_version => Action::Upgrade,
+                    Some(_) if !installed => Action::Install,
+                    Some(_) => Action::Skip,
                 }
-                Some(entry) if entry.version != *requested_version => Action::Upgrade,
-                Some(_) if !installed => Action::Install,
-                Some(_) => Action::Skip,
             };
 
             actions.push(PlannedAction {
@@ -92,4 +97,31 @@ pub fn resolve(
     }
 
     Plan { actions }
+}
+
+/// Action selection for a `[skills]` entry under versioning model A
+/// (friendly ref in chord.toml, resolved SHA in chord.lock).
+fn skill_action(
+    locked: Option<&crate::core::lockfile::LockedTool>,
+    requested_ref: &str,
+    installed: bool,
+) -> Action {
+    match locked {
+        None => Action::Install,
+        Some(entry) => {
+            if looks_like_sha(requested_ref) {
+                // Pinned: comparable against the locked SHA.
+                if entry.version == requested_ref && installed {
+                    Action::Skip
+                } else {
+                    Action::Upgrade
+                }
+            } else if installed {
+                // Moving ref (latest/branch/tag): no silent auto-upgrade.
+                Action::Skip
+            } else {
+                Action::Install
+            }
+        }
+    }
 }

@@ -35,7 +35,11 @@ pub fn install_all(ctx: &OpContext, quiet: bool) -> Result<InstallOutcome, Opera
     let mut lockfile = ctx.lockfile_store.load()?;
 
     let packages_dir = ctx.packages_dir.to_path_buf();
+    let project_root = ctx.project_root.to_path_buf();
     let is_installed = |section: &str, name: &str| -> bool {
+        if section == "skills" {
+            return skill_installed(&project_root, &lockfile, name);
+        }
         packages_dir.join(name).join("node_modules").exists()
             && lockfile.get(section, name).is_some()
     };
@@ -135,6 +139,24 @@ fn execute_action(
     }
 }
 
+/// A skill is "installed" if its lock row exists and the materialized
+/// state is present: for a named skill, the `.claude/skills/<name>` symlink;
+/// for a wildcard anchor row, every listed skill's symlink exists.
+fn skill_installed(project_root: &std::path::Path, lockfile: &Lockfile, name: &str) -> bool {
+    let Some(entry) = lockfile.get("skills", name) else {
+        return false;
+    };
+    let link_exists = |skill: &str| project_root.join(".claude").join("skills").join(skill).exists();
+    match &entry.skills {
+        Some(subs) => !subs.is_empty() && subs.iter().all(|s| link_exists(&s.name)),
+        None => {
+            // Named skill: the leaf segment is the flat skill name.
+            let leaf = name.rsplit('/').next().unwrap_or(name);
+            link_exists(leaf)
+        }
+    }
+}
+
 pub(super) fn section_name(tool_type: &ToolType) -> &'static str {
     match tool_type {
         ToolType::Mcp => "mcp",
@@ -167,7 +189,11 @@ pub fn install_one(
     let mut lockfile = ctx.lockfile_store.load()?;
 
     let packages_dir = ctx.packages_dir.to_path_buf();
+    let project_root = ctx.project_root.to_path_buf();
     let is_installed = |section: &str, n: &str| -> bool {
+        if section == "skills" {
+            return skill_installed(&project_root, &lockfile, n);
+        }
         packages_dir.join(n).join("node_modules").exists() && lockfile.get(section, n).is_some()
     };
     let plan = resolver::resolve(&config, &lockfile, &is_installed);
