@@ -130,6 +130,7 @@ fn file_lockfile_store_save_then_load_roundtrips() {
             version: "2.1.4".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
     store.save(&lockfile).unwrap();
@@ -158,6 +159,7 @@ fn file_lockfile_store_snapshot_preserves_exact_bytes() {
             version: "1.0.0".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
     store.save(&lockfile).unwrap();
@@ -187,6 +189,7 @@ fn memory_lockfile_store_save_then_load_roundtrips() {
             version: "1.2.0".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
     store.save(&lockfile).unwrap();
@@ -208,6 +211,7 @@ fn memory_lockfile_store_snapshot_restore_is_logically_equivalent() {
             version: "1".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
     store.save(&lockfile_a).unwrap();

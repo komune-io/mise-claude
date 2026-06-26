@@ -114,6 +114,7 @@ fn execute_action(
                             version: action.version.clone(),
                             integrity: None,
                             resolved_at: Some(chrono::Utc::now().format("%Y-%m-%d").to_string()),
+                            skills: None,
                         }
                     } else {
                         LockedTool {
@@ -121,6 +122,7 @@ fn execute_action(
                             version: action.version.clone(),
                             integrity: install_result.integrity,
                             resolved_at: None,
+                            skills: None,
                         }
                     };
                     lockfile.set(section, &action.name, locked);

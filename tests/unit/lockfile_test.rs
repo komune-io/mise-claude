@@ -57,6 +57,7 @@ fn serialize_lockfile_roundtrip() {
             version: "1.2.3".to_string(),
             integrity: Some("sha512-xyz".to_string()),
             resolved_at: Some("2026-04-20T12:00:00Z".to_string()),
+            skills: None,
         },
     );
     lock.set(
@@ -67,6 +68,7 @@ fn serialize_lockfile_roundtrip() {
             version: "latest".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
 
@@ -121,4 +123,51 @@ fn lockfile_from_missing_file_returns_empty() {
     let lock =
         Lockfile::from_file(path).expect("missing file should return empty lockfile, not error");
     assert!(lock.is_empty());
+}
+
+// ---------------------------------------------------------------------------
+// Wildcard anchor sub-list
+// ---------------------------------------------------------------------------
+
+#[test]
+fn wildcard_anchor_row_roundtrips_with_skills_sublist() {
+    use chord::core::lockfile::{LockedSkill, LockedTool, Lockfile};
+    let mut lf = Lockfile::new();
+    lf.set(
+        "skills",
+        "mattpocock/skills",
+        LockedTool {
+            package: None,
+            version: "abc123".to_string(),
+            integrity: None,
+            resolved_at: Some("2026-06-25".to_string()),
+            skills: Some(vec![
+                LockedSkill { name: "foo".to_string(), integrity: "sha256:11".to_string() },
+                LockedSkill { name: "bar".to_string(), integrity: "sha256:22".to_string() },
+            ]),
+        },
+    );
+    let serialized = lf.serialize();
+    let parsed = Lockfile::parse(&serialized).unwrap();
+    let row = parsed.get("skills", "mattpocock/skills").unwrap();
+    assert_eq!(row.version, "abc123");
+    let subs = row.skills.as_ref().unwrap();
+    assert_eq!(subs.len(), 2);
+    assert_eq!(subs[0].name, "foo");
+}
+
+#[test]
+fn remove_prefix_drops_entry_and_descendants_only() {
+    use chord::core::lockfile::{LockedTool, Lockfile};
+    let mk = |v: &str| LockedTool {
+        package: None, version: v.to_string(), integrity: None, resolved_at: None, skills: None,
+    };
+    let mut lf = Lockfile::new();
+    lf.set("skills", "o/r", mk("1"));
+    lf.set("skills", "o/r/foo", mk("1"));
+    lf.set("skills", "o/repo2/x", mk("1"));
+    lf.remove_prefix("skills", "o/r");
+    assert!(lf.get("skills", "o/r").is_none());
+    assert!(lf.get("skills", "o/r/foo").is_none());
+    assert!(lf.get("skills", "o/repo2/x").is_some(), "sibling repo must survive");
 }

@@ -4,6 +4,13 @@ use std::path::Path;
 use serde::de::Error as _;
 use serde::{Deserialize, Serialize};
 
+/// One expanded skill recorded under a wildcard anchor row.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LockedSkill {
+    pub name: String,
+    pub integrity: String,
+}
+
 /// A single locked tool entry within a lockfile section.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LockedTool {
@@ -21,6 +28,12 @@ pub struct LockedTool {
     /// ISO-8601 timestamp of when the tool was resolved.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resolved_at: Option<String>,
+
+    /// For wildcard skill entries: the individual skills materialized from
+    /// the repo, each with its own content integrity. `None` for all other
+    /// entries.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skills: Option<Vec<LockedSkill>>,
 }
 
 /// In-memory representation of `chord.lock`.
@@ -90,6 +103,19 @@ impl Lockfile {
     pub fn remove(&mut self, section: &str, name: &str) {
         if let Some(sec) = self.sections.get_mut(section) {
             sec.remove(name);
+            if sec.is_empty() {
+                self.sections.remove(section);
+            }
+        }
+    }
+
+    /// Remove the entry named `prefix` and every entry whose key starts with
+    /// `"{prefix}/"` within `section`. Used to clear a wildcard entry and all
+    /// the skills it expanded to before rewriting them.
+    pub fn remove_prefix(&mut self, section: &str, prefix: &str) {
+        if let Some(sec) = self.sections.get_mut(section) {
+            let child = format!("{prefix}/");
+            sec.retain(|k, _| k != prefix && !k.starts_with(&child));
             if sec.is_empty() {
                 self.sections.remove(section);
             }

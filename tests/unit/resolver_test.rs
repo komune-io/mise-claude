@@ -39,6 +39,7 @@ fn skip_when_lockfile_matches_installed() {
             version: "latest".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
 
@@ -67,6 +68,7 @@ fn upgrade_when_config_version_differs_from_lock() {
             version: "1.0.0".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
 
@@ -95,6 +97,7 @@ fn install_when_lockfile_matches_but_not_installed() {
             version: "latest".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
 
@@ -156,6 +159,7 @@ fn latest_with_concrete_locked_version_and_installed_skips() {
             version: "2.1.4".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
 
@@ -188,6 +192,7 @@ fn latest_with_concrete_locked_version_but_not_installed_installs() {
             version: "2.1.4".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
 
@@ -215,6 +220,7 @@ fn wildcard_star_behaves_like_latest() {
             version: "2.1.4".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
 
@@ -243,6 +249,7 @@ fn concrete_version_mismatch_still_upgrades() {
             version: "2.1.4".to_string(),
             integrity: None,
             resolved_at: None,
+            skills: None,
         },
     );
 
