@@ -1,6 +1,6 @@
 [plugins]
-"anthropics/financial-services-plugins/financial-analysis@financial-services-plugins" = "latest"
-"anthropics/financial-services-plugins/investment-banking@financial-services-plugins" = "latest"
-"anthropics/financial-services-plugins/equity-research@financial-services-plugins" = "latest"
-"anthropics/financial-services-plugins/private-equity@financial-services-plugins" = "latest"
-"anthropics/financial-services-plugins/wealth-management@financial-services-plugins" = "latest"
+"anthropics/financial-services-plugins/financial-analysis@claude-for-financial-services" = "latest"
+"anthropics/financial-services-plugins/investment-banking@claude-for-financial-services" = "latest"
+"anthropics/financial-services-plugins/equity-research@claude-for-financial-services" = "latest"
+"anthropics/financial-services-plugins/private-equity@claude-for-financial-services" = "latest"
+"anthropics/financial-services-plugins/wealth-management@claude-for-financial-services" = "latest"
