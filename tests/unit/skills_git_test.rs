@@ -77,8 +77,20 @@ fn fetch_commit_issues_init_remote_fetch_checkout() {
         })
         .collect();
     assert_eq!(argvs[0], vec!["git", "init"]);
-    assert_eq!(argvs[1], vec!["git", "remote", "add", "origin", "https://github.com/o/r.git"]);
-    assert_eq!(argvs[2], vec!["git", "fetch", "--depth", "1", "origin", sha]);
+    assert_eq!(
+        argvs[1],
+        vec![
+            "git",
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/o/r.git"
+        ]
+    );
+    assert_eq!(
+        argvs[2],
+        vec!["git", "fetch", "--depth", "1", "origin", sha]
+    );
     assert_eq!(argvs[3], vec!["git", "checkout", "--detach", "FETCH_HEAD"]);
     for c in &calls {
         assert_eq!(c.cwd, dir);
