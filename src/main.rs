@@ -148,6 +148,50 @@ fn main() {
                 }
             }
         }
+        Command::Clean { all } => {
+            let project_root = PathBuf::from(".");
+            let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+            let packages_dir = chord::core::operations::install::default_packages_dir();
+            let (config_store, lockfile_store) = file_stores(&project_root);
+            let installers = DefaultInstallers::new();
+            let installer_set = installers.as_set();
+            let ctx = chord::core::operations::OpContext {
+                config_store: &config_store,
+                lockfile_store: &lockfile_store,
+                installers: &installer_set,
+                project_root: &project_root,
+                home_dir: &home_dir,
+                packages_dir: &packages_dir,
+                verbose: cli.verbose,
+            };
+            match chord::core::operations::clean::clean(&ctx, all) {
+                Ok(o) => {
+                    println!(
+                        "removed: {} skills, {} mcp, {} cli, {} plugins{}",
+                        o.skills,
+                        o.mcp,
+                        o.cli,
+                        o.plugins,
+                        if all {
+                            format!(", {} extra artifacts", o.extra_removed)
+                        } else {
+                            String::new()
+                        }
+                    );
+                    if o.plugins_failed > 0 {
+                        eprintln!(
+                            "warning: {} plugin(s) failed to uninstall",
+                            o.plugins_failed
+                        );
+                        process::exit(1);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    process::exit(2);
+                }
+            }
+        }
         Command::Migrate => {
             let project_dir = PathBuf::from(".");
             let total;

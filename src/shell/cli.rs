@@ -53,6 +53,16 @@ pub enum Command {
         tool: String,
     },
 
+    /// Remove everything chord installed (per chord.lock), keeping chord.toml.
+    Clean {
+        /// Full project reset: also remove foreign artifacts and ALL Claude
+        /// tool config in the project (.agents/, skills-lock.json, the whole
+        /// .claude/skills/, .mcp.json, .claude/settings.json) — not just
+        /// chord-owned state. Destructive: deletes config chord did not create.
+        #[arg(short, long)]
+        all: bool,
+    },
+
     /// Migrate Claude tool declarations from .mise.toml to chord.toml.
     ///
     /// Reads the current directory's .mise.toml, finds all `claude:mcp/*`,
