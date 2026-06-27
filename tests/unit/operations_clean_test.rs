@@ -30,6 +30,18 @@ fn seeded_lock() -> Lockfile {
             ]),
         },
     );
+    // named skill row (skills: None) — exercises leaf-segment key path
+    lf.set(
+        "skills",
+        "o/r/solo",
+        LockedTool {
+            package: None,
+            version: "sha".into(),
+            integrity: Some("sha256:9".into()),
+            resolved_at: None,
+            skills: None,
+        },
+    );
     lf.set(
         "cli",
         "mytool",
@@ -94,6 +106,9 @@ fn clean_default_removes_chord_owned_only() {
     write(&root.join(".chord/o/r/foo/SKILL.md"), "x");
     fs::create_dir_all(root.join(".claude/skills")).unwrap();
     std::os::unix::fs::symlink("../../.chord/o/r/foo", root.join(".claude/skills/foo")).unwrap();
+    // named skill (skills: None) — leaf-segment branch
+    write(&root.join(".chord/o/r/solo/SKILL.md"), "x");
+    std::os::unix::fs::symlink("../../.chord/o/r/solo", root.join(".claude/skills/solo")).unwrap();
     // foreign symlink (npx) for grill — must be LEFT
     fs::create_dir_all(root.join(".agents/skills/grill")).unwrap();
     std::os::unix::fs::symlink(
@@ -118,6 +133,10 @@ fn clean_default_removes_chord_owned_only() {
         "chord-owned symlink removed"
     );
     assert!(
+        root.join(".claude/skills/solo").symlink_metadata().is_err(),
+        "named-skill symlink removed"
+    );
+    assert!(
         root.join(".claude/skills/grill").symlink_metadata().is_ok(),
         "foreign symlink kept"
     );
@@ -129,7 +148,7 @@ fn clean_default_removes_chord_owned_only() {
         !packages.path().join("mytool").exists(),
         "cli package dir removed"
     );
-    assert_eq!(out.skills, 1);
+    assert_eq!(out.skills, 2);
     assert_eq!(out.cli, 1);
     assert_eq!(out.extra_removed, 0);
 }
@@ -169,7 +188,7 @@ fn clean_all_wipes_foreign_and_config() {
     assert!(!root.join("skills-lock.json").exists());
     assert!(!root.join(".mcp.json").exists());
     assert!(!root.join(".claude/settings.json").exists());
-    assert!(out.extra_removed >= 1);
+    assert_eq!(out.extra_removed, 5);
 }
 
 #[test]
