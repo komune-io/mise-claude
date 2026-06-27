@@ -60,3 +60,6 @@ mod skills_discover_test;
 
 #[path = "unit/skills_materialize_test.rs"]
 mod skills_materialize_test;
+
+#[path = "unit/operations_clean_test.rs"]
+mod operations_clean_test;

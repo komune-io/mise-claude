@@ -13,6 +13,7 @@ use crate::core::installer::InstallerSet;
 use crate::core::store::{ConfigStore, ConfigStoreError, LockfileStore, LockfileStoreError};
 
 pub mod add;
+pub mod clean;
 pub mod install;
 pub mod remove;
 pub mod scope;
