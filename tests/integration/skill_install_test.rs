@@ -67,7 +67,7 @@ fn named_skill_materializes_store_and_symlink() {
         project.join(".chord/o/r/foo/SKILL.md").is_file(),
         "SKILL.md should be in store"
     );
-    let link = project.join(".claude/skills/foo");
+    let link = project.join(".claude/skills/o__r__foo");
     assert_eq!(
         std::fs::read_link(&link).unwrap(),
         Path::new("../../.chord/o/r/foo")
@@ -139,7 +139,7 @@ fn skill_installer_end_to_end_via_operations() {
         project.join(".chord/o/r/foo/SKILL.md").is_file(),
         "SKILL.md should be in store"
     );
-    let link = project.join(".claude/skills/foo");
+    let link = project.join(".claude/skills/o__r__foo");
     assert!(link.exists() || link.is_symlink(), "symlink should exist");
 
     // Verify lockfile was written with the resolved SHA and integrity.

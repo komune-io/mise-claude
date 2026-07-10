@@ -347,18 +347,81 @@ pub fn scan_plugins(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem>
     items
 }
 
+/// Scan project skills from `.claude/skills/*/SKILL.md`.
+///
+/// chord exposes each skill under a namespaced link name (`owner__repo__name`,
+/// see [`materialize::link_name`]). For those chord-owned symlinks, the target
+/// is reverse-resolved so the reported `name` is the bare skill name and
+/// `source_repo` is the `owner/repo` it came from — keeping the audit output
+/// stable and provenance visible. Real (non-symlink) skill dirs report the
+/// directory name with no source.
+fn scan_project_skills(project_root: &Path, items: &mut Vec<DiscoveredItem>) {
+    let dir = project_root.join(".claude").join("skills");
+    let read_dir = match fs::read_dir(&dir) {
+        Ok(rd) => rd,
+        Err(_) => return,
+    };
+    for entry in read_dir.flatten() {
+        let path = entry.path();
+        let marker = path.join("SKILL.md");
+        if !marker.is_file() {
+            continue;
+        }
+        let (name, source_repo) = match chord_link_source(project_root, &path) {
+            Some((skill, owner_repo)) => (skill, Some(owner_repo)),
+            None => match path.file_name().and_then(|n| n.to_str()) {
+                Some(n) => (n.to_string(), None),
+                None => continue,
+            },
+        };
+        items.push(DiscoveredItem {
+            name,
+            version: None,
+            scope: Scope::Project,
+            source_path: marker.to_string_lossy().into_owned(),
+            from_plugin: None,
+            source_repo,
+        });
+    }
+}
+
+/// If `link` is a chord-owned symlink into `<project_root>/.chord`
+/// (`../../.chord/<owner>/<repo>/<name>`), return `(skill_name, "owner/repo")`.
+///
+/// Ownership is confirmed with the same canonicalizing check the installer and
+/// `chord clean` use, so a foreign symlink that merely traverses an unrelated
+/// `.chord` segment is not misattributed. Owner/repo/name are then read from the
+/// raw (relative) target, which round-trips names containing `__`.
+fn chord_link_source(project_root: &Path, link: &Path) -> Option<(String, String)> {
+    if !crate::core::skills::materialize::symlink_points_into_chord(project_root, link) {
+        return None;
+    }
+    let target = fs::read_link(link).ok()?;
+    // Collect the path segments after the `.chord` component.
+    let mut after = Vec::new();
+    let mut seen_chord = false;
+    for comp in target.components() {
+        let seg = comp.as_os_str().to_str()?;
+        if seen_chord {
+            after.push(seg.to_string());
+        } else if seg == ".chord" {
+            seen_chord = true;
+        }
+    }
+    // Need at least owner/repo/name.
+    if after.len() < 3 {
+        return None;
+    }
+    let skill = after.pop()?;
+    let owner_repo = after.join("/");
+    Some((skill, owner_repo))
+}
+
 /// Scan for skills from `.claude/skills/*/SKILL.md` (project) and `~/.claude/skills/*/SKILL.md` (global).
 pub fn scan_skills(project_root: &Path, home_dir: &Path) -> Vec<DiscoveredItem> {
     let mut items = Vec::new();
 
-    let project_skills_dir = project_root.join(".claude").join("skills");
-    scan_md_dirs(
-        &project_skills_dir,
-        Scope::Project,
-        "",
-        "SKILL.md",
-        &mut items,
-    );
+    scan_project_skills(project_root, &mut items);
 
     let global_skills_dir = home_dir.join(".claude").join("skills");
     scan_md_dirs(

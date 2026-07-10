@@ -45,13 +45,20 @@ pub fn clean(ctx: &OpContext, all: bool) -> Result<CleanOutcome, OperationError>
     // Skills: remove chord-owned symlinks (those resolving into .chord). The
     // .chord stores themselves are removed wholesale below.
     for (key, tool) in lockfile.section_entries("skills") {
+        // `owner/repo` store namespace: the wildcard key verbatim, or the
+        // named key with its leaf skill segment stripped.
+        let owner_repo: &str = match &tool.skills {
+            Some(_) => &key,
+            None => key.rsplit_once('/').map(|(o, _)| o).unwrap_or(&key),
+        };
         let flat_names: Vec<String> = match &tool.skills {
             Some(subs) => subs.iter().map(|s| s.name.clone()).collect(),
             None => vec![key.rsplit('/').next().unwrap_or(&key).to_string()],
         };
         for name in &flat_names {
-            let link = root.join(".claude").join("skills").join(name);
-            if symlink_points_into_chord(root, &link) {
+            let link_name = crate::core::skills::materialize::link_name(owner_repo, name);
+            let link = root.join(".claude").join("skills").join(link_name);
+            if crate::core::skills::materialize::symlink_points_into_chord(root, &link) {
                 let _ = std::fs::remove_file(&link);
             }
         }
@@ -111,21 +118,6 @@ pub fn clean(ctx: &OpContext, all: bool) -> Result<CleanOutcome, OperationError>
     }
 
     Ok(out)
-}
-
-/// True iff `link` is a symlink whose target resolves inside `<root>/.chord`.
-fn symlink_points_into_chord(root: &Path, link: &Path) -> bool {
-    let Ok(target) = std::fs::read_link(link) else {
-        return false;
-    };
-    let resolved = link.parent().unwrap_or(Path::new(".")).join(target);
-    match (
-        std::fs::canonicalize(&resolved),
-        std::fs::canonicalize(root.join(".chord")),
-    ) {
-        (Ok(r), Ok(chord)) => r.starts_with(chord),
-        _ => false,
-    }
 }
 
 /// Remove a path (dir or file/symlink). Returns whether it existed beforehand.

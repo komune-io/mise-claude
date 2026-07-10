@@ -55,7 +55,7 @@ fn materialize_copies_store_and_makes_relative_symlink() {
     assert!(store.join("SKILL.md").is_file());
     assert!(store.join("scripts/run.py").is_file());
 
-    let link = proj.path().join(".claude/skills/pdf");
+    let link = proj.path().join(".claude/skills/anthropics__skills__pdf");
     let target = fs::read_link(&link).unwrap();
     assert_eq!(target, Path::new("../../.chord/anthropics/skills/pdf"));
     // The symlink resolves to the store.
@@ -70,7 +70,7 @@ fn materialize_is_idempotent_for_same_target() {
     let h1 = materialize(proj.path(), "anthropics/skills", &skill).unwrap();
     let h2 = materialize(proj.path(), "anthropics/skills", &skill).unwrap();
     assert_eq!(h1, h2);
-    let link = proj.path().join(".claude/skills/pdf");
+    let link = proj.path().join(".claude/skills/anthropics__skills__pdf");
     assert_eq!(
         std::fs::read_link(&link).unwrap(),
         std::path::Path::new("../../.chord/anthropics/skills/pdf")
@@ -82,8 +82,8 @@ fn materialize_is_idempotent_for_same_target() {
 #[test]
 fn materialize_errors_on_foreign_symlink_collision() {
     let proj = tempfile::tempdir().unwrap();
-    // Pre-create a .claude/skills/pdf symlink pointing somewhere else.
-    let link = proj.path().join(".claude/skills/pdf");
+    // Pre-create the namespaced link pointing somewhere else.
+    let link = proj.path().join(".claude/skills/anthropics__skills__pdf");
     fs::create_dir_all(link.parent().unwrap()).unwrap();
     std::os::unix::fs::symlink("../../somewhere/else", &link).unwrap();
 
@@ -93,5 +93,50 @@ fn materialize_errors_on_foreign_symlink_collision() {
         err,
         Err(chord::core::skills::SkillError::NameCollision(..))
     ));
+    drop(src);
+}
+
+#[test]
+fn link_name_folds_owner_repo_into_flat_name() {
+    use chord::core::skills::materialize::link_name;
+    assert_eq!(
+        link_name("mattpocock/skills", "ask-matt"),
+        "mattpocock__skills__ask-matt"
+    );
+}
+
+#[test]
+fn materialize_removes_legacy_bare_link() {
+    let proj = tempfile::tempdir().unwrap();
+    // Simulate a pre-namespacing install: bare-name chord-owned symlink.
+    let bare = proj.path().join(".claude/skills/pdf");
+    fs::create_dir_all(bare.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink("../../.chord/anthropics/skills/pdf", &bare).unwrap();
+
+    let (src, skill) = src_skill("pdf");
+    materialize(proj.path(), "anthropics/skills", &skill).unwrap();
+
+    // Legacy bare link is gone; namespaced link took its place.
+    assert!(bare.symlink_metadata().is_err(), "legacy bare link removed");
+    assert!(proj
+        .path()
+        .join(".claude/skills/anthropics__skills__pdf")
+        .join("SKILL.md")
+        .is_file());
+    drop(src);
+}
+
+#[test]
+fn materialize_keeps_foreign_bare_link() {
+    let proj = tempfile::tempdir().unwrap();
+    // A same-named foreign symlink (not into .chord) must be left alone.
+    let bare = proj.path().join(".claude/skills/pdf");
+    fs::create_dir_all(bare.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink("../../.agents/skills/pdf", &bare).unwrap();
+
+    let (src, skill) = src_skill("pdf");
+    materialize(proj.path(), "anthropics/skills", &skill).unwrap();
+
+    assert!(bare.symlink_metadata().is_ok(), "foreign bare link kept");
     drop(src);
 }

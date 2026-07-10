@@ -199,19 +199,22 @@ fn skill_installed(project_root: &std::path::Path, lockfile: &Lockfile, name: &s
     let Some(entry) = lockfile.get("skills", name) else {
         return false;
     };
-    let link_exists = |skill: &str| {
+    let link_exists = |owner_repo: &str, skill: &str| {
         project_root
             .join(".claude")
             .join("skills")
-            .join(skill)
+            .join(crate::core::skills::materialize::link_name(
+                owner_repo, skill,
+            ))
             .exists()
     };
     match &entry.skills {
-        Some(subs) => !subs.is_empty() && subs.iter().all(|s| link_exists(&s.name)),
+        // Wildcard anchor row: `name` is the `owner/repo` store namespace.
+        Some(subs) => !subs.is_empty() && subs.iter().all(|s| link_exists(name, &s.name)),
         None => {
-            // Named skill: the leaf segment is the flat skill name.
-            let leaf = name.rsplit('/').next().unwrap_or(name);
-            link_exists(leaf)
+            // Named skill `owner/repo/leaf`: split off the leaf skill name.
+            let (owner_repo, leaf) = name.rsplit_once('/').unwrap_or((name, name));
+            link_exists(owner_repo, leaf)
         }
     }
 }
@@ -276,7 +279,8 @@ pub fn prune_orphan_skills(
         }
         let store = crate::core::skills::materialize::store_path(project_root, owner_repo, old);
         let _ = std::fs::remove_dir_all(&store);
-        let _ = std::fs::remove_file(project_root.join(".claude").join("skills").join(old));
+        let link_name = crate::core::skills::materialize::link_name(owner_repo, old);
+        let _ = std::fs::remove_file(project_root.join(".claude").join("skills").join(link_name));
     }
 }
 

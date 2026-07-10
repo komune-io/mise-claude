@@ -102,13 +102,21 @@ fn clean_default_removes_chord_owned_only() {
     let packages = TempDir::new().unwrap();
     let root = project.path();
 
-    // chord-owned skill store + symlink for foo
+    // chord-owned skill store + namespaced symlink for foo
     write(&root.join(".chord/o/r/foo/SKILL.md"), "x");
     fs::create_dir_all(root.join(".claude/skills")).unwrap();
-    std::os::unix::fs::symlink("../../.chord/o/r/foo", root.join(".claude/skills/foo")).unwrap();
+    std::os::unix::fs::symlink(
+        "../../.chord/o/r/foo",
+        root.join(".claude/skills/o__r__foo"),
+    )
+    .unwrap();
     // named skill (skills: None) — leaf-segment branch
     write(&root.join(".chord/o/r/solo/SKILL.md"), "x");
-    std::os::unix::fs::symlink("../../.chord/o/r/solo", root.join(".claude/skills/solo")).unwrap();
+    std::os::unix::fs::symlink(
+        "../../.chord/o/r/solo",
+        root.join(".claude/skills/o__r__solo"),
+    )
+    .unwrap();
     // foreign symlink (npx) for grill — must be LEFT
     fs::create_dir_all(root.join(".agents/skills/grill")).unwrap();
     std::os::unix::fs::symlink(
@@ -129,11 +137,15 @@ fn clean_default_removes_chord_owned_only() {
 
     assert!(!root.join(".chord").exists(), ".chord removed");
     assert!(
-        root.join(".claude/skills/foo").symlink_metadata().is_err(),
+        root.join(".claude/skills/o__r__foo")
+            .symlink_metadata()
+            .is_err(),
         "chord-owned symlink removed"
     );
     assert!(
-        root.join(".claude/skills/solo").symlink_metadata().is_err(),
+        root.join(".claude/skills/o__r__solo")
+            .symlink_metadata()
+            .is_err(),
         "named-skill symlink removed"
     );
     assert!(

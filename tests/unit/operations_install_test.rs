@@ -86,7 +86,11 @@ fn prune_orphan_skills_removes_vanished_skills_only() {
         std::fs::write(store.join("SKILL.md"), "x").unwrap();
         let linkdir = proj.path().join(".claude/skills");
         std::fs::create_dir_all(&linkdir).unwrap();
-        std::os::unix::fs::symlink(format!("../../.chord/o/r/{s}"), linkdir.join(s)).unwrap();
+        std::os::unix::fs::symlink(
+            format!("../../.chord/o/r/{s}"),
+            linkdir.join(format!("o__r__{s}")),
+        )
+        .unwrap();
     }
 
     // "foo" stays; "bar" vanished from upstream.
@@ -104,7 +108,7 @@ fn prune_orphan_skills_removes_vanished_skills_only() {
         "kept skill store survives"
     );
     assert!(
-        proj.path().join(".claude/skills/foo").exists(),
+        proj.path().join(".claude/skills/o__r__foo").exists(),
         "kept skill symlink survives"
     );
     assert!(
@@ -113,7 +117,7 @@ fn prune_orphan_skills_removes_vanished_skills_only() {
     );
     assert!(
         proj.path()
-            .join(".claude/skills/bar")
+            .join(".claude/skills/o__r__bar")
             .symlink_metadata()
             .is_err(),
         "vanished skill symlink removed"

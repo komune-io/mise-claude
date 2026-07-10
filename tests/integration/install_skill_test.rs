@@ -74,10 +74,10 @@ fn install_skill() {
         "SKILL.md should be materialized in .chord store"
     );
 
-    let link = project_dir.path().join(".claude/skills/foo");
+    let link = project_dir.path().join(".claude/skills/o__r__foo");
     assert!(
         link.exists() || link.is_symlink(),
-        "symlink .claude/skills/foo should exist"
+        "symlink .claude/skills/o__r__foo should exist"
     );
 
     // Verify lockfile records the skill.

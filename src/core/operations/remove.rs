@@ -97,7 +97,12 @@ pub fn remove(name: &str, ctx: &OpContext) -> Result<RemoveOutcome, OperationErr
                 None => vec![name.rsplit('/').next().unwrap_or(name).to_string()],
             };
             for flat in &flat_names {
-                let link = ctx.project_root.join(".claude").join("skills").join(flat);
+                let link_name = crate::core::skills::materialize::link_name(&owner_repo, flat);
+                let link = ctx
+                    .project_root
+                    .join(".claude")
+                    .join("skills")
+                    .join(link_name);
                 let _ = std::fs::remove_file(&link);
                 let _ = std::fs::remove_dir_all(store_root.join(flat));
             }

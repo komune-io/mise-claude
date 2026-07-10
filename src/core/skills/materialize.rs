@@ -17,6 +17,17 @@ pub fn store_path(project_root: &Path, owner_repo: &str, skill_name: &str) -> Pa
     p.join(skill_name)
 }
 
+/// The flat directory name a skill is exposed under in `.claude/skills/`.
+///
+/// Claude Code only discovers skills one level deep (`.claude/skills/*/SKILL.md`),
+/// so the source namespace is folded into the single link name with `__`:
+/// `"mattpocock/skills"` + `"ask-matt"` → `"mattpocock__skills__ask-matt"`.
+/// This keeps discovery working while making provenance visible and preventing
+/// same-named skills from different repos from colliding.
+pub fn link_name(owner_repo: &str, skill_name: &str) -> String {
+    format!("{}__{}", owner_repo.replace('/', "__"), skill_name)
+}
+
 /// Copy the skill into the store, create the relative symlink, and return
 /// the store's integrity hash.
 pub fn materialize(
@@ -62,13 +73,19 @@ fn create_symlink(
     skill_name: &str,
 ) -> Result<(), SkillError> {
     let link_dir = project_root.join(".claude").join("skills");
-    let link = link_dir.join(skill_name);
+    let link = link_dir.join(link_name(owner_repo, skill_name));
     // depth of .claude/skills/<name> below project root is 2 dirs up to root.
     let mut rel = PathBuf::from("../../.chord");
     for seg in owner_repo.split('/') {
         rel = rel.join(seg);
     }
     let rel = rel.join(skill_name);
+
+    // Migration: drop a legacy pre-namespacing bare-name link (`.claude/skills/
+    // <skill_name>`) if it is a chord-owned symlink, so upgrading from the flat
+    // scheme does not leave an orphan alongside the new namespaced link. The
+    // store was copied above, so the target resolves for the ownership check.
+    remove_legacy_bare_link(project_root, &link_dir.join(skill_name));
 
     // Collision check: an existing symlink to a different target, or a real
     // directory not owned by us, is a hard error.
@@ -95,6 +112,33 @@ fn create_symlink(
         .map_err(|e| SkillError::Io(link_dir.display().to_string(), e.to_string()))?;
     std::os::unix::fs::symlink(&rel, &link)
         .map_err(|e| SkillError::Io(link.display().to_string(), e.to_string()))
+}
+
+/// Best-effort removal of a legacy bare-name link at `path` iff it is a symlink
+/// whose target resolves inside `<project_root>/.chord`. Foreign symlinks and
+/// real directories are left untouched.
+fn remove_legacy_bare_link(project_root: &Path, path: &Path) {
+    if symlink_points_into_chord(project_root, path) {
+        let _ = std::fs::remove_file(path);
+    }
+}
+
+/// True iff `link` is a symlink whose target resolves inside `<root>/.chord`.
+/// Canonicalizes both sides against the real filesystem, so a foreign symlink
+/// that merely traverses an unrelated `.chord` segment is not mistaken for
+/// chord-owned. Requires the target to exist (dangling links read as foreign).
+pub(crate) fn symlink_points_into_chord(root: &Path, link: &Path) -> bool {
+    let Ok(target) = std::fs::read_link(link) else {
+        return false;
+    };
+    let resolved = link.parent().unwrap_or(Path::new(".")).join(target);
+    match (
+        std::fs::canonicalize(&resolved),
+        std::fs::canonicalize(root.join(".chord")),
+    ) {
+        (Ok(r), Ok(chord)) => r.starts_with(chord),
+        _ => false,
+    }
 }
 
 fn copy_dir(src: &Path, dst: &Path) -> Result<(), SkillError> {

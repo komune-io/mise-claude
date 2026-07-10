@@ -167,6 +167,32 @@ fn scan_skills_from_project() {
 }
 
 #[test]
+fn scan_skills_reverse_resolves_chord_symlink_provenance() {
+    let (proj, home) = make_dirs();
+    // chord store + namespaced symlink, as materialize() would create.
+    write_file(
+        &proj
+            .path()
+            .join(".chord/mattpocock/skills/ask-matt/SKILL.md"),
+        "# Ask Matt",
+    );
+    let linkdir = proj.path().join(".claude/skills");
+    fs::create_dir_all(&linkdir).unwrap();
+    std::os::unix::fs::symlink(
+        "../../.chord/mattpocock/skills/ask-matt",
+        linkdir.join("mattpocock__skills__ask-matt"),
+    )
+    .unwrap();
+
+    let items = scanner::scan_skills(proj.path(), home.path());
+    assert_eq!(items.len(), 1);
+    // Reported as the bare skill name with source provenance recovered.
+    assert_eq!(items[0].name, "ask-matt");
+    assert_eq!(items[0].source_repo.as_deref(), Some("mattpocock/skills"));
+    assert_eq!(items[0].scope, Scope::Project);
+}
+
+#[test]
 fn scan_skills_ignores_dirs_without_marker() {
     let (proj, home) = make_dirs();
     // Create a directory under skills/ but no SKILL.md inside it
