@@ -2,17 +2,21 @@
 
 Declarative agent-tool environment manager. Declare your MCP servers, skills, plugins, and CLI tools in one file — `chord install` handles the rest.
 
-`chord` is part of the [rytmyk](https://github.com/rytmyk) toolchain. The repo also ships a [mise](https://mise.jdx.dev) backend plugin that bootstraps the binary automatically.
+`chord` is part of the [rytmyk](https://github.com/rytmyk-ai) toolchain. The repo also ships a [mise](https://mise.jdx.dev) backend plugin that can bootstrap the binary automatically.
 
 ## Install
 
-Via mise (recommended):
-
 ```bash
-mise plugin install chord https://github.com/komune-io/mise-claude
+cargo install rytmyk-chord
 ```
 
-Then, in your project:
+The cargo package is `rytmyk-chord` — org-prefixed because the bare name `chord` is held by an unrelated dormant crate. The installed binary is just `chord`.
+
+Optionally, the mise backend plugin can bootstrap the binary and keep it topped up on shell entry:
+
+```bash
+mise plugin install chord https://github.com/rytmyk-ai/chord
+```
 
 ```toml
 # .mise.toml
@@ -23,14 +27,6 @@ chord = "latest"
 ```bash
 mise install
 ```
-
-Or directly via cargo:
-
-```bash
-cargo install rytmyk-chord
-```
-
-(The cargo package is `rytmyk-chord` — org-prefixed because the bare name `chord` is held by an unrelated dormant crate. The installed binary is just `chord`.)
 
 ## Quick start
 
@@ -68,25 +64,25 @@ When you `cd` into a directory containing `chord.toml`, the mise plugin runs `ch
 
 ### MCP servers
 
-MCP servers extend what your agent can do — browse the web, access documentation, generate UI components, and more. Short aliases are available for popular servers:
+MCP servers extend what your agent can do — browse the web, access documentation, generate UI components, and more. Declared under `[mcp]`; short aliases are available for popular servers:
 
-| You write | What gets installed |
-|-----------|--------------------|
-| `mcp/context7` | `@upstash/context7-mcp` |
-| `mcp/chrome-devtools` | `chrome-devtools-mcp` |
-| `mcp/shadcn` | `shadcn` |
+| Alias | Installs |
+|-------|----------|
+| `context7` | `@upstash/context7-mcp` |
+| `chrome-devtools` | `chrome-devtools-mcp` |
+| `shadcn` | `shadcn` |
 
 You can also use any npm package name directly.
 
 ### Workflow tools
 
-Workflow tools add structured methodologies, slash commands, and agents to Claude Code. They set themselves up in your project when installed.
+Workflow tools add structured methodologies, slash commands, and agents to Claude Code. Declared under `[cli]`; they set themselves up in your project when installed.
 
-| You write | What it does |
-|-----------|--------------|
-| `spec/gsd` | GSD — structured project execution workflow |
-| `spec/bmad` | BMAD Method — product development agents and commands |
-| `spec/openspec` | OpenSpec — API specification tool |
+| Alias | Tool |
+|-------|------|
+| `gsd` | GSD — structured project execution workflow |
+| `bmad` | BMAD Method — product development agents and commands |
+| `openspec` | OpenSpec — spec-driven workflow |
 
 ### Skills
 
@@ -109,20 +105,6 @@ Native Claude Code plugins from GitHub-based marketplaces.
 "anthropics/claude-plugins-official/commit-commands@claude-plugins-official" = "latest"
 "upstash/context7/context7-plugin@context7-marketplace" = "latest"
 ```
-
-## Extra configuration
-
-To pass additional settings to MCP servers, create a `.mcp-config.toml` file in your project:
-
-```toml
-["@upstash/context7-mcp"]
-args = ["--api-key", "${CONTEXT7_API_KEY}"]
-env = { LOG_LEVEL = "debug" }
-```
-
-- `args` — extra arguments passed to the server
-- `env` — environment variables for the server
-- `${VAR}` references are replaced with values from your environment
 
 ## How it works
 
