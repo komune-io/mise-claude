@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!-- PROTOTYPE preview — wordmark FONT chooser. One full screen per font.
+     ← / → cycle fonts · space toggles light(warm sand)/dark(dusk). System fonts only. Throwaway. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>rytmyk — font chooser</title>
+<style>
+  *{margin:0;box-sizing:border-box}html,body{height:100%}
+  #stage{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;
+    background:#f3e7dd;color:#3a3230;transition:background .25s,color .25s}
+  #stage.dark{background:linear-gradient(180deg,#2a2f52,#0e1620 62%);color:#eafff0}
+  .lock{display:flex;align-items:center;gap:22px}
+  .big{width:120px;height:120px}
+  .wm{font-size:104px;font-weight:700;letter-spacing:-.02em;line-height:1}
+  .tag{font-size:30px;font-weight:600;opacity:.92}
+  .tag em{font-style:italic;color:#c2603a}
+  #stage.dark .tag em{color:#b6ff5c;font-style:normal}
+  .cap{font-family:ui-monospace,monospace;font-size:13px;letter-spacing:.08em;opacity:.65;margin-top:8px}
+  #bar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;z-index:9;
+    background:#111;color:#fff;border-radius:999px;padding:7px 8px;box-shadow:0 10px 30px rgba(0,0,0,.45);
+    font-family:ui-monospace,monospace;font-size:13px}
+  #bar button{background:#2a2a2a;color:#fff;border:0;width:34px;height:34px;border-radius:999px;cursor:pointer;font-size:16px}
+  #bar button:hover{background:#3d3d3d}#bar .lbl{padding:0 14px;white-space:nowrap}#bar .lbl b{color:#8be28b}
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#ff9d5c" stop-opacity="1"/><stop offset="100%" stop-color="#ff9d5c" stop-opacity="0"/>
+  </radialGradient>
+  <symbol id="rytmyk" viewBox="0 0 128 128">
+    <circle cx="64" cy="64" r="60" fill="url(#glow)" opacity=".7"/>
+    <g fill="none" stroke="#ff9d5c" stroke-width="3">
+      <circle cx="64" cy="64" r="60" opacity=".25"/><circle cx="64" cy="64" r="47" opacity=".40"/>
+      <circle cx="64" cy="64" r="35" opacity=".60"/><circle cx="64" cy="64" r="24" opacity=".85"/>
+    </g>
+    <circle cx="64" cy="64" r="16" fill="#ff9d5c"/>
+  </symbol>
+</defs></svg>
+
+<div id="stage">
+  <div class="lock"><svg class="big"><use href="#rytmyk"/></svg><span class="wm" id="wm">chord</span></div>
+  <div class="tag" id="tag">Every agent tool, <em>growing in harmony.</em></div>
+  <div class="cap" id="cap"></div>
+</div>
+
+<div id="bar"><button id="prev">‹</button><span class="lbl"></span><button id="next">›</button></div>
+
+<script>
+  var FONTS=[
+    {n:"Optima",         css:'"Optima","Segoe UI",sans-serif',      note:"humanist sans · organic, flared"},
+    {n:"Iowan Old Style",css:'"Iowan Old Style","Georgia",serif',   note:"warm book serif (current)"},
+    {n:"Avenir Next",    css:'"Avenir Next","Avenir",sans-serif',   note:"geometric-humanist sans"},
+    {n:"Futura",         css:'"Futura","Century Gothic",sans-serif',note:"geometric sans · round"},
+    {n:"Baskerville",    css:'"Baskerville","Georgia",serif',       note:"classic transitional serif"},
+    {n:"Didot",          css:'"Didot","Times New Roman",serif',     note:"high-contrast elegant serif"},
+    {n:"Palatino",       css:'"Palatino Linotype","Palatino",serif',note:"calligraphic serif"},
+    {n:"Gill Sans",      css:'"Gill Sans","Gill Sans MT",sans-serif',note:"british humanist sans"},
+    {n:"American Typewriter",css:'"American Typewriter",serif',      note:"friendly slab · typewriter"},
+    {n:"Charter",        css:'"Charter","Georgia",serif',           note:"sturdy screen serif"},
+    {n:"Helvetica Neue", css:'"Helvetica Neue",Arial,sans-serif',   note:"neutral grotesque"},
+    {n:"Menlo / mono",   css:'ui-monospace,"SF Mono",Menlo,monospace',note:"terminal mono · fits the CLI"}
+  ];
+  var i=0,dark=false,stage=document.getElementById("stage"),wm=document.getElementById("wm"),
+      tag=document.getElementById("tag"),cap=document.getElementById("cap");
+  function show(n){
+    i=(n+FONTS.length)%FONTS.length;var f=FONTS[i];
+    wm.style.fontFamily=f.css; tag.style.fontFamily=f.css;
+    cap.textContent=(i+1)+" / "+FONTS.length+" · "+f.n+" · "+f.note;
+    document.querySelector("#bar .lbl").innerHTML="<b>"+f.n+"</b> — "+f.note;
+  }
+  document.getElementById("prev").onclick=function(){show(i-1)};
+  document.getElementById("next").onclick=function(){show(i+1)};
+  document.addEventListener("keydown",function(e){
+    if(e.key==="ArrowLeft")show(i-1);
+    if(e.key==="ArrowRight")show(i+1);
+    if(e.key===" "){e.preventDefault();dark=!dark;stage.classList.toggle("dark",dark);}
+  });
+  show(0);
+</script>
+</body></html>

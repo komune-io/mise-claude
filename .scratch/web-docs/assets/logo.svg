@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="rytmyk">
+  <title>rytmyk — sound-ring sun</title>
+  <defs>
+    <radialGradient id="rytmykGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff9d5c" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#ff9d5c" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- soft glow disc (matches page-C sunG, opacity .7) -->
+  <circle cx="64" cy="64" r="60" fill="url(#rytmykGlow)" opacity=".7"/>
+  <!-- radiating sound-rings (radii ratio & opacities from the page sun) -->
+  <g fill="none" stroke="#ff9d5c" stroke-width="3">
+    <circle cx="64" cy="64" r="60" opacity=".25"/>
+    <circle cx="64" cy="64" r="47" opacity=".40"/>
+    <circle cx="64" cy="64" r="35" opacity=".60"/>
+    <circle cx="64" cy="64" r="24" opacity=".85"/>
+  </g>
+  <!-- solid core (flat --sun, as on the page) -->
+  <circle cx="64" cy="64" r="16" fill="#ff9d5c"/>
+</svg>

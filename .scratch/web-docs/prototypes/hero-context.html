@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!-- PROTOTYPE — the illustrated Dusk hero with Helvetica Neue (neutral grotesque) in context.
+     space = toggle Dusk (dark) / Warm-sand (light). Throwaway. System fonts, no CDN. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>chord — hero in context (Helvetica Neue)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root, body.dusk{
+    --sky1:#2a2f52;--sky2:#0e1620;--sun:#ff9d5c;--sunglow:rgba(255,157,92,.95);--ring:#ff9d5c;
+    --hillFar:#233f34;--hillMid:#18342a;--hillNear:#0c211a;--stem:#3f6b4d;
+    --note:#b6ff5c;--note2:#ffb15c;--ink:#eafff0;--sub:#9fbfa6;--accent:#b6ff5c;--accentInk:#0e1620;
+    --card:#0b141b;--cardLine:#22362b;--tagEm:#b6ff5c;}
+  body.sand{
+    --sky1:#f7ede1;--sky2:#f3e7dd;--sun:#ff9d5c;--sunglow:rgba(255,157,92,.9);--ring:#e58a3c;
+    --hillFar:#cdd9b0;--hillMid:#8bb072;--hillNear:#4a7a4f;--stem:#3a5d3c;
+    --note:#c2603a;--note2:#4a7a4f;--ink:#2a2320;--sub:#6a5c50;--accent:#2f5d31;--accentInk:#f3e7dd;
+    --card:#fffaf3;--cardLine:#e4d6c4;--tagEm:#c2603a;}
+  body{font-family:"Helvetica Neue",Arial,system-ui,sans-serif;color:var(--ink);background:var(--sky2);transition:.3s}
+  code,pre{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+  .hero{position:relative;min-height:100vh;overflow:hidden;background:linear-gradient(180deg,var(--sky1),var(--sky2) 62%)}
+  .scene{position:absolute;inset:0;width:100%;height:100%}
+  .content{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:64px 40px 0}
+  .eyebrow{text-transform:uppercase;letter-spacing:.22em;font-size:12px;font-weight:700;color:var(--note2)}
+  .wordmark{font-size:clamp(56px,9vw,104px);font-weight:700;letter-spacing:-.035em;color:var(--ink);line-height:1;margin:14px 0 0}
+  .wordmark .seed{color:var(--sun)}
+  h1.tag{font-size:clamp(26px,3.6vw,46px);font-weight:600;letter-spacing:-.02em;color:var(--ink);line-height:1.1;margin:18px 0 0;max-width:20ch}
+  h1.tag em{font-style:normal;color:var(--tagEm)}
+  .lede{margin:20px 0 0;max-width:46ch;font-size:18px;line-height:1.6;color:var(--sub)}
+  .row{margin:32px 0 0;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .prim{background:var(--accent);color:var(--accentInk);text-decoration:none;font-weight:600;padding:14px 26px;border-radius:999px;box-shadow:0 6px 0 var(--sun)}
+  .gho{color:var(--ink);text-decoration:none;font-weight:600;padding:14px 22px;border-radius:999px;border:1.5px solid var(--cardLine)}
+  .install{margin:26px 0 0;display:inline-block;background:var(--card);border:1px solid var(--cardLine);
+    border-left:5px solid var(--accent);border-radius:10px;padding:13px 18px;font-size:14px;line-height:1.9;color:var(--ink)}
+  .install .c{opacity:.5}.install .p{color:var(--note2);font-weight:600}
+  .hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9;background:#111;color:#fff;
+    font-family:ui-monospace,monospace;font-size:12px;padding:9px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .hint b{color:#8be28b}
+</style></head><body class="dusk">
+
+<div class="hero">
+  <svg class="scene" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs><radialGradient id="sunG" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="var(--sun)"/><stop offset="100%" stop-color="var(--sunglow)" stop-opacity="0"/>
+    </radialGradient></defs>
+    <g transform="translate(950,180)">
+      <circle r="150" fill="url(#sunG)" opacity=".7"/>
+      <g fill="none" stroke="var(--ring)" stroke-width="2.5">
+        <circle r="150" opacity=".25"/><circle r="118" opacity=".4"/><circle r="88" opacity=".6"/><circle r="60" opacity=".85"/>
+      </g><circle r="40" fill="var(--sun)"/>
+    </g>
+    <g stroke="var(--stem)" stroke-width="2.4" fill="none" opacity=".8" stroke-linecap="round">
+      <path d="M300 150 q14 -12 28 0"/><path d="M328 150 q14 -12 28 0"/>
+      <path d="M470 110 q11 -9 22 0"/><path d="M492 110 q11 -9 22 0"/>
+      <path d="M690 90 q12 -10 24 0"/><path d="M714 90 q12 -10 24 0"/>
+    </g>
+    <path d="M-50 470 C 200 400 400 462 650 424 S 1050 402 1250 446 L1250 700 L-50 700 Z" fill="var(--hillFar)"/>
+    <path d="M-50 560 C 260 502 520 566 800 524 S 1120 544 1250 522 L1250 700 L-50 700 Z" fill="var(--hillMid)"/>
+    <g transform="translate(560,560)">
+      <path d="M0 0 C -6 -46 8 -92 0 -150" fill="none" stroke="var(--stem)" stroke-width="8" stroke-linecap="round"/>
+      <path d="M0 -70 C -26 -80 -40 -104 -30 -126 C -14 -110 -6 -96 0 -80" fill="var(--hillNear)"/>
+      <path d="M0 -96 C 26 -104 44 -128 34 -150 C 16 -134 8 -118 0 -104" fill="var(--hillNear)"/>
+      <ellipse cx="-14" cy="-158" rx="20" ry="15" transform="rotate(-18 -14 -158)" fill="var(--note)"/>
+      <ellipse cx="16" cy="-186" rx="20" ry="15" transform="rotate(-18 16 -186)" fill="var(--note2)"/>
+      <ellipse cx="-2" cy="-214" rx="20" ry="15" transform="rotate(-18 -2 -214)" fill="var(--note)"/>
+    </g>
+    <path d="M-50 640 C 300 598 720 664 1010 620 S 1200 632 1250 632 L1250 700 L-50 700 Z" fill="var(--hillNear)"/>
+    <g stroke="var(--stem)" stroke-width="4" fill="none" stroke-linecap="round">
+      <g transform="translate(180,650)"><path d="M0 0 C -8 -34 10 -60 2 -100"/></g>
+      <g transform="translate(300,662)"><path d="M0 0 C 8 -30 -8 -58 0 -92"/></g>
+      <g transform="translate(840,650)"><path d="M0 0 C -6 -30 10 -58 2 -104"/></g>
+      <g transform="translate(980,664)"><path d="M0 0 C 8 -34 -10 -62 0 -96"/></g>
+      <g transform="translate(1080,650)"><path d="M0 0 C -6 -30 10 -56 2 -100"/></g>
+    </g>
+    <g fill="var(--note)">
+      <ellipse cx="182" cy="548" rx="15" ry="11" transform="rotate(-20 182 548)"/>
+      <ellipse cx="300" cy="568" rx="15" ry="11" transform="rotate(-20 300 568)"/>
+      <ellipse cx="842" cy="544" rx="15" ry="11" transform="rotate(-20 842 544)"/>
+      <ellipse cx="980" cy="566" rx="15" ry="11" transform="rotate(-20 980 566)"/>
+      <ellipse cx="1082" cy="548" rx="15" ry="11" transform="rotate(-20 1082 548)"/>
+    </g>
+  </svg>
+
+  <div class="content">
+    <div class="eyebrow">rytmyk toolchain</div>
+    <div class="wordmark">chord<span class="seed">.</span></div>
+    <h1 class="tag">Every agent tool, <em>growing in harmony.</em></h1>
+    <p class="lede">Declare your MCP servers, skills, plugins and CLIs in one <code>chord.toml</code>. Run <code>chord install</code> and the whole environment blooms — the same on every machine.</p>
+    <div class="row">
+      <a class="prim" href="#">Install chord →</a>
+      <a class="gho" href="#">Read the docs</a>
+    </div>
+    <pre class="install"><span class="c"># bootstrap via mise</span>
+<span class="p">mise</span> plugin install chord
+<span class="p">chord</span> install</pre>
+  </div>
+</div>
+
+<div class="hint">Helvetica Neue in context · press <b>space</b> to toggle Dusk / Warm-sand</div>
+<script>
+  document.addEventListener("keydown",function(e){
+    if(e.key===" "){e.preventDefault();
+      document.body.classList.toggle("dusk");document.body.classList.toggle("sand");}
+  });
+</script>
+</body></html>
