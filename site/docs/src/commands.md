@@ -65,20 +65,24 @@ uninstalls** it: the entry is dropped from `chord.toml`, and the lockfile,
 
 ## `update`
 
+> **Not yet implemented** — the command is exposed but currently prints a stub. Planned.
+
 ```bash
 chord update [tool]
 ```
 
-Updates installed tools to their latest matching version. Omit `tool` to update
-everything; pass a name to update just one.
+Will update installed tools to their latest matching version — omit `tool` to
+update everything, or pass a name to update just one.
 
 ## `diff`
+
+> **Not yet implemented** — the command is exposed but currently prints a stub. Planned.
 
 ```bash
 chord diff <tool>
 ```
 
-Shows the changelog / diff for a tool between what's declared and what's
+Will show the diff / changelog for a tool between what's declared and what's
 installed.
 
 ## `clean`
