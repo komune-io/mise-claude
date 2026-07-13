@@ -11,8 +11,10 @@ chord install [--idempotent] [--quiet]
 Installs everything declared in `chord.toml`. Idempotent — already-installed
 tools are skipped, so it's safe to run repeatedly.
 
-- `--idempotent` — documents intent; installs are idempotent regardless.
-- `--quiet` — suppress output when nothing changed (used by the mise shell hook).
+- `--quiet` — suppress the per-tool output (used by the mise shell hook).
+- `--idempotent` — installs are always idempotent, so this changes nothing about
+  *what* is installed; in the current build it just enables the same quiet output
+  as `--quiet` (the mise hook passes both together).
 
 ## `inspect`
 
