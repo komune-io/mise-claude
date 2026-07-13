@@ -1,0 +1,166 @@
+/* chord docs — musical-solarpunk skin (ticket 02 direction).
+   Dark theme "navy" → Dusk · light theme "light" → Warm sand.
+   Overrides mdBook's CSS custom properties + fonts. */
+
+/* ---- fonts (neutral grotesque + mono; ship Inter later, no CDN now) ---- */
+html, body,
+.menu-title,
+.sidebar,
+.content { font-family: "Helvetica Neue", Arial, system-ui, sans-serif; }
+code, pre, kbd, .hljs { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+/* ============ DARK — "Dusk" (navy) ============ */
+html.navy {
+  --bg: #191327;
+  --fg: #f4ecdd;
+
+  --sidebar-bg: #140f20;
+  --sidebar-fg: #c9b39d;
+  --sidebar-non-existant: #6b5d70;
+  --sidebar-active: #ff9d5c;      /* sun */
+  --sidebar-spacer: #2a2038;
+
+  --scrollbar: #3a2f4a;
+  --icons: #9c8aa5;
+  --icons-hover: #ff9d5c;
+
+  --links: #ff9d5c;               /* sun */
+
+  --inline-code-color: #ffb377;
+  --code-block-background-color: #120c1c;
+
+  --theme-popup-bg: #241a33;
+  --theme-popup-border: #3a2f4a;
+  --theme-hover: #2c2140;
+
+  --quote-bg: #201830;
+  --quote-border: #3a2f4a;
+
+  --table-border-color: #3a2f4a;
+  --table-header-bg: #2a1f3a;
+  --table-alternate-bg: #1c1529;
+
+  --searchbar-border-color: #3a2f4a;
+  --searchbar-bg: #241a33;
+  --searchbar-fg: #f4ecdd;
+  --searchbar-shadow-color: #0e0a16;
+  --searchresults-header-fg: #8fbf74;   /* leaf-green */
+  --searchresults-border-color: #3a2f4a;
+  --searchresults-li-bg: #241a33;
+  --search-mark-bg: #e9a24a;
+
+  --color-scheme: dark;
+}
+
+/* ============ LIGHT — "Warm sand" ============ */
+html.light {
+  --bg: #f3e7dd;
+  --fg: #2c2418;
+
+  --sidebar-bg: #ede0cf;
+  --sidebar-fg: #6a5c48;
+  --sidebar-non-existant: #b0a58f;
+  --sidebar-active: #c0692e;
+  --sidebar-spacer: #e2d0b8;
+
+  --scrollbar: #cbb99c;
+  --icons: #9a8a6f;
+  --icons-hover: #c0692e;
+
+  --links: #c0692e;               /* terracotta */
+
+  --inline-code-color: #9a5a2a;
+  --code-block-background-color: #fbf3e7;
+
+  --theme-popup-bg: #fffaf1;
+  --theme-popup-border: #e2d0b8;
+  --theme-hover: #f0e4d2;
+
+  --quote-bg: #efe2d0;
+  --quote-border: #e2d0b8;
+
+  --table-border-color: #e2d0b8;
+  --table-header-bg: #ede0cf;
+  --table-alternate-bg: #f7eddd;
+
+  --searchbar-border-color: #e2d0b8;
+  --searchbar-bg: #fffaf1;
+  --searchbar-fg: #2c2418;
+  --searchbar-shadow-color: #d9c6a8;
+  --searchresults-header-fg: #3f7a48;
+  --searchresults-border-color: #e2d0b8;
+  --searchresults-li-bg: #fffaf1;
+  --search-mark-bg: #e9a24a;
+
+  --color-scheme: light;
+}
+
+/* ---- code backgrounds (mdBook's var doesn't cover both cleanly) ---- */
+html.navy pre, html.navy pre > code, html.navy .hljs { background: #120c1c; }
+html.navy :not(pre) > code { background: #241a33; }
+/* light mode: LIGHT code panel so mdBook's (light-tuned) syntax colors stay readable */
+html.light pre, html.light pre > code, html.light .hljs { background: #efe3cf; color: #2c2418; }
+html.light pre { border: 1px solid #e2d0b8; }
+html.light code:not(pre code) { background: #ece0cd !important; color: #9a5a2a !important; }
+html.navy code:not(pre code) { background: #241a33 !important; color: #ffb377 !important; }
+
+/* ============ SIDEBAR / MENU REDESIGN ============ */
+
+/* brand header (injected by brand.js) */
+/* kill the scrollbox's top padding so the brand can top-align with the menu bar */
+.sidebar-scrollbox { padding-top: 0 !important; }
+#rytmyk-brand {
+  display: flex; align-items: center; gap: 11px;
+  min-height: 50px;                    /* == top menu-bar height, so they line up */
+  padding: 0 22px; margin-bottom: 8px;
+  font-size: 23px; font-weight: 700; letter-spacing: -.02em;
+  color: var(--fg); text-decoration: none;
+  border-bottom: 1px solid var(--sidebar-spacer);
+}
+#rytmyk-brand svg { width: 32px; height: 32px; flex: none; }
+#rytmyk-brand:hover { color: var(--sidebar-active); }
+#rytmyk-brand .seed { color: #ff9d5c; }
+
+.sidebar { border-inline-end: 1px solid var(--sidebar-spacer); }
+
+/* top-level chapters — compact */
+.sidebar .chapter { padding: 2px 0 12px; line-height: 1.25; }
+.sidebar .chapter li { margin-top: 1px; }          /* mdBook defaults this to ~0.6em */
+.sidebar .chapter > .chapter-item > .chapter-link-wrapper > a {
+  padding: 5px 22px; font-weight: 600; border-radius: 0;
+}
+/* drop the "1. 2. 3." numbers */
+.sidebar .chapter > .chapter-item > .chapter-link-wrapper > a > strong { display: none; }
+
+.sidebar .chapter a:hover { color: var(--fg); background: var(--theme-hover); }
+.sidebar .chapter a.active {
+  color: var(--sidebar-active); font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--sidebar-active);
+  background: color-mix(in srgb, var(--sidebar-active) 9%, transparent);
+}
+
+/* the on-this-page sub-nav (mdBook 0.5 injects the active page's headings) */
+.sidebar .on-this-page { border-inline-start: 0 !important; margin: 0 !important; }
+.sidebar .on-this-page .section {
+  margin: 1px 0 4px 22px; padding: 0;
+  border-inline-start: 1px solid var(--sidebar-spacer);
+}
+.sidebar .on-this-page .header-item a { padding: 3px 12px; font-size: 13px; opacity: .72; }
+.sidebar .on-this-page .header-item a:hover { opacity: 1; color: var(--fg); background: transparent; }
+.sidebar .on-this-page a.current-header { opacity: 1; color: var(--sidebar-active); font-weight: 700; }
+/* neutralize inline-code pills inside the sidebar (headings render as <code>) */
+.sidebar code { background: transparent !important; color: inherit !important; padding: 0; font-size: 12.5px; }
+
+/* top bar (mdBook 0.5 id is #mdbook-menu-bar / class .menu-bar) */
+.menu-bar { background: var(--sidebar-bg); border-bottom: 1px solid var(--sidebar-spacer); }
+.menu-bar .icon-button { color: var(--icons); }
+.menu-bar .icon-button:hover { color: var(--sidebar-active); }
+#print-button, .print-button { display: none; }
+.menu-title { font-weight: 700; letter-spacing: -.01em; color: var(--fg); }
+
+/* ---- shared touches ---- */
+.content h1, .content h2 { letter-spacing: -.02em; }
+/* a thin sun-accent rule under top-level headings */
+.content h1 { border-bottom: 2px solid var(--links); padding-bottom: .2em; }
+.content a { text-decoration-color: color-mix(in srgb, var(--links) 45%, transparent); }
+blockquote { border-inline-start-width: 4px; }

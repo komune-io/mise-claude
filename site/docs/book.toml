@@ -1,0 +1,19 @@
+[book]
+title = "chord"
+description = "Declarative agent-tool environment manager — part of the rytmyk toolchain"
+authors = ["rytmyk"]
+src = "src"
+language = "en"
+
+[output.html]
+git-repository-url = "https://github.com/rytmyk-ai/chord"
+additional-css = ["theme/solarpunk.css"]
+additional-js = ["theme/brand.js"]
+# Musical-solarpunk skin (ticket 02). Light "warm sand" is the default;
+# Dusk ("navy") stays available via the theme toggle. preferred-dark-theme is
+# set to light too so a dark-mode OS still opens light by default.
+default-theme = "light"
+preferred-dark-theme = "light"
+
+[output.html.playground]
+runnable = false

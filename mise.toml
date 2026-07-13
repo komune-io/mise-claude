@@ -12,6 +12,8 @@
 
 [tools]
 rust = "latest"
+# docs site generator (localhost only; hosting is a separate step)
+mdbook = "latest"
 
 # ── Cargo dev tasks (fast inner loop) ──
 
@@ -104,3 +106,18 @@ for dir in $(find sample -name '.mise.toml' -exec dirname {} \\;); do
   (cd "$dir" && mise run clean && mise install && mise run test || true)
 done
 """
+
+# ── Docs & landing site (localhost only; hosting is a separate step) ──
+# docs → docs.chord.rytmyk.ai (mdBook)  ·  landing → chord.rytmyk.ai (static HTML)
+
+[tasks."docs:dev"]
+description = "Serve the mdBook docs with live-reload on http://localhost:3000"
+run = "mdbook serve site/docs --open --port 3000"
+
+[tasks."docs:build"]
+description = "Build the static docs into site/docs/book"
+run = "mdbook build site/docs"
+
+[tasks."landing:dev"]
+description = "Serve the static landing page on http://localhost:8080"
+run = "python3 -m http.server 8080 --directory site/landing"

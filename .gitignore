@@ -23,5 +23,9 @@ sample/skillssh/.claude/skills/
 .superpowers/
 _bmad-output/
 
-# Design docs / specs / ADRs — local only, not committed
-docs/
+# Design docs / specs / ADRs — local only, not committed.
+# Anchored to the repo root so it does NOT swallow site/docs/ (the mdBook source).
+/docs/
+
+# Generated mdBook output (source of truth is site/docs/src/)
+site/docs/book/

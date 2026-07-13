@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>chord — declarative agent-tool environment manager</title>
+  <meta name="description" content="Declare your MCP servers, skills, plugins and CLIs in one chord.toml. One command, identical everywhere. Part of the rytmyk toolchain.">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body class="dusk">
+
+  <!-- reusable sun mark -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="var(--sun)" stop-opacity="1"/><stop offset="100%" stop-color="var(--sun)" stop-opacity="0"/>
+    </radialGradient>
+    <symbol id="mark" viewBox="0 0 128 128">
+      <circle cx="64" cy="64" r="60" fill="url(#glow)" opacity=".7"/>
+      <g fill="none" stroke="var(--sun)" stroke-width="3">
+        <circle cx="64" cy="64" r="60" opacity=".25"/><circle cx="64" cy="64" r="47" opacity=".40"/>
+        <circle cx="64" cy="64" r="35" opacity=".60"/><circle cx="64" cy="64" r="24" opacity=".85"/>
+      </g><circle cx="64" cy="64" r="16" fill="var(--sun)"/>
+    </symbol>
+  </defs></svg>
+
+  <nav><div class="wrap">
+    <div class="brand"><svg class="sun"><use href="#mark"/></svg><span>chord<span class="seed">.</span></span></div>
+    <div class="links">
+      <a href="#why">Why</a><a href="#toml">chord.toml</a><a href="#install">Install</a>
+      <a href="https://docs.chord.rytmyk.ai" style="color:var(--note2)">docs ↗</a>
+      <button class="toggle" id="tg" type="button">☾ dusk</button>
+    </div>
+  </div></nav>
+
+  <!-- HERO — High horizon -->
+  <header class="hero">
+    <svg class="scene" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <defs><radialGradient id="sunG" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="var(--sun)"/><stop offset="100%" stop-color="var(--sunglow)" stop-opacity="0"/>
+      </radialGradient></defs>
+      <!-- setting sound-ring sun, low-right -->
+      <g transform="translate(920,530)">
+        <circle r="190" fill="url(#sunG)" opacity=".7"/>
+        <g fill="none" stroke="var(--ring)" stroke-width="2.5">
+          <circle r="150" opacity=".22"/><circle r="118" opacity=".38"/><circle r="88" opacity=".58"/><circle r="60" opacity=".82"/>
+        </g><circle r="40" fill="var(--sun)"/>
+      </g>
+      <!-- thin dune band at the bottom -->
+      <path d="M-50 600 C 350 560 760 620 1250 578 L1250 700 L-50 700 Z" fill="var(--duneFar)"/>
+      <path d="M-50 648 C 400 620 820 660 1250 632 L1250 700 L-50 700 Z" fill="var(--duneMid)"/>
+    </svg>
+    <div class="inner">
+      <div class="eyebrow">rytmyk toolchain</div>
+      <div class="wordmark">chord<span class="seed">.</span></div>
+      <h1 class="tag">Every agent tool, <em>in harmony.</em></h1>
+      <p class="lede">Declare your MCP servers, skills, plugins and CLIs in one <code>chord.toml</code>. One command, identical everywhere.</p>
+      <div class="row">
+        <a class="prim" href="#install">Install chord →</a>
+        <a class="gho" href="https://docs.chord.rytmyk.ai">Read the docs</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- WHY -->
+  <section class="band" id="why"><div class="wrap">
+    <div class="kicker">the problem</div>
+    <h2>Agent tooling drifts. chord keeps it in tune.</h2>
+    <p class="lead">MCP servers, skills, plugins and CLIs live in a dozen configs, scattered across machines. They fall out of sync, break onboarding, and can't be reproduced. chord makes the whole set <b style="color:var(--ink)">declarative</b>: one file describes the environment, one command reproduces it — everywhere.</p>
+    <div class="feat">
+      <div class="card"><div class="ic">◔</div><h3>One file, everything</h3><p>MCP servers, skills, plugins and CLI tools declared together in <code>chord.toml</code>.</p></div>
+      <div class="card"><div class="ic">◑</div><h3>Reproducible</h3><p><code>chord install</code> brings the same environment up on every machine — no drift.</p></div>
+      <div class="card"><div class="ic">◕</div><h3>mise-native</h3><p>Ships as a mise backend plugin; fills in missing tools transparently on shell entry.</p></div>
+      <div class="card"><div class="ic">●</div><h3>Audit &amp; clean</h3><p><code>chord inspect</code> surfaces drift; <code>chord clean</code> reverses an install cleanly.</p></div>
+    </div>
+  </div></section>
+
+  <!-- TOML -->
+  <section class="band" id="toml" style="background:var(--bg2);border-block:1px solid var(--line)"><div class="wrap">
+    <div class="kicker">one declaration</div>
+    <h2>Four sections. One environment.</h2>
+    <div class="show">
+      <pre class="big"><span class="cm"># chord.toml</span>
+<span class="sec">[mcp.github]</span>
+<span class="k">command</span> = <span class="s">"gh-mcp"</span>
+
+<span class="sec">[skills]</span>
+<span class="k">brainstorming</span> = <span class="s">"latest"</span>
+<span class="k">systematic-debugging</span> = <span class="s">"latest"</span>
+
+<span class="sec">[plugins]</span>
+<span class="k">figma</span> = <span class="s">"1.4"</span>
+
+<span class="sec">[cli]</span>
+<span class="k">ripgrep</span> = <span class="s">"14.1"</span></pre>
+      <div class="decl">
+        <div class="d"><span class="dot" style="background:var(--sun)"></span><div><b>MCP servers</b><br><span>Model-context servers your agent talks to.</span></div></div>
+        <div class="d"><span class="dot" style="background:var(--note2)"></span><div><b>Skills</b><br><span>Reusable agent skills, pinned to a version.</span></div></div>
+        <div class="d"><span class="dot" style="background:var(--accent)"></span><div><b>Plugins</b><br><span>Editor / tool plugins the environment needs.</span></div></div>
+        <div class="d"><span class="dot" style="background:var(--duneMid)"></span><div><b>CLI tools</b><br><span>Binaries resolved and installed for you.</span></div></div>
+      </div>
+    </div>
+  </div></section>
+
+  <!-- INSTALL -->
+  <section class="band" id="install"><div class="wrap">
+    <div class="kicker">get started</div>
+    <h2>Install chord</h2>
+    <div class="cols">
+      <div class="card"><h3>Via cargo <span class="tagpill">recommended</span></h3>
+        <pre><span class="c"># install the binary</span>
+<span class="p">cargo</span> install rytmyk-chord
+<span class="c"># declare tools in chord.toml, then</span>
+<span class="p">chord</span> install
+<span class="p">chord</span> inspect</pre></div>
+      <div class="card"><h3>Via mise plugin</h3>
+        <pre><span class="c"># optional — bootstraps chord on shell entry</span>
+<span class="p">mise</span> plugin install chord \
+  https://github.com/rytmyk-ai/chord
+<span class="p">chord</span> install</pre></div>
+    </div>
+    <div class="row"><a class="prim" href="https://docs.chord.rytmyk.ai">Read the docs →</a><a class="gho" href="https://github.com/rytmyk-ai/chord">View on GitHub</a></div>
+  </div></section>
+
+  <footer><div class="wrap">
+    <div class="brand"><svg class="sun"><use href="#mark"/></svg><span>chord</span></div>
+    <div class="fl">
+      <a href="https://docs.chord.rytmyk.ai">docs.chord.rytmyk.ai</a>
+      <a href="https://github.com/rytmyk-ai/chord">GitHub</a>
+      <a href="https://crates.io/crates/rytmyk-chord">crates.io</a>
+      <a href="https://rytmyk.ai">rytmyk.ai</a>
+    </div>
+    <div class="fine">chord — declarative agent-tool environment manager · part of the rytmyk toolchain · MIT</div>
+  </div></footer>
+
+  <script>
+    var tg = document.getElementById("tg");
+    tg.addEventListener("click", function () {
+      var dark = document.body.classList.contains("dusk");
+      document.body.classList.toggle("dusk", !dark);
+      document.body.classList.toggle("sand", dark);
+      tg.textContent = dark ? "☀ warm sand" : "☾ dusk";
+    });
+  </script>
+</body>
+</html>
