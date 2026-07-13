@@ -21,9 +21,10 @@ ripgrep = "14.1"
 
 `chord.toml` is the single declarative file chord reads. It has four top-level
 tables — `[mcp]`, `[skills]`, `[plugins]`, `[cli]` — each a flat map of
-`name = "version"` entries. Version strings are either an exact version
-(`"2.1.4"`) or `"latest"`. **Unknown top-level keys are rejected**: a typo'd
-table name is an error, not a silent no-op.
+`name = "version"` entries. A version string is an exact version (`"2.1.4"`),
+`"latest"`, or `"*"` (both track the newest); `[skills]` entries may also pin to
+a branch or tag. **Unknown top-level keys are rejected**: a typo'd table name is
+an error, not a silent no-op.
 
 The rest of this page documents each table.
 
@@ -45,19 +46,7 @@ shadcn = "4.0.6"
 | `chrome-devtools` | `chrome-devtools-mcp` |
 | `shadcn` | `shadcn` |
 
-### Extra MCP configuration
-
-To pass extra settings to a server, add a `.mcp-config.toml` in your project:
-
-```toml
-["@upstash/context7-mcp"]
-args = ["--api-key", "${CONTEXT7_API_KEY}"]
-env = { LOG_LEVEL = "debug" }
-```
-
-- `args` — extra arguments passed to the server.
-- `env` — environment variables for the server.
-- `${VAR}` references are replaced from your environment.
+Installing a server writes it into the project's `.mcp.json`.
 
 ## `[skills]` — agent skills
 
@@ -83,10 +72,18 @@ Native Claude Code plugins from GitHub-based marketplaces. The slug ends with
 
 ## `[cli]` — CLI tools
 
-Command-line binaries and workflow tools (e.g. GSD, BMAD, OpenSpec) chord
-resolves and installs.
+Command-line binaries. Workflow tools (GSD, BMAD, OpenSpec) also live here and
+run a setup step in your project when installed. Use a short alias or any npm
+package name.
 
 ```toml
 [cli]
 gsd = "1.22.4"
+ripgrep = "14.1"
 ```
+
+| You write | What gets installed |
+|-----------|---------------------|
+| `gsd` | `get-shit-done-cc` |
+| `bmad` | `bmad-method` |
+| `openspec` | `@fission-ai/openspec` |

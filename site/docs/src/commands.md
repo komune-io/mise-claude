@@ -38,10 +38,20 @@ Lists the tools chord installed, from `chord.lock`.
 ## `add`
 
 ```bash
-chord add <name@version>
+chord add <section>:<name>[@<version>]
 ```
 
-Adds a declaration to `chord.toml`. Example: `chord add context7@latest`.
+Writes the declaration to `chord.toml` **and installs it**. The section is
+required — one of `mcp`, `cli`, `skills`, `plugins`. Omit `@<version>` and it
+defaults to `latest`.
+
+```bash
+chord add mcp:context7@latest
+chord add cli:ripgrep            # version defaults to "latest"
+```
+
+For `plugins` the name already contains an `@marketplace` qualifier, so a
+version is only read when a second `@` is present.
 
 ## `remove`
 
@@ -49,7 +59,9 @@ Adds a declaration to `chord.toml`. Example: `chord add context7@latest`.
 chord remove <name>
 ```
 
-Removes a declaration from `chord.toml`. Example: `chord remove context7`.
+Removes a tool by bare name — chord finds which section it's in — and **fully
+uninstalls** it: the entry is dropped from `chord.toml`, and the lockfile,
+`.mcp.json`, and installed files are cleaned up. Example: `chord remove context7`.
 
 ## `update`
 
@@ -89,6 +101,12 @@ chord migrate
 ```
 
 Migrates Claude tool declarations from `.mise.toml` into `chord.toml`. Reads the
-current directory's `.mise.toml`, finds all `claude:mcp/*`, `claude:skills.sh/*`,
-`claude:plugin/*`, and `claude:spec/*` entries, and writes an equivalent
-`chord.toml`.
+current directory's `.mise.toml` and maps each `claude:*` tool entry into the
+matching table:
+
+| `.mise.toml` key | chord.toml table |
+|------------------|------------------|
+| `claude:mcp/*` | `[mcp]` |
+| `claude:skills.sh/*` | `[skills]` |
+| `claude:plugin/*` | `[plugins]` |
+| `claude:spec/*`, `claude:cli/*` | `[cli]` |

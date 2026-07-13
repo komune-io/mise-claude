@@ -4,28 +4,36 @@
 chord inspect --tui
 ```
 
-Launches the interactive audit view — the same information as `chord inspect`,
-in a navigable terminal UI.
+An interactive terminal UI over your Claude Code configuration — the same audit
+as `chord inspect`, but navigable, and able to **make changes inline** without
+leaving it.
 
-## What it shows
+## Layout
 
-Your full Claude Code configuration, project and global:
+Two panes: a **tree** of everything chord found — MCP servers, plugins, skills,
+commands, agents, project *and* global — on the left, and a **preview** of the
+selected item on the right. `Tab` switches focus between them.
 
-- **MCP servers** — what's configured and where it came from.
-- **Plugins** — installed marketplace plugins.
-- **Skills** — installed skills.
-- **Commands** and **Agents** — registered slash commands and agents.
+## Keys
 
-## Navigating
-
-- Move between categories and entries with the arrow keys.
-- Select an entry to see its detail.
-- Quit with `q`.
+| Key | Action |
+|-----|--------|
+| `↑` `↓` / `k` `j` | Move selection |
+| `←` `→` / `h` `l` | Collapse / expand |
+| `Enter` | Toggle expand |
+| `Tab` | Switch tree ↔ preview focus |
+| `/` | Search / filter |
+| `i` | Toggle "enabled only" filter |
+| `v` | View the selected item's file |
+| `a` | Add a tool |
+| `d` | Remove the selected (chord-managed) tool |
+| `r` | Install the selected drift entry |
+| `R` | Install everything |
+| `e` | Change a plugin's scope (project / global) |
+| `q` · `Esc` · `Ctrl-C` | Quit |
 
 ## Relation to `chord inspect`
 
 The TUI and the plain command surface the same audit. Use `chord inspect` (or
-`chord inspect --json`) for scripting and CI; use `--tui` to explore
-interactively.
-
-<!-- Screenshots of the TUI to be added. -->
+`chord inspect --json`) for scripting and CI; use `--tui` to explore and fix
+things interactively.
